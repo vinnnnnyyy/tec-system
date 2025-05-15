@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "axios": "^1.8.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
+    "pdfmake": "^0.2.18",
+    "vue-html2pdf": "^1.8.0",
+    "vue-toastification": "^2.0.0-rc.5"
+  }
+}
