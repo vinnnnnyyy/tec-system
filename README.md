@@ -83,3 +83,4 @@ The Vue.js app will be available at http://localhost:5173/
 - `GET /api/tasks/{id}/` - Retrieve a specific task
 - `PUT /api/tasks/{id}/` - Update a specific task
 - `DELETE /api/tasks/{id}/` - Delete a specific task # tec
+"# project-tec" 
