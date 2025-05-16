@@ -82,11 +82,11 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'railway',
+        'NAME': 'tecdb',
         'USER': 'root',
-        'PASSWORD': 'HGAVZZjtIbCmTXlZEWcNVruUnQrCRSmL',
-        'HOST': 'switchyard.proxy.rlwy.net',
-        'PORT': '19709',
+        'PASSWORD': '',
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
     }
 }
 # Password validation
