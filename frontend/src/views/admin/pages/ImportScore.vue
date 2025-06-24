@@ -99,6 +99,22 @@
                 </select>
               </div>
 
+              <!-- Exam Year Selection -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Exam Year</label>
+                <select v-model="selectedExamYear" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 transition-colors duration-200 text-sm">
+                  <option value="">Choose an exam year</option>
+                  <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
+                </select>              </div>
+              
+              <!-- Validation Message -->
+              <div v-if="!isReadyToImport && missingFields.length > 0" 
+                   class="text-amber-600 text-sm py-1 flex items-center">
+                <i class="fas fa-exclamation-circle mr-1"></i>
+                {{ validationMessage }}
+              </div>
+
               <!-- Import Button -->
               <div class="pt-2">
                 <button 
@@ -133,41 +149,20 @@
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <i class="fas fa-info text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">Your file should include all test part scores and identifiers (name and school are required)</p>
+                <p class="text-sm text-gray-600">Your file should include all test part scores and identifiers (name fields, school, and app_no are required)</p>
               </div>
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <i class="fas fa-table text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">CSV columns: app_no, name, school, date, part1, part2, part3, part4, part5, oapr</p>
+                <p class="text-sm text-gray-600">CSV columns: app_no, lastname, firstname, middleinitial, school, date, part1, part2, part3, part4, part5, oapr</p>
               </div>
-              <div class="flex items-start space-x-3">
-                <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <i class="fas fa-list-ol text-crimson-600 text-sm"></i>
-                </div>
-                <div class="text-sm text-gray-600">
-                  <p>Test parts represent:</p>
-                  <ul class="list-disc ml-5 mt-1">
-                    <li>Part 1: English Proficiency</li>
-                    <li>Part 2: Reading Comprehension</li>
-                    <li>Part 3: Science Process Skills</li>
-                    <li>Part 4: Quantitative Skills</li>
-                    <li>Part 5: Abstract Thinking Skills</li>
-                    <li>OAPR: Overall Ability Percentile Rank</li>
-                  </ul>
-                </div>
-              </div>
-              <div class="flex items-start space-x-3">
-                <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <i class="fas fa-file-alt text-crimson-600 text-sm"></i>
-                </div>
-                <p class="text-sm text-gray-600">File should be in CSV or Excel format (.xlsx, .xls)</p>
-              </div>
-              <div class="flex items-start space-x-3">
-                <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <i class="fas fa-exclamation-triangle text-crimson-600 text-sm"></i>
-                </div>
-                <p class="text-sm text-gray-600">Maximum file size: 10MB</p>
+              
+              <!-- Sample CSV Format -->
+              <div class="rounded-md bg-gray-50 p-3 border border-gray-200 text-xs font-mono overflow-x-auto whitespace-nowrap">
+                app_no,lastname,firstname,middleinitial,school,date,part1,part2,part3,part4,part5,oapr<br>
+                123-456,Doe,John,A,Sample School,2023-10-15,85,92,88,95,90,90<br>
+                789-012,Smith,Jane,B,Test Academy,2023-10-15,92,88,90,87,94,92
               </div>
             </div>
           </div>
@@ -230,9 +225,12 @@ export default {
       dragover: false,
       selectedFile: null,
       selectedExamType: '',
+      selectedExamYear: '',
       examTypes: [], // Will be populated from backend
+      availableYears: [], // Will be populated based on the current year
       loading: false,
       error: null,
+      sessionId: null, // Will store session ID if passed from TestSessionManagement
       recentImports: [
         {
           examType: 'LSAT Exam',
@@ -254,10 +252,22 @@ export default {
         }
       ]
     }
-  },
-  computed: {
+  },  computed: {
     isReadyToImport() {
-      return this.selectedFile && this.selectedExamType;
+      return this.selectedFile && this.selectedExamType && this.selectedExamYear;
+    },
+    missingFields() {
+      const missing = [];
+      if (!this.selectedFile) missing.push('CSV or Excel file');
+      if (!this.selectedExamType) missing.push('exam type');
+      if (!this.selectedExamYear) missing.push('exam year');
+      return missing;
+    },
+    validationMessage() {
+      if (this.missingFields.length > 0) {
+        return `Please select ${this.missingFields.join(' and ')} before importing.`;
+      }
+      return '';
     }
   },
   methods: {
@@ -309,16 +319,41 @@ export default {
         }
         return false;
       }
-    },
-    async fetchProgramCodes() {
+    },    async fetchProgramCodes() {
       this.loading = true;
       this.error = null;
+      
       try {
-        // Use the full API URL
-        const response = await axios.get('http://localhost:8000/api/programs/');
+        // Use a dynamic API URL based on environment
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrlWithoutTrailingSlash = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+        
+        // Try different possible API endpoints
+        let response = null;
+        let lastError = null;
+        
+        try {
+          response = await axios.get(`${apiUrlWithoutTrailingSlash}/api/programs/`);
+        } catch (error) {
+          console.log('First attempt failed:', error);
+          lastError = error;
+          
+          try {
+            // Try without /api/ prefix as fallback
+            response = await axios.get(`${apiUrlWithoutTrailingSlash}/programs/`);
+          } catch (error) {
+            console.log('Second attempt failed:', error);
+            lastError = error;
+          }
+        }
+        
+        if (!response) {
+          throw lastError || new Error('Failed to fetch program codes');
+        }
+        
         console.log('API Response:', response.data); // Debug log
         
-        // Check if response.data is an array
+        // Process the API response
         if (Array.isArray(response.data)) {
           this.examTypes = response.data.map(program => ({
             value: program.code,
@@ -332,24 +367,41 @@ export default {
           }));
         } else {
           console.error('Unexpected response format:', response.data);
-          this.error = 'Invalid response format from server';
+          
+          // Fallback to static exam types if API response format is unexpected
+          this.examTypes = [
+            { value: 'CET', label: 'CET - College Entrance Test' },
+            { value: 'NAT', label: 'NAT - National Achievement Test' },
+            { value: 'LSAT', label: 'LSAT - Law School Admission Test' },
+            { value: 'EAT', label: 'EAT - Engineering Aptitude Test' },
+            { value: 'MAT', label: 'MAT - Medical Admission Test' }
+          ];
+          
+          this.error = 'Warning: Using default exam types. Server returned invalid format.';
         }
       } catch (error) {
         console.error('Error fetching program codes:', error);
+        
+        // Fallback to static exam types if API request fails
+        this.examTypes = [
+          { value: 'CET', label: 'CET - College Entrance Test' },
+          { value: 'NAT', label: 'NAT - National Achievement Test' },
+          { value: 'LSAT', label: 'LSAT - Law School Admission Test' },
+          { value: 'EAT', label: 'EAT - Engineering Aptitude Test' },
+          { value: 'MAT', label: 'MAT - Medical Admission Test' }
+        ];
+        
+        // Set appropriate error message
         if (error.response) {
-          // The request was made and the server responded with a status code
-          // that falls out of the range of 2xx
           console.error('Error response:', error.response.data);
           console.error('Error status:', error.response.status);
           this.error = `Server error: ${error.response.status} - ${error.response.data.error || 'Unknown error'}`;
         } else if (error.request) {
-          // The request was made but no response was received
           console.error('No response received:', error.request);
-          this.error = 'No response from server. Please check if the backend server is running.';
+          this.error = 'No response from server. Using default exam types.';
         } else {
-          // Something happened in setting up the request that triggered an Error
           console.error('Error setting up request:', error.message);
-          this.error = 'Error setting up request. Please try again.';
+          this.error = 'Error setting up request. Using default exam types.';
         }
       } finally {
         this.loading = false;
@@ -422,14 +474,21 @@ export default {
       const formData = new FormData();
       formData.append('file', this.selectedFile);
       formData.append('examType', this.selectedExamType);
+      formData.append('examYear', this.selectedExamYear);
       
-      try {
-        // Try multiple URLs in sequence - from most specific to most general
+      // Add file structure information for the backend
+      const fileStructure = 'app_no,lastname,firstname,middleinitial,school,date,part1,part2,part3,part4,part5,oapr';
+      formData.append('file_structure', fileStructure); 
+      formData.append('has_headers', 'true');
+      
+      console.log('Sending import with structure:', fileStructure);
+      
+      try {        // Try multiple URLs in sequence - from most specific to most general
         const urls = [
           `${apiUrlWithoutTrailingSlash}/api/appointments/import-scores/`,
-          `${apiUrlWithoutTrailingSlash}/appointments/import-scores/`,
-          `${apiUrlWithoutTrailingSlash}/admin/import-scores/`,
-          `${apiUrlWithoutTrailingSlash}/admin/results/import/`
+          `${apiUrlWithoutTrailingSlash}/api/admin/import-scores/`,
+          `${apiUrlWithoutTrailingSlash}/api/import-scores/`,
+          `${apiUrlWithoutTrailingSlash}/api/score-import/`
         ];
         
         console.log(`Trying multiple URL endpoints for score import...`);
@@ -464,10 +523,11 @@ export default {
                 withCredentials: true
               }
             );
-            console.log(`Success with URL: ${url}`);
+            console.log(`Success with URL: ${url}`, response.data);
             break; // Exit the loop if successful
           } catch (error) {
             console.error(`Failed with URL ${url}:`, error);
+            console.log('Error response:', error.response?.data);
             lastError = error;
             // Continue to next URL
           }
@@ -502,14 +562,52 @@ export default {
         
       } catch (apiError) {
         console.error('API storage failed:', apiError);
-        this.showToast('Failed to save score data to the server: ' + (apiError.response?.data?.error || apiError.message), 'error');
+        
+        // More detailed error message
+        let errorMessage = 'Failed to save score data to the server';
+        
+        if (apiError.response?.data) {
+          if (typeof apiError.response.data === 'string') {
+            errorMessage += ': ' + apiError.response.data;
+          } else if (apiError.response.data.error) {
+            errorMessage += ': ' + apiError.response.data.error;
+          } else if (apiError.response.data.detail) {
+            errorMessage += ': ' + apiError.response.data.detail;
+          }
+        } else if (apiError.message) {
+          errorMessage += ': ' + apiError.message;
+        }
+        
+        this.error = errorMessage;
+        this.showToast(errorMessage, 'error');
       } finally {
         this.loading = false;
       }
     }
-  },
-  created() {
+  },  created() {
     this.fetchProgramCodes();
+    
+    // Generate available years (current year down to 2020)
+    const currentYear = new Date().getFullYear();
+    for (let year = currentYear; year >= 2020; year--) {
+      this.availableYears.push(year);
+    }
+    
+    // Check for session ID and exam type in the URL query parameters
+    const sessionId = this.$route.query.sessionId;
+    const examType = this.$route.query.examType;
+    
+    if (sessionId) {
+      console.log(`Import page loaded with sessionId: ${sessionId}, examType: ${examType}`);
+      
+      // If exam type was provided, pre-select it
+      if (examType) {
+        this.selectedExamType = examType;
+      }
+      
+      // Store the session ID for use during import
+      this.sessionId = sessionId;
+    }
   },
   mounted() {
     // Check for authentication when component mounts
@@ -533,4 +631,4 @@ export default {
     transform: translateY(0);
   }
 }
-</style> 
+</style>
