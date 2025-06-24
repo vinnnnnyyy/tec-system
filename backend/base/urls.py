@@ -9,8 +9,9 @@ from .views import (
     batch_verify_applications, count_pending_applications, debug_test_assignments,
     get_room_assignment_counts, update_appointment_status,
     create_individual_test_detail, create_bulk_test_details, AnnouncementViewSet,
-    get_student_exam_score, import_scores_api,
-    get_dashboard_stats, get_recent_appointments, reset_test_session_rooms
+    get_student_exam_score, import_scores_api, get_exam_years,
+    get_dashboard_stats, get_recent_appointments, reset_test_session_rooms,
+    search_public_exam_scores
 )
 from .date_availability_view import program_availability
 from .auth_views import (
@@ -33,10 +34,14 @@ urlpatterns = [
     path('api/score-import/', import_scores_api, name='import_scores_api'),
     path('api/appointments/import-scores/', import_scores_api, name='import_scores_api2'),
     path('appointments/import-scores/', import_scores_api, name='import_scores_api3'),
-    path('admin/import-scores/', import_scores_api, name='import_scores_api4'),  # Additional admin path
-    
-    # Student exam scores
+    path('admin/import-scores/', import_scores_api, name='import_scores_api4'),  # Additional admin path    # Student exam scores
     path('student/exam-score/', get_student_exam_score, name='get_student_exam_score'),
+    
+    # Public exam scores search endpoint
+    path('api/public/search-exam-scores/', search_public_exam_scores, name='search_public_exam_scores'),
+    
+    # Exam years endpoint
+    path('api/exam-years/', get_exam_years, name='get_exam_years'),
     
     # Dashboard statistics endpoints
     path('admin/dashboard/stats/', get_dashboard_stats, name='get_dashboard_stats'),
@@ -63,6 +68,8 @@ urlpatterns = [
     
     # Application and exam routes
     path('admin/applications/batch-verify/', batch_verify_applications, name='batch_verify_applications'),
+    # Add alternative path to support the URL being used in the frontend
+    path('admin/appointments/batch-verify/', batch_verify_applications, name='batch_verify_appointments'),
     path('admin/applications/count-pending/', count_pending_applications, name='count_pending_applications'),
     path('admin/test-rooms/assignments/count/', get_room_assignment_counts, name='get_room_assignment_counts'),
     path('admin/auto-assign/', auto_assign_test_details, name='auto_assign_test_details'),
@@ -82,4 +89,7 @@ urlpatterns = [
     # Debug endpoint
     path('debug/test-assignments/', debug_test_assignments, name='debug_test_assignments'),
     path('admin/update-appointment-status/', update_appointment_status, name='update_appointment_status'),
+
+    # Exam years endpoint
+    path('admin/exam-years/', get_exam_years, name='get_exam_years'),
 ]
