@@ -98,6 +98,16 @@
                   <option v-for="exam in examTypes" :key="exam.value" :value="exam.value">{{ exam.label }}</option>
                 </select>
               </div>
+              
+              <!-- Exam Year Selection -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Exam Year</label>
+                <select v-model="selectedExamYear" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 transition-colors duration-200 text-sm">
+                  <option value="">Choose an exam year</option>
+                  <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
+                </select>
+              </div>
 
               <!-- Import Button -->
               <div class="pt-2">
@@ -208,12 +218,12 @@ export default {
   setup() {
     const { showToast } = useToast();
     return { showToast };
-  },
-  data() {
+  },  data() {
     return {
       dragover: false,
       selectedFile: null,
       selectedExamType: '',
+      selectedExamYear: '',
       examTypes: [], // Will be populated from backend
       loading: false,
       error: null,
@@ -238,10 +248,41 @@ export default {
         }
       ]
     }
-  },
-  computed: {
+  },  computed: {
     isReadyToImport() {
-      return this.selectedFile && this.selectedExamType;
+      return this.selectedFile && this.selectedExamType && this.selectedExamYear;
+    }
+  },
+  data() {
+    return {
+      dragover: false,
+      selectedFile: null,
+      selectedExamType: '',
+      selectedExamYear: '',
+      availableYears: [], // Will be populated from API
+      examTypes: [], // Will be populated from backend
+      loading: false,
+      error: null,
+      recentImports: [
+        {
+          examType: 'LSAT Exam',
+          date: '2024-03-15 14:30',
+          successful: 150,
+          failed: 3
+        },
+        {
+          examType: 'NAT Exam',
+          date: '2024-03-14 16:45',
+          successful: 200,
+          failed: 5
+        },
+        {
+          examType: 'EAT Exam',
+          date: '2024-03-13 09:15',
+          successful: 180,
+          failed: 2
+        }
+      ]
     }
   },
   methods: {
@@ -321,7 +362,11 @@ export default {
         }
       } finally {
         this.loading = false;
-      }
+      }    },    
+    // Dummy implementation to prevent errors from old references
+    fetchAvailableYears() {
+      console.log('Using computed property for years instead of API call');
+      return Promise.resolve([]);
     },
     onFileSelect(event) {
       const file = event.target.files[0];
@@ -364,6 +409,35 @@ export default {
         return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
       }
     },
+    
+    // Fetch available exam years from API
+    async fetchAvailableYears() {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const response = await axios.get(`${apiUrl}/api/exam-years/`);
+        
+        if (response.data && Array.isArray(response.data)) {
+          this.availableYears = response.data;
+          
+          // If no years are returned, generate some default ones
+          if (this.availableYears.length === 0) {
+            const currentYear = new Date().getFullYear();
+            for (let year = currentYear; year >= currentYear - 5; year--) {
+              this.availableYears.push(year.toString());
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching available years:', error);
+        // Fallback to generating years if API fails
+        const currentYear = new Date().getFullYear();
+        this.availableYears = [];
+        for (let year = currentYear; year >= currentYear - 5; year--) {
+          this.availableYears.push(year.toString());
+        }
+      }
+    },
+    
     async startImport() {
       if (!this.isReadyToImport) {
         return;
@@ -400,13 +474,12 @@ export default {
             const columns = dataRows[i].split(',');
             
             // Ensure we have at least 4 columns (No, app no, name, school)
-            if (columns.length >= 4) {
-              parsedData.push({
-                no: parseInt(columns[0].trim()) || null,
+            if (columns.length >= 4) {              parsedData.push({                no: parseInt(columns[0].trim()) || null,
                 appNo: columns[1].trim(),
                 name: columns[2].trim(),
                 school: columns[3].trim(),
-                examType: this.selectedExamType
+                examType: this.selectedExamType,
+                year: this.selectedExamYear
               });
             }
           }
@@ -424,12 +497,11 @@ export default {
           const token = localStorage.getItem('token') || 
                        localStorage.getItem('access_token') || 
                        localStorage.getItem('authToken');
-          
-          try {
+            try {
             const response = await axios.post(
-              `${apiUrl}/api/admin/results/import/`, 
-              {
+              `${apiUrl}/api/admin/results/import/`,{
                 examType: this.selectedExamType,
+                year: this.selectedExamYear,
                 results: parsedData,
                 overwrite: true
               },
@@ -441,10 +513,9 @@ export default {
               }
             );
             console.log('Data successfully sent to API:', response.data);
-            
-            // Add to recent imports
+              // Add to recent imports
             const newImport = {
-              examType: this.selectedExamType,
+              examType: `${this.selectedExamType} (${this.selectedExamYear})`,
               date: new Date().toLocaleString(),
               successful: parsedData.length,
               failed: 0
@@ -478,9 +549,9 @@ export default {
       
       reader.readAsText(this.selectedFile);
     }
-  },
-  created() {
+  },  created() {
     this.fetchProgramCodes();
+    this.fetchAvailableYears();
   },
   mounted() {
     // Check for authentication when component mounts
@@ -504,4 +575,4 @@ export default {
     transform: translateY(0);
   }
 }
-</style> 
+</style>
