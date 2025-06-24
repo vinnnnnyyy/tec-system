@@ -45,7 +45,7 @@
                 <!-- Logo container with subtle animation -->
                 <div class="flex items-center justify-center overflow-hidden p-4">
                   <img 
-                    src="https://vectorseek.com/wp-content/uploads/2023/09/Western-Mindanao-State-University-Logo-Vector.svg-.png" 
+                    src="../assets/images/wmsu-logo.png" 
                     alt="WMSU Testing Center Logo"
                     class="max-w-full max-h-[280px] object-contain filter drop-shadow-md transform transition-all duration-700 group-hover:scale-110"
                   >
@@ -206,7 +206,7 @@ import axiosInstance from '../services/axios.interceptor'
 import { useAnnouncementStore } from '../stores/announcement'
 
 const API_URL = import.meta.env.VITE_API_URL;
-const API_ENDPOINT = `${API_URL}api/`;
+const API_ENDPOINT = `${API_URL}/`;
 
 export default {
   name: 'Home',
@@ -579,4 +579,4 @@ h2.text-transparent {
 .absolute.top-4.right-4 .rounded-full:nth-child(3) {
   animation: pulse 2s infinite 1.2s;
 }
-</style> 
+</style>

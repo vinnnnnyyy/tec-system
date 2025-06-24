@@ -221,7 +221,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import axiosInstance from '../services/axios.interceptor'
 
 const API_URL = import.meta.env.VITE_API_URL;
-const API_ENDPOINT = `${API_URL}api/`;
 
 export default {
   name: 'FAQ',
@@ -281,7 +280,8 @@ export default {
       error.value = null;
       
       try {
-        const response = await axiosInstance.get(API_ENDPOINT + 'admin/faqs/');
+        // Fixed API endpoint - using just API_URL without adding "api/" again
+        const response = await axiosInstance.get(`${API_URL}/admin/faqs/`);
         faqs.value = response.data.filter(faq => faq.is_active).map(faq => {
           // Add helpful links for some FAQs as an example
           if (faq.category === 'Scheduling') {
@@ -531,4 +531,4 @@ export default {
     height: 2rem;
   }
 }
-</style> 
+</style>
