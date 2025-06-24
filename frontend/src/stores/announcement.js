@@ -14,7 +14,7 @@ export const useAnnouncementStore = defineStore('announcement', {
       this.error = null
       
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/announcements/`)
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/announcements/`)
         this.announcements = response.data.results || response.data
       } catch (err) {
         console.error('Error fetching announcements:', err)
@@ -42,4 +42,4 @@ export const useAnnouncementStore = defineStore('announcement', {
       return state.announcements.filter(announcement => announcement.type === type)
     }
   }
-}) 
+})

@@ -22,6 +22,12 @@ export const adminRoutes = [
         name: 'AdminAppointments',
         component: () => import('../views/admin/pages/Appointments.vue')
       },
+      {
+        path: 'appointments/:id',
+        name: 'AdminAppointmentDetails',
+        component: () => import('../views/admin/pages/AppointmentDetails.vue'),
+        props: true
+      },
      
       {
         path: 'program',
@@ -50,4 +56,4 @@ export const adminRoutes = [
       },
     ]
   }
-] 
+]

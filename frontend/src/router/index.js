@@ -28,6 +28,16 @@ const routes = [
     component: () => import('../views/FAQ.vue')
   },
   {
+    path: '/about',
+    name: 'About',
+    component: () => import('../views/About.vue')
+  },
+  {
+    path: '/requirements',
+    name: 'Requirements',
+    component: () => import('../views/Requirements.vue')
+  },
+  {
     path: '/announcements',
     name: 'Announcements',
     component: () => import('../views/Announcements.vue')
@@ -62,11 +72,15 @@ const routes = [
     component: () => import('../components/ApplicationForm.vue'),
     props: route => ({ appointmentId: route.params.appointmentId }),
     meta: { requiresAuth: true }
-  },
-  {
+  },  {
     path: '/results',
     name: 'ExamResults',
     component: ExamResults
+  },
+  {
+    path: '/scores',
+    name: 'ExamScores',
+    component: () => import('../views/ExamScores.vue')
   },
  
   
