@@ -3,7 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from .models import Program, Appointment, FAQ, ExamScore, ExamResult, TestSession, TestCenter, TestRoom, Announcement
-from .serializers import ProgramSerializer, AppointmentSerializer, FAQSerializer, TestSessionSerializer, TestCenterSerializer, TestRoomSerializer, AnnouncementSerializer
+from .serializers import (
+    ProgramSerializer, AppointmentSerializer, FAQSerializer, TestSessionSerializer, 
+    TestCenterSerializer, TestRoomSerializer, AnnouncementSerializer, ExamScoreDetailSerializer
+)
 from rest_framework.decorators import action, api_view, permission_classes
 import csv
 import io
@@ -386,10 +389,9 @@ def import_exam_results(request):
         
         # Delete existing results for this exam type if overwrite is true
         if data.get('overwrite', False):
-            ExamResult.objects.filter(exam_type=exam_type).delete()
-        
-        # Create new exam results
+            ExamResult.objects.filter(exam_type=exam_type).delete()        # Create new exam results
         created_count = 0
+        exam_year = data.get('year')
         for result in results:
             # Convert the serial number to integer if possible
             try:
@@ -397,12 +399,12 @@ def import_exam_results(request):
             except (ValueError, TypeError):
                 serial_no = None
                 
-            ExamResult.objects.create(
-                serial_no=serial_no,
+            ExamResult.objects.create(                serial_no=serial_no,
                 app_no=result.get('appNo', ''),
                 name=result.get('name', ''),
                 school=result.get('school', ''),
                 exam_type=exam_type,
+                year=exam_year,
                 imported_by=request.user
             )
             created_count += 1
@@ -422,22 +424,28 @@ def get_exam_results(request):
     Get exam results with optional filtering
     """
     exam_type = request.query_params.get('exam_type', None)
+    exam_year = request.query_params.get('exam_year', None)
+    
+    queryset = ExamResult.objects.all()
     
     if exam_type:
-        results = ExamResult.objects.filter(exam_type=exam_type)
-    else:
-        results = ExamResult.objects.all()
+        queryset = queryset.filter(exam_type=exam_type)
+        
+    if exam_year:
+        queryset = queryset.filter(year=exam_year)
+        
+    results = queryset
     
     # Convert to list of dictionaries
     data = []
-    for result in results:
-        data.append({
+    for result in results:        data.append({
             'id': result.id,
             'no': result.serial_no if result.serial_no is not None else 0,
             'appNo': result.app_no,
             'name': result.name,
             'school': result.school,
             'examType': result.exam_type,
+            'year': result.year,
             'importedDate': result.created_at.isoformat()
         })
     
@@ -1215,7 +1223,7 @@ def batch_verify_applications(request):
             return Response({'error': 'No matching applications found'}, status=status.HTTP_404_NOT_FOUND)
         
         # Update status based on action
-        status_value = 'waiting_for_test_details' if action == 'approve' else 'rejected'
+        status_value = 'approved' if action == 'approve' else 'rejected'
         
         updated_count = 0
         for application in applications:
@@ -1854,13 +1862,13 @@ def get_student_exam_score(request):
                 'detail': 'Your application has been submitted, but no exam scores have been uploaded yet.',
                 'model_info': {
                     'available_score_fields': score_fields,
-                    'labels': {
+                    'labels':{
                         'part1': 'English Proficiency',
                         'part2': 'Reading Comprehension',
                         'part3': 'Science Process Skills',
                         'part4': 'Quantitative Skills',
                         'part5': 'Abstract Thinking Skills',
-                        'oapr': 'Overall Ability Percentile Rank'
+                        'oapr': 'Overall Ability Percentile'
                     }
                 }
             }, status=404)
@@ -1888,7 +1896,8 @@ def get_student_exam_score(request):
 @permission_classes([IsAuthenticated])
 def import_scores_api(request):
     """
-    Import scores from a CSV file with multiple test part columns
+    Import exam scores from a CSV file
+    Expected columns: app_no, lastname, firstname, middleinitial, school, date, part1, part2, part3, part4, part5, oapr
     """
     print("import_scores_api called with request:", request.method)
     print("Request DATA:", request.data)
@@ -1914,10 +1923,12 @@ def import_scores_api(request):
         
         print(f"CSV Headers: {headers}")
         
-        # Find column indices
+        # Find column indices based on the new structure
         col_indices = {
             'app_no': headers.index('app_no') if 'app_no' in headers else None,
-            'name': headers.index('name') if 'name' in headers else None,
+            'lastname': headers.index('lastname') if 'lastname' in headers else None,
+            'firstname': headers.index('firstname') if 'firstname' in headers else None,
+            'middleinitial': headers.index('middleinitial') if 'middleinitial' in headers else None,
             'school': headers.index('school') if 'school' in headers else None,
             'date': headers.index('date') if 'date' in headers else None,
             'part1': headers.index('part1') if 'part1' in headers else None,
@@ -1929,8 +1940,11 @@ def import_scores_api(request):
         }
         
         # Ensure required columns exist
-        if col_indices['name'] is None or col_indices['school'] is None:
-            return Response({'error': 'CSV must include name and school columns'}, status=400)
+        if (col_indices['lastname'] is None or col_indices['firstname'] is None or 
+            col_indices['school'] is None):
+            return Response({
+                'error': 'CSV must include lastname, firstname, and school columns'
+            }, status=400)
         
         # Track results
         matched_count = 0
@@ -1942,7 +1956,14 @@ def import_scores_api(request):
             if len(row) < 2:
                 continue  # Skip rows without enough columns
                 
-            name = row[col_indices['name']].strip() if col_indices['name'] is not None and col_indices['name'] < len(row) else ''
+            # Extract name components
+            lastname = row[col_indices['lastname']].strip() if col_indices['lastname'] is not None and col_indices['lastname'] < len(row) else ''
+            firstname = row[col_indices['firstname']].strip() if col_indices['firstname'] is not None and col_indices['firstname'] < len(row) else ''
+            middleinitial = row[col_indices['middleinitial']].strip() if col_indices['middleinitial'] is not None and col_indices['middleinitial'] < len(row) else ''
+            
+            # Construct full name
+            full_name = f"{firstname} {middleinitial} {lastname}".strip().replace("  ", " ")
+            
             school = row[col_indices['school']].strip() if col_indices['school'] is not None and col_indices['school'] < len(row) else ''
             app_no = row[col_indices['app_no']].strip() if col_indices['app_no'] is not None and col_indices['app_no'] < len(row) else ''
             
@@ -1969,7 +1990,7 @@ def import_scores_api(request):
             
             # Try to find a matching appointment
             matching_appointments = Appointment.objects.filter(
-                full_name__iexact=name,
+                full_name__iexact=full_name,
                 school_name__iexact=school,
                 status='submitted'  # Only match submitted appointments
             )
@@ -1981,7 +2002,7 @@ def import_scores_api(request):
                         appointment=appointment,
                         defaults={
                             'app_no': app_no,
-                            'name': name,
+                            'name': full_name,  # Use constructed full name
                             'school': school,
                             'score': oapr,  # Use OAPR as main score
                             'part1': part1,
@@ -2005,7 +2026,7 @@ def import_scores_api(request):
                 ExamScore.objects.create(
                     appointment=None,
                     app_no=app_no,
-                    name=name,
+                    name=full_name,  # Use constructed full name
                     school=school,
                     score=oapr,  # Use OAPR as main score
                     part1=part1,
@@ -2020,7 +2041,7 @@ def import_scores_api(request):
                 )
                 created_count += 1
                 unmatched_count += 1
-        
+            
         return Response({
             'success': True,
             'matched': matched_count,
@@ -2242,3 +2263,142 @@ def reset_test_session_rooms(request):
         return Response({
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def get_exam_years(request):
+    """
+    Get all unique exam years from ExamResult records
+    """
+    # Get distinct exam years, handle NULL values
+    years = list(ExamResult.objects.exclude(year__isnull=True)
+                .values_list('year', flat=True)
+                .distinct().order_by('-year'))
+    
+    # Add current year if it's not in the list
+    current_year = str(datetime.now().year)
+    if current_year not in years:
+        years.insert(0, current_year)
+    
+    return Response(years)
+
+@api_view(['GET'])
+def search_public_exam_scores(request):
+    """
+    Public endpoint for searching exam scores using application number and other details.
+    Does not require authentication.
+    """
+    try:
+        app_no = request.query_params.get('app_no', '')
+        last_name = request.query_params.get('last_name', '')
+        first_name = request.query_params.get('first_name', '')
+        middle_initial = request.query_params.get('middle_initial', '')
+        exam_year = request.query_params.get('exam_year', '')
+        exam_type = request.query_params.get('exam_type', '')
+        
+        print(f"SEARCH: app_no={app_no}, last_name={last_name}, first_name={first_name}, middle_initial={middle_initial}")
+        
+        # Basic validation
+        if not app_no or not last_name:
+            return Response({
+                'status': 'error',
+                'detail': 'Application Number and Last Name are required.'
+            }, status=400)
+        
+        # Start with a base query
+        query = Q(app_no=app_no)
+        
+        # Since the `name` field now stores the full name as a combined string
+        # (firstname middleinitial lastname), we need to search using icontains
+        # to match any part of the name field
+        
+        # First, try with exact application number and then filter by name components
+        if last_name:
+            query = query & Q(name__icontains=last_name)
+        
+        if first_name:
+            query = query & Q(name__icontains=first_name)
+        
+        if middle_initial:
+            query = query & Q(name__icontains=middle_initial)
+            
+        # Add exam type and year if provided
+        if exam_type:
+            query = query & Q(exam_type=exam_type)
+            
+        if exam_year:
+            query = query & Q(year=exam_year)
+          # For debugging
+        print(f"Executing query: {query}")
+        
+        # Execute the query - prioritize exact exam type match if provided
+        if exam_type:
+            print(f"Searching with specific exam type: {exam_type}")
+            exam_scores = ExamScore.objects.filter(query).order_by('-created_at')
+            
+            if exam_scores.exists():
+                print(f"Found {exam_scores.count()} scores, using the most recent one")
+                exam_score = exam_scores.first()
+                serializer = ExamScoreDetailSerializer(exam_score)
+                return Response(serializer.data)
+        
+        # If no exam_type was provided or no results found with exam_type, try without it
+        if not exam_type or not exam_scores.exists():
+            # Remove exam_type from query if it was included
+            if exam_type:
+                # Recreate the base query without the exam_type filter
+                base_query = Q(app_no=app_no)
+                if last_name:
+                    base_query = base_query & Q(name__icontains=last_name)
+                if first_name:
+                    base_query = base_query & Q(name__icontains=first_name)
+                if middle_initial:
+                    base_query = base_query & Q(name__icontains=middle_initial)
+                if exam_year:
+                    base_query = base_query & Q(year=exam_year)
+            else:
+                base_query = query
+                
+            # Try to find any exam scores with the app_no and last_name
+            exam_scores = ExamScore.objects.filter(base_query).order_by('-created_at')
+            
+            if exam_scores.exists():
+                # If multiple scores found, return all of them as a list
+                if exam_scores.count() > 1:
+                    print(f"Found {exam_scores.count()} different exam scores for app_no={app_no}")
+                    serializer = ExamScoreDetailSerializer(exam_scores, many=True)
+                    return Response(serializer.data)
+                else:
+                    # Just one score found
+                    print(f"Found single exam score: {exam_scores.first()}")
+                    serializer = ExamScoreDetailSerializer(exam_scores.first())
+                    return Response(serializer.data)
+            else:
+                # No scores found, try a simplified search
+                print("No results with all criteria, trying simplified search")
+                simplified_query = Q(app_no=app_no) & Q(name__icontains=last_name)
+                exam_scores = ExamScore.objects.filter(simplified_query).order_by('-created_at')
+                
+                if exam_scores.exists():
+                    # If multiple scores found, return all of them as a list
+                    if exam_scores.count() > 1:
+                        print(f"Found {exam_scores.count()} different exam scores with simplified criteria")
+                        serializer = ExamScoreDetailSerializer(exam_scores, many=True)
+                        return Response(serializer.data)
+                    else:
+                        # Just one score found
+                        print(f"Found single exam score with simplified criteria: {exam_scores.first()}")
+                        serializer = ExamScoreDetailSerializer(exam_scores.first())
+                        return Response(serializer.data)
+                else:
+                    print(f"No exam scores found for criteria: app_no={app_no}, last_name={last_name}")
+                    return Response({
+                        'status': 'not_found',
+                        'detail': 'No exam score found matching your criteria.'
+                    }, status=404)
+            
+    except Exception as e:
+        print(f"Error in search_public_exam_scores: {str(e)}")
+        return Response({
+            'status': 'error',
+            'detail': 'An error occurred while searching for exam scores.'
+        }, status=500)
