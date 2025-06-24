@@ -942,8 +942,9 @@ import axiosInstance from '../../../services/axios.interceptor'
 import { useAnnouncementStore } from '../../../stores/announcement'
 import AdminPagination from '../components/AdminPagination.vue'
 
+// Define the API endpoint without duplicating 'api'
 const API_URL = import.meta.env.VITE_API_URL;
-const API_ENDPOINT = `${API_URL}api/`; 
+const API_ENDPOINT = `${API_URL}/`; 
 
 export default {
   name: 'Settings',
@@ -1843,4 +1844,4 @@ export default {
   transform: translateY(-2px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
-</style> 
+</style>
