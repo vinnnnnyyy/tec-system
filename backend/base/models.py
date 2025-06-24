@@ -48,6 +48,8 @@ class Appointment(models.Model):
     ]
     
     STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
         ('waiting_for_test_details', 'Waiting for Test Details'),
         ('waiting_for_submission', 'Waiting for Submission'),
         ('rejected', 'Rejected'),
@@ -141,6 +143,7 @@ class ExamScore(models.Model):
     school = models.CharField(max_length=255, null=True, blank=True)
     exam_type = models.CharField(max_length=50, null=True, blank=True, default='')
     score = models.CharField(max_length=20, null=True, blank=True)
+    year = models.CharField(max_length=4, null=True, blank=True)
     # Add fields for test parts
     part1 = models.CharField(max_length=20, null=True, blank=True, verbose_name="English Proficiency")
     part2 = models.CharField(max_length=20, null=True, blank=True, verbose_name="Reading Comprehension")
@@ -158,12 +161,13 @@ class ExamScore(models.Model):
             return f"{self.appointment.full_name} - Score: {self.score}"
         else:
             return f"{self.name} - {self.exam_type} - App No: {self.app_no}"
-    
+            
     class Meta:
         indexes = [
             models.Index(fields=['app_no']),
             models.Index(fields=['exam_type']),
             models.Index(fields=['name']),
+            models.Index(fields=['year']),
         ]
 
 # Exam Result Model - For storing imported exam results
@@ -173,6 +177,7 @@ class ExamResult(models.Model):
     name = models.CharField(max_length=255)
     school = models.CharField(max_length=255)
     exam_type = models.CharField(max_length=50)
+    year = models.CharField(max_length=4, null=True, blank=True)
     imported_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='imported_results')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -186,6 +191,7 @@ class ExamResult(models.Model):
             models.Index(fields=['app_no']),
             models.Index(fields=['exam_type']),
             models.Index(fields=['name']),
+            models.Index(fields=['year']),
         ]
 
 # Test Center Model
