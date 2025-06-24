@@ -564,10 +564,12 @@ export default {
           fullDetails: appointment // Store the full appointment details
         }))
 
-        // Extract unique status options
-        this.statusOptions = [...new Set(this.appointments.map(a => a.status))]
+        // Extract unique status options but filter out the standard ones
+        // Fix: Use a Set to ensure we only get unique status values
+        const uniqueStatuses = [...new Set(this.appointments.map(a => a.status))];
+        this.statusOptions = uniqueStatuses
           .filter(status => !['approved', 'pending', 'claimed', 'rejected'].includes(status))
-          .sort()
+          .sort();
         
         // Extract unique program options
         this.programOptions = [...new Set(this.appointments.map(a => a.program))].sort()
@@ -981,4 +983,4 @@ export default {
 .status-badge:hover {
   transform: scale(1.05);
 }
-</style> 
+</style>
