@@ -281,6 +281,7 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AdminPagination from '../components/AdminPagination.vue'
 import axiosInstance from '../../../services/axios.interceptor'
 
@@ -290,6 +291,7 @@ export default {
     AdminPagination
   },
   setup() {
+    const router = useRouter()
     // Dashboard statistics state
     const dashboardStats = ref({
       totalAppointments: 0,
@@ -471,8 +473,8 @@ export default {
 
     // View details handler
     const viewDetails = (appointmentId) => {
-      // Navigate to appointment details page
-      window.location.href = `/admin/appointments/${appointmentId}`
+      // Navigate to appointment details page using Vue Router
+      router.push(`/admin/appointments/${appointmentId}`)
     }
     
     // Initial data fetch
@@ -601,4 +603,4 @@ export default {
 .duration-300 {
   transition-duration: 300ms;
 }
-</style> 
+</style>
