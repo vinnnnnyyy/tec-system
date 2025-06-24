@@ -164,6 +164,7 @@
                   id="password"
                   v-model="password"
                   :type="showPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
                   required
                   class="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-crimson-500 focus:border-transparent sm:text-sm bg-white/90 hover:bg-white transition-colors duration-200"
                   placeholder="Create password"
@@ -189,6 +190,7 @@
                   id="confirmPassword"
                   v-model="confirmPassword"
                   :type="showConfirmPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
                   required
                   class="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-crimson-500 focus:border-transparent sm:text-sm bg-white/90 hover:bg-white transition-colors duration-200"
                   placeholder="Confirm password"
@@ -554,4 +556,4 @@ export default {
 .z-10 {
   z-index: 10;
 }
-</style> 
+</style>
