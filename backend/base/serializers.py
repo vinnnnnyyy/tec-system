@@ -74,7 +74,7 @@ class ExamScoreDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExamScore
         fields = [
-            'id', 'app_no', 'name', 'school', 'exam_type', 'score',
+            'id', 'app_no', 'name', 'school', 'exam_type', 'score', 'year',
             'part1', 'part2', 'part3', 'part4', 'part5', 'oapr',
             'exam_date', 'created_at'
         ]
