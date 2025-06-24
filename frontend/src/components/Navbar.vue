@@ -66,9 +66,8 @@
               class="px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 flex items-center gap-1.5 hover:bg-crimson-50 hover:text-crimson-600 hover:scale-[1.02] active:scale-[0.98]"
               :class="{
                 'bg-crimson-100 text-crimson-700': isCurrentRoute(item.path)
-              }"
-              @click.native="refreshPageIfSame(item.path)">
-              <i :class="item.icon"></i>
+              }"              @click.native="refreshPageIfSame(item.path)">
+              <font-awesome-icon :icon="item.icon" />
               <span>{{ item.name }}</span>
             </router-link>
           </div>
@@ -80,8 +79,7 @@
               <router-link 
                 to="/profile" 
                 class="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium border transition-all duration-300 border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-crimson-600 hover:border-crimson-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <i class="fas fa-user"></i>
+              >                <font-awesome-icon :icon="['fas', 'user']" />
                 <span>Profile</span>
               </router-link>
               <a 
@@ -99,15 +97,13 @@
               <router-link 
                 to="/login" 
                 class="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium border transition-all duration-300 border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-crimson-600 hover:border-crimson-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <i class="fas fa-sign-in-alt"></i>
+              >                <font-awesome-icon :icon="['fas', 'sign-in-alt']" />
                 <span>Login</span>
               </router-link>
               <router-link 
                 to="/signup" 
                 class="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 border bg-crimson-600 text-white border-transparent hover:bg-crimson-700 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] active:bg-crimson-800"
-              >
-                <i class="fas fa-user-plus"></i>
+              >                <font-awesome-icon :icon="['fas', 'user-plus']" />
                 <span>Register</span>
               </router-link>
             </template>
@@ -227,8 +223,7 @@ export default {
     
     // Check authentication status on component mount
     const checkAuth = () => {
-      isAuthenticated.value = !!AuthService.getCurrentUser()
-    }
+      isAuthenticated.value = !!AuthService.getCurrentUser()    }
 
     // Navigation items data
     const navigationItems = [
@@ -236,6 +231,7 @@ export default {
       { name: 'Schedule', path: '/schedule', icon: ['fas', 'calendar-alt'] },
       { name: 'Announcements', path: '/announcements', icon: ['fas', 'bullhorn']},
       { name: 'Exam Results', path: '/results', icon: ['fas', 'award']},
+      { name: 'Exam Scores', path: '/scores', icon: ['fas', 'graduation-cap']},
       { name: 'FAQ', path: '/faq', icon: ['fas', 'question-circle'] }
     ]
 
@@ -337,7 +333,5 @@ export default {
 
 <style scoped>
 /* Add specific styles if needed, like custom hamburger animation details */
-.hamburger-line {
-  /* Base styles already applied via Tailwind, add transitions if needed */
-}
-</style> 
+/* Base styles for hamburger line are applied via Tailwind */
+</style>
