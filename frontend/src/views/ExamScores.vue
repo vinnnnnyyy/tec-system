@@ -1,4 +1,40 @@
 <template>
+  <!-- Header Banner -->
+    <section class="relative min-h-[600px] flex items-center py-20 sm:py-28 md:py-32 overflow-hidden">
+      <!-- Background image -->
+      <div 
+        class="absolute inset-0 bg-cover bg-center bg-no-repeat transform scale-105 transition-transform duration-[2s]"
+        :style="{ backgroundImage: `url('https://i.ytimg.com/vi/JoimFFEafbE/maxresdefault.jpg')` }"
+      ></div>
+      
+      <!-- Enhanced Overlay with multiple layers -->
+      <div class="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-transparent backdrop-blur-sm"></div>
+      <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+      
+      <!-- Content -->
+      <div class="container mx-auto px-4 relative z-10">
+        <div class="max-w-7xl mx-auto">
+          <div class="max-w-2xl">
+            <!-- Main Content -->
+            <div class="text-left animate-fade-in-up">
+              <div class="inline-block">
+                <span class="text-crimson-300 bg-white/10 backdrop-blur-lg px-4 py-1.5 rounded-full uppercase tracking-wider text-sm font-semibold mb-4 block">
+                  Examination Score Results
+                </span>
+              </div>
+              
+              <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-6 leading-tight">
+                Access Your <span class="text-transparent bg-clip-text bg-gradient-to-r from-crimson-300 to-pink-300">Exam Results</span> and Important Updates
+              </h1>
+              
+              <p class="text-lg sm:text-xl text-gray-200 max-w-xl mb-8 leading-relaxed">
+                Access your official exam results, check your scores, and stay updated on important announcements from the Testing and Evaluation Center.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>  
   <div class="min-h-screen bg-gray-50 py-8">
     <div class="container mx-auto px-4 max-w-4xl">
       <!-- Header Section -->

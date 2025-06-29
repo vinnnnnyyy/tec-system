@@ -16,7 +16,7 @@
           ]"
           @click="closeMobileMenu">
           <img src="../assets/images/wmsu-logo.png" alt="Logo" class="h-10 w-auto md:h-12">
-          <span class="text-lg md:text-xl">Testing Evaluation Center</span>
+          <span class="text-lg md:text-xl">Testing & Evaluation Center</span>
         </router-link>    
     
         <!-- Mobile menu button -->
@@ -230,7 +230,7 @@ export default {
       { name: 'Home', path: '/', icon: ['fas', 'home'] },
       { name: 'Schedule', path: '/schedule', icon: ['fas', 'calendar-alt'] },
       { name: 'Announcements', path: '/announcements', icon: ['fas', 'bullhorn']},
-      { name: 'Exam Results', path: '/results', icon: ['fas', 'award']},
+      { name: 'Exam Passers', path: '/results', icon: ['fas', 'award']},
       { name: 'Exam Scores', path: '/scores', icon: ['fas', 'graduation-cap']},
       { name: 'FAQ', path: '/faq', icon: ['fas', 'question-circle'] }
     ]

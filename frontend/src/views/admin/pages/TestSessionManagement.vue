@@ -907,8 +907,7 @@
                 @click="confirmAction" 
                 class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 flex items-center justify-center"
                 :disabled="loading.confirmation"
-              >
-                <i v-if="loading.confirmation" class="fas fa-spinner fa-spin mr-2"></i>
+              >                <i v-if="loading.confirmation" class="fas fa-spinner fa-spin mr-2"></i>
                 <i v-else class="fas fa-trash mr-2"></i>
                 {{ confirmationData.confirmButtonText }}
               </button>
@@ -916,6 +915,19 @@
           </div>
         </div>
       </div>
+      
+      <!-- Room Allocations Modal -->
+      <RoomAllocationsModal
+        :show="showRoomAllocationsModal"
+        :session="selectedSession"
+        :rooms="roomAllocations.data"
+        :loading="roomAllocations.loading"
+        :error="roomAllocations.error"
+        @close="showRoomAllocationsModal = false"
+        @retry="checkRoomAllocations"
+        @success="showToast($event, 'success')"
+        @error="showToast($event, 'error')"
+      />
     </div>
   </div>
 </template>
@@ -926,11 +938,13 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replac
 import AuthService from '../../../services/auth.service';
 import axiosInstance from '../../../services/axios.interceptor';
 import AdminPagination from '../components/AdminPagination.vue';
+import RoomAllocationsModal from './room-allocations-modal.vue';
 import { useToast } from '../../../composables/useToast';
 
 export default {
   components: {
-    AdminPagination
+    AdminPagination,
+    RoomAllocationsModal
   },
   setup() {
     const { showToast } = useToast();
@@ -962,7 +976,15 @@ export default {
       showCreateSessionModal: false,
       showCreateCenterModal: false,
       showCreateRoomModal: false,
+      showRoomAllocationsModal: false, // New modal state
       createBothSlots: false,
+      // Store the selected session for room allocations
+      selectedSession: null,
+      roomAllocations: {
+        loading: false,
+        data: [],
+        error: null
+      },
       autoAssign: {
         testSessionId: '',
         groupBySchool: true,
@@ -1275,12 +1297,59 @@ export default {
       
       // Store the session ID for the update operation
       this.editingSessionId = session.id;
-    },
-    
-    checkRoomAllocations(session) {
-      // View room allocations for a session
-      console.log('Check room allocations for session:', session);
-      // This could navigate to a detailed view of allocations
+    },      async checkRoomAllocations(session) {
+      // Store the selected session and show the modal
+      this.selectedSession = session;
+      this.roomAllocations.loading = true;
+      this.roomAllocations.error = null;
+      this.roomAllocations.data = [];
+      
+      try {
+        // First try using the new API endpoint which provides allocations for a specific session
+        try {
+          // This will use the new endpoint we just created
+          const response = await axiosInstance.get(`/api/admin/test-sessions/${session.id}/allocations/`);
+          if (response.data && Array.isArray(response.data)) {
+            this.roomAllocations.data = response.data;
+            console.log('Room allocations fetched from specific endpoint:', this.roomAllocations.data);
+          }
+        } catch (specificError) {
+          console.warn('Specific allocations endpoint failed, falling back to generic approach:', specificError);
+          
+          // Fallback approach: Fetch test rooms data and centers data separately
+          const roomsResponse = await axiosInstance.get('/api/admin/test-rooms/');
+          const centersResponse = await axiosInstance.get('/api/admin/test-centers/');
+          
+          const centers = centersResponse.data || [];
+          const allRooms = roomsResponse.data || [];
+          
+          // Process and format room data for display
+          const roomsWithCenterNames = allRooms.map(room => {
+            // Find the center this room belongs to
+            const center = centers.find(c => c.id === room.test_center);
+            
+            return {
+              ...room,
+              center_name: center ? center.name : 'Unknown Center',
+              test_center_name: center ? center.name : 'Unknown Center',
+              test_session_id: session.id
+            };
+          });
+          
+          // Assign these rooms to the modal data
+          this.roomAllocations.data = roomsWithCenterNames;
+          console.log('Room allocations prepared via fallback:', this.roomAllocations.data);
+        }
+      } catch (error) {
+        console.error('Error fetching room allocations:', error);
+        this.roomAllocations.error = 'Failed to load room allocations. Please try again.';
+        this.showToast('Failed to load room allocations', 'error');
+      } finally {
+        this.roomAllocations.loading = false;
+      }
+      
+      // Show the modal
+      this.showRoomAllocationsModal = true;
     },
     
     showDeleteConfirmation(session) {
@@ -1805,8 +1874,7 @@ export default {
             time_slot: 'both',  // Switch to 'both' as a workaround
             force_assign_any_slot: true  // Add another parameter that might help
           };
-          
-          try {
+            try {
             console.log('Trying fallback request:', fallbackRequest);
             const fallbackResponse = await axiosInstance.post('/api/admin/auto-assign/', fallbackRequest);
             const fallbackResult = fallbackResponse.data;
@@ -1818,14 +1886,11 @@ export default {
               result.success = true;
               result.assigned_applications = fallbackResult.assigned_applications || 
                                             fallbackResult.assigned_ids || 
-                                            fallbackResult.details?.map(d => d.application_id || d.student_id) || 
-                                            [];
-              result.room_assignments = fallbackResult.room_assignments;
-              result.details = fallbackResult.details;
+                                            fallbackResult.assigned || [];
             }
           } catch (fallbackError) {
-            console.error('Fallback auto-assign error:', fallbackError);
-            // Continue with original result if fallback fails
+            console.error('Fallback approach failed:', fallbackError);
+            // Continue with original result
           }
         }
 

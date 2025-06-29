@@ -65,11 +65,16 @@
                     class="button button-danger">
               <i class="fas fa-times mr-2"></i>
               Reject
-            </button>
-            <button v-if="canMarkClaimed()"
-                    @click="markAsClaimed"
+            </button>            <button v-if="canMarkAsSubmitted()"
+                    @click="markAsSubmitted"
                     class="button button-primary">
               <i class="fas fa-clipboard-check mr-2"></i>
+              Mark as Submitted
+            </button>
+            <button v-if="canMarkAsClaimed()"
+                    @click="markAsClaimed"
+                    class="button button-primary">
+              <i class="fas fa-check-double mr-2"></i>
               Mark as Claimed
             </button>
             <button v-if="canReschedule()"
@@ -196,6 +201,78 @@
             </div>
           </div>
         </div>
+
+        <!-- Test Assignment Section - Only show when status is waiting_for_test_details -->
+        <div v-if="appointment && appointment.status === 'waiting_for_test_details'" 
+             class="lg:col-span-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div class="p-4 border-b border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+              <i class="fas fa-clipboard-list text-indigo-500 mr-2"></i>
+              Assign Test Center and Room
+            </h3>
+          </div>
+          
+          <div class="p-6">
+            <p class="mb-4 text-gray-600">
+              Select a test center and test room to assign to this applicant. 
+              Once assigned, the status will automatically update to "Waiting for Submission".
+            </p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Test Center Selection -->
+              <div class="space-y-3">
+                <label class="block text-sm font-medium text-gray-700">Test Center</label>
+                <div class="relative">
+                  <select 
+                    v-model="selectedTestCenter" 
+                    @change="onTestCenterChange"
+                    class="form-select block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    <option value="" disabled selected>Select a test center</option>
+                    <option v-for="center in testCenters" :key="center.id" :value="center.id">
+                      {{ center.name }}
+                    </option>
+                  </select>
+                  <div v-if="loadingTestCenters" class="absolute right-10 top-3">
+                    <i class="fas fa-circle-notch fa-spin text-gray-400"></i>
+                  </div>
+                </div>
+                <p v-if="testCenterError" class="text-sm text-red-500">{{ testCenterError }}</p>
+              </div>
+              
+              <!-- Test Room Selection -->
+              <div class="space-y-3">
+                <label class="block text-sm font-medium text-gray-700">Test Room</label>
+                <div class="relative">
+                  <select 
+                    v-model="selectedTestRoom" 
+                    :disabled="!selectedTestCenter || loadingTestRooms"
+                    class="form-select block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    <option value="" disabled selected>Select a test room</option>
+                    <option v-for="room in filteredTestRooms" :key="room.id" :value="room.id">
+                      {{ room.name }} ({{ room.time_slot === 'morning' ? 'Morning' : 'Afternoon' }}, 
+                      {{ room.available_capacity }} available)
+                    </option>
+                  </select>
+                  <div v-if="loadingTestRooms" class="absolute right-10 top-3">
+                    <i class="fas fa-circle-notch fa-spin text-gray-400"></i>
+                  </div>
+                </div>
+                <p v-if="testRoomError" class="text-sm text-red-500">{{ testRoomError }}</p>
+              </div>
+            </div>
+            
+            <div class="flex justify-end mt-6">
+              <button 
+                @click="assignTestDetails"
+                :disabled="!selectedTestCenter || !selectedTestRoom || submittingAssignment"
+                :class="['button', (!selectedTestCenter || !selectedTestRoom || submittingAssignment) ? 'bg-gray-300 cursor-not-allowed' : 'button-primary']">
+                <i class="fas fa-save mr-2"></i>
+                <span v-if="submittingAssignment">Assigning...</span>
+                <span v-else>Assign Test Details</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Personal Information Section -->
@@ -266,57 +343,140 @@ export default {
     }
   },
   setup(props) {
-    const router = useRouter()
     const route = useRoute()
+    const router = useRouter()
     const { showToast } = useToast()
     
-    // Use either prop or route param for ID
-    const appointmentId = computed(() => props.id || route.params.id)
-    
-    // State
+    const appointmentId = ref(route.params.id)
     const appointment = ref(null)
     const testDetails = ref({})
     const loading = ref(true)
     const error = ref(null)
     
-    // Computed
+    // Test center and room assignment data
+    const testCenters = ref([])
+    const testRooms = ref([])
+    const selectedTestCenter = ref('')
+    const selectedTestRoom = ref('')
+    const loadingTestCenters = ref(false)
+    const loadingTestRooms = ref(false)
+    const testCenterError = ref(null)
+    const testRoomError = ref(null)
+    const submittingAssignment = ref(false)
+    
+    // Check if the assigned time slot matches the preferred time slot
     const timeSlotsMatch = computed(() => {
-      if (!appointment.value) return true;
-      
-      // If assigned test time slot is not set, they match by default
-      if (!appointment.value.assigned_test_time_slot) return true;
-      
-      // Compare preferred time slot with assigned test time slot
-      return appointment.value.time_slot === appointment.value.assigned_test_time_slot;
+      if (!appointment.value) return true
+      if (!appointment.value.assigned_test_time_slot) return true
+      return appointment.value.assigned_test_time_slot === appointment.value.time_slot
     })
     
-    // Methods
+    // Filter test rooms based on the selected test center
+    const filteredTestRooms = computed(() => {
+      if (!selectedTestCenter.value) return []
+      return testRooms.value.filter(room => room.test_center === parseInt(selectedTestCenter.value, 10))
+    })
+    
+    const fetchTestCenters = async () => {
+      loadingTestCenters.value = true
+      testCenterError.value = null
+      
+      try {
+        const response = await axiosInstance.get('/api/admin/test-centers/')
+        testCenters.value = response.data
+      } catch (err) {
+        console.error('Error fetching test centers:', err)
+        testCenterError.value = 'Failed to load test centers. Please try again.'
+      } finally {
+        loadingTestCenters.value = false
+      }
+    }
+    
+    const fetchTestRooms = async () => {
+      loadingTestRooms.value = true
+      testRoomError.value = null
+      
+      try {
+        const response = await axiosInstance.get('/api/admin/test-rooms/')
+        testRooms.value = response.data
+      } catch (err) {
+        console.error('Error fetching test rooms:', err)
+        testRoomError.value = 'Failed to load test rooms. Please try again.'
+      } finally {
+        loadingTestRooms.value = false
+      }
+    }
+    
+    const onTestCenterChange = () => {
+      // Reset room selection when center changes
+      selectedTestRoom.value = ''
+    }
+    
+    const assignTestDetails = async () => {
+      if (!selectedTestCenter.value || !selectedTestRoom.value) {
+        showToast('Please select both a test center and test room', 'error')
+        return
+      }
+      
+      submittingAssignment.value = true
+      
+      try {
+        const response = await axiosInstance.post('/api/admin/assign-test-details/', {
+          appointment_id: appointmentId.value,
+          test_center_id: selectedTestCenter.value,
+          test_room_id: selectedTestRoom.value
+        })
+        
+        if (response.data.success) {
+          showToast('Test details assigned successfully', 'success')
+          // Refresh the appointment data
+          fetchAppointmentDetails()
+        } else {
+          showToast(response.data.error || 'Failed to assign test details', 'error')
+        }
+      } catch (err) {
+        console.error('Error assigning test details:', err)
+        showToast('Error assigning test details: ' + (err.response?.data?.error || err.message), 'error')
+      } finally {
+        submittingAssignment.value = false
+      }
+    }
+    
     const fetchAppointmentDetails = async () => {
       loading.value = true
       error.value = null
       
       try {
-        // Fetch main appointment data
         const response = await axiosInstance.get(`/api/appointments/${appointmentId.value}/`)
         appointment.value = response.data
         
-        // Fetch test details if the appointment is assigned
-        if (appointment.value.status === 'waiting_for_submission' || 
-            appointment.value.status === 'submitted' ||
-            appointment.value.status === 'claimed') {
-          try {
-            const testDetailsResponse = await axiosInstance.get(`/api/appointments/${appointmentId.value}/test-details/`)
-            testDetails.value = testDetailsResponse.data
-            console.log('Test details loaded:', testDetails.value)
-          } catch (err) {
-            console.error('Failed to load test details:', err)
+        // Fetch test details if available
+        if (appointment.value) {
+          await fetchTestDetails()
+          
+          // If status is waiting_for_test_details, fetch test centers and rooms
+          if (appointment.value.status === 'waiting_for_test_details') {
+            fetchTestCenters()
+            fetchTestRooms()
           }
         }
       } catch (err) {
-        console.error('Error fetching appointment:', err)
-        error.value = err.response?.data?.error || 'Failed to load appointment details'
+        console.error('Error fetching appointment details:', err)
+        error.value = 'Failed to load appointment details'
       } finally {
         loading.value = false
+      }
+    }
+    
+    const fetchTestDetails = async () => {
+      try {
+        const response = await axiosInstance.get(`/api/appointments/${appointmentId.value}/test-details/`)
+        testDetails.value = response.data
+        console.log('Test details loaded:', testDetails.value)
+      } catch (err) {
+        console.error('Failed to load test details:', err)
+        // Don't set this as an error since test details might not exist yet
+        testDetails.value = {}
       }
     }
     
@@ -334,10 +494,13 @@ export default {
       return appointment.value?.status === 'waiting_for_test_details' || 
              appointment.value?.status === 'pending'
     }
-      const canMarkClaimed = () => {
-      return appointment.value?.status === 'submitted' || 
-             appointment.value?.status === 'approved' ||
-             appointment.value?.status === 'waiting_for_submission'
+    
+    const canMarkAsSubmitted = () => {
+      return appointment.value?.status === 'waiting_for_submission'
+    }
+    
+    const canMarkAsClaimed = () => {
+      return appointment.value?.status === 'submitted'
     }
     
     const canReschedule = () => {
@@ -382,6 +545,21 @@ export default {
         })
         
         showToast('Appointment marked as claimed', 'success')
+        fetchAppointmentDetails()
+      } catch (err) {
+        showToast('Failed to update status', 'error')
+        console.error('Error updating status:', err)
+      }
+    }
+    
+    const markAsSubmitted = async () => {
+      try {
+        await axiosInstance.post('/api/admin/update-appointment-status/', {
+          appointment_ids: [appointmentId.value],
+          new_status: 'submitted'
+        })
+        
+        showToast('Appointment marked as submitted', 'success')
         fetchAppointmentDetails()
       } catch (err) {
         showToast('Failed to update status', 'error')
@@ -479,6 +657,7 @@ export default {
     onMounted(() => {
       if (appointmentId.value) {
         fetchAppointmentDetails()
+        fetchTestCenters()
       } else {
         error.value = 'No appointment ID provided'
         loading.value = false
@@ -498,15 +677,31 @@ export default {
       formatDate,
       formatTimeSlot,
       formatBirthDate,
-      formatGender,
+      formatGender,      
       canApprove,
       canReject,
-      canMarkClaimed,
+      canMarkAsSubmitted,
+      canMarkAsClaimed,
       canReschedule,
       approveAppointment,
       rejectAppointment,
+      markAsSubmitted,
       markAsClaimed,
-      rescheduleAppointment
+      rescheduleAppointment,
+      
+      // Test center and room assignment
+      testCenters,
+      testRooms,
+      selectedTestCenter,
+      selectedTestRoom,
+      loadingTestCenters,
+      loadingTestRooms,
+      testCenterError,
+      testRoomError,
+      submittingAssignment,
+      filteredTestRooms,
+      onTestCenterChange,
+      assignTestDetails
     }
   }
 }

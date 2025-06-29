@@ -300,12 +300,11 @@ export default {
       submittedForms: 0
     })
     const loading = ref(true)
-    
-    // Appointments state
+      // Appointments state
     const appointments = ref([])
     const currentPage = ref(1)
     const itemsPerPage = ref(10)
-    const totalAppointments = ref(0)
+    const totalAppointments = ref(0)  // Initialize with 0 instead of undefined
     const loadingAppointments = ref(true)
     
     // Filter state
@@ -333,27 +332,31 @@ export default {
       }
       applyFilters()
     }
-    
-
-    // Fetch dashboard statistics
+        // Fetch dashboard statistics
     const fetchDashboardStats = async () => {
       loading.value = true
       try {
         const response = await axiosInstance.get('/api/admin/dashboard/stats/')
         dashboardStats.value = {
-          totalAppointments: response.data.total_appointments,
-          upcomingAppointments: response.data.upcoming_appointments,
-          pendingAssignments: response.data.pending_assignments,
-          submittedForms: response.data.submitted_forms
+          totalAppointments: response.data.total_appointments || 0,
+          upcomingAppointments: response.data.upcoming_appointments || 0,
+          pendingAssignments: response.data.pending_assignments || 0,
+          submittedForms: response.data.submitted_forms || 0
         }
       } catch (error) {
         console.error('Error fetching dashboard stats:', error)
+        // Set default values on error
+        dashboardStats.value = {
+          totalAppointments: 0,
+          upcomingAppointments: 0,
+          pendingAssignments: 0,
+          submittedForms: 0
+        }
       } finally {
         loading.value = false
       }
     }
-    
-    // Fetch recent appointments
+      // Fetch recent appointments
     const fetchRecentAppointments = async () => {
       loadingAppointments.value = true
       try {
@@ -384,10 +387,20 @@ export default {
           params: params
         })
         
-        appointments.value = response.data.appointments
-        totalAppointments.value = response.data.total
+        // Handle the response structure
+        if (response.data.appointments) {
+          appointments.value = response.data.appointments || []
+          totalAppointments.value = response.data.total || 0
+        } else {
+          // Fallback if the API returns a different structure
+          appointments.value = Array.isArray(response.data) ? response.data : []
+          totalAppointments.value = appointments.value.length
+        }
       } catch (error) {
         console.error('Error fetching recent appointments:', error)
+        // Set default values on error
+        appointments.value = []
+        totalAppointments.value = 0
       } finally {
         loadingAppointments.value = false
       }
