@@ -14,7 +14,8 @@ export const useAnnouncementStore = defineStore('announcement', {
       this.error = null
       
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/announcements/`)
+        const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+        const response = await axios.get(`${API_URL}/api/announcements/`)
         this.announcements = response.data.results || response.data
       } catch (err) {
         console.error('Error fetching announcements:', err)
