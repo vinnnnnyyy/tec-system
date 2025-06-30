@@ -39,15 +39,51 @@
         v-for="date in daysInMonth" 
         :key="date"
         :class="[
-          'relative h-8 md:h-12 flex flex-col items-center justify-center rounded-md cursor-pointer transition-all duration-150 text-xs md:text-sm',
-          isDateSelected(date) ? 'bg-purple-600 text-white' : 'hover:bg-purple-100',
+          'relative h-8 md:h-12 flex flex-col items-center justify-center rounded-lg cursor-pointer transition-all duration-200 text-xs md:text-sm font-medium',
+          isDateSelected(date) ? '' : 'hover:bg-purple-50 hover:border-purple-200',
           !isDateSelectable(date) ? 'opacity-50 cursor-not-allowed' : '',
-          isDateToday(date) ? 'border border-purple-500' : '',
+          isDateToday(date) ? 'ring-2 ring-purple-400 ring-offset-1' : '',
+          getExamDateClasses(date),
+          getRegistrationDateClasses(date),
+          // Fallback for selected dates without special highlighting
+          isDateSelected(date) && !isExamDate(date) && !isRegistrationDate(date) ? 'bg-purple-600 text-white border-2 border-purple-700 shadow-lg' : ''
         ]"
         @click="selectDate(date)"
       >
         <!-- Date number -->
-        <span class="mb-0.5 md:mb-1">{{ date }}</span>
+        <span class="mb-0.5 md:mb-1 font-bold relative z-10 text-shadow-sm">{{ date }}</span>
+        
+        <!-- Date type indicators with enhanced styling -->
+        <div class="absolute top-1 right-1 flex flex-col gap-0.5">
+          <!-- Exam date indicator with enhanced tooltip -->
+          <div v-if="isExamDate(date)" 
+               class="relative group">
+            <span :class="[
+              'h-3 w-3 md:h-4 md:w-4 rounded-full border-2 border-white shadow-lg animate-pulse',
+              getExamTypeColors(getTestSessionForDate(date)?.exam_type).dotColor
+            ]"></span>
+            <!-- Enhanced tooltip for exam date -->
+            <div class="absolute z-30 bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl">
+              <div class="font-semibold">{{ getExamTypeColors(getTestSessionForDate(date)?.exam_type).name }}</div>
+              <div class="text-gray-300">Exam Date</div>
+              <!-- Arrow pointing down -->
+              <div class="absolute top-full right-2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+            </div>
+          </div>
+          
+          <!-- Registration period indicator with enhanced tooltip -->
+          <div v-if="isRegistrationDate(date) && !isExamDate(date)" 
+               class="relative group">
+            <span class="h-3 w-3 md:h-4 md:w-4 rounded-full bg-green-500 border-2 border-white shadow-lg animate-pulse"></span>
+            <!-- Enhanced tooltip for registration date -->
+            <div class="absolute z-30 bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl">
+              <div class="font-semibold">Registration Open</div>
+              <div class="text-gray-300">{{ getRegistrationSessionsForDate(date).length }} exam(s)</div>
+              <!-- Arrow pointing down -->
+              <div class="absolute top-full right-2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+            </div>
+          </div>
+        </div>
         
         <!-- Capacity indicators -->
         <div class="flex justify-center gap-0.5 md:gap-1">
@@ -92,32 +128,108 @@
     </div>
     
     <!-- Legend -->
-    <div class="mt-2 md:mt-4 flex flex-wrap items-center justify-start gap-2 md:gap-4 text-xs text-gray-600">
-      <div class="flex items-center">
-        <span class="h-2 w-2 rounded-full bg-green-500 mr-1"></span>
-        <span>Morning</span>
+    <div class="mt-2 md:mt-4 space-y-2">
+      <!-- Capacity indicators legend -->
+      <div class="flex flex-wrap items-center justify-start gap-2 md:gap-4 text-xs text-gray-600">
+        <div class="flex items-center">
+          <span class="h-2 w-2 rounded-full bg-green-500 mr-1"></span>
+          <span>Morning</span>
+        </div>
+        <div class="flex items-center">
+          <span class="h-2 w-2 rounded-full bg-blue-500 mr-1"></span>
+          <span>Afternoon</span>
+        </div>
+        <div class="flex items-center">
+          <span class="h-2 w-2 rounded-full bg-yellow-500 mr-1"></span>
+          <span>Half Full</span>
+        </div>
+        <div class="flex items-center">
+          <span class="h-2 w-2 rounded-full bg-orange-500 mr-1"></span>
+          <span>Nearly Full</span>
+        </div>
+        <div class="flex items-center">
+          <span class="h-2 w-2 rounded-full bg-red-500 mr-1"></span>
+          <span>Full</span>
+        </div>
       </div>
-      <div class="flex items-center">
-        <span class="h-2 w-2 rounded-full bg-blue-500 mr-1"></span>
-        <span>Afternoon</span>
-      </div>
-      <div class="flex items-center">
-        <span class="h-2 w-2 rounded-full bg-yellow-500 mr-1"></span>
-        <span>Half Full</span>
-      </div>
-      <div class="flex items-center">
-        <span class="h-2 w-2 rounded-full bg-orange-500 mr-1"></span>
-        <span>Nearly Full</span>
-      </div>
-      <div class="flex items-center">
-        <span class="h-2 w-2 rounded-full bg-red-500 mr-1"></span>
-        <span>Full</span>
+      
+      <!-- Enhanced date type indicators legend -->
+      <div class="flex flex-wrap items-center justify-start gap-2 md:gap-4 text-xs text-gray-600 pt-2 border-t border-gray-200">
+        <div class="flex items-center">
+          <div class="h-3 w-3 rounded-sm bg-green-50 border-4 border-green-400 mr-1"></div>
+          <span>Registration Open</span>
+        </div>
+        
+        <!-- Exam type legends based on actual test sessions -->
+        <div class="flex items-center">
+          <div class="h-3 w-3 rounded-sm bg-red-100 border-4 border-red-500 mr-1"></div>
+          <span>CET Exam</span>
+        </div>
+        <div class="flex items-center">
+          <div class="h-3 w-3 rounded-sm bg-blue-100 border-4 border-blue-500 mr-1"></div>
+          <span>EAT Exam</span>
+        </div>
+        <div class="flex items-center">
+          <div class="h-3 w-3 rounded-sm bg-purple-100 border-4 border-purple-500 mr-1"></div>
+          <span>NAT Exam</span>
+        </div>
+        <div class="flex items-center">
+          <div class="h-3 w-3 rounded-sm bg-yellow-100 border-4 border-yellow-500 mr-1"></div>
+          <span>Other Exam</span>
+        </div>
+        <div class="flex items-center">
+          <div class="h-3 w-3 rounded-sm bg-indigo-100 border-4 border-indigo-500 mr-1"></div>
+          <span>Diagnostic Test</span>
+        </div>
+        
+        <div class="flex items-center">
+          <div class="h-3 w-3 rounded-sm ring-2 ring-purple-400 ring-offset-1 mr-1"></div>
+          <span>Today</span>
+        </div>
       </div>
     </div>
     
     <!-- Selected date display -->
     <div v-if="selectedDateFormatted" class="mt-2 md:mt-4 p-2 md:p-3 bg-gray-50 rounded-lg">
       <div class="font-medium text-xs md:text-sm">Selected Date: {{ selectedDateFormatted }}</div>
+      
+      <!-- Enhanced test session information for selected date -->
+      <div v-if="selectedDate" class="mt-2 space-y-2">
+        <!-- Exam date notification with enhanced styling -->
+        <div v-if="isExamDate(selectedDate)" :class="[
+          'p-3 rounded-lg border-l-4 shadow-sm',
+          getExamTypeColors(getTestSessionForDate(selectedDate)?.exam_type).background,
+          `border-l-${getExamTypeColors(getTestSessionForDate(selectedDate)?.exam_type).border.split('-')[1]}-500`,
+          getExamTypeColors(getTestSessionForDate(selectedDate)?.exam_type).text
+        ]">
+          <div class="flex items-center text-sm font-semibold">
+            <i class="fas fa-calendar-day mr-2"></i>
+            <span>{{ getExamTypeColors(getTestSessionForDate(selectedDate)?.exam_type).name }}</span>
+          </div>
+          <div class="text-xs mt-1 opacity-80">
+            Exam scheduled for {{ selectedDateFormatted }}
+          </div>
+          <div v-if="getTestSessionForDate(selectedDate)?.description" class="text-xs mt-2 font-medium">
+            {{ getTestSessionForDate(selectedDate).description }}
+          </div>
+        </div>
+        
+        <!-- Registration period notification with enhanced styling -->
+        <div v-if="isRegistrationDate(selectedDate) && !isExamDate(selectedDate)" class="p-3 bg-green-50 border-l-4 border-l-green-500 rounded-lg shadow-sm">
+          <div class="flex items-center text-sm text-green-800 font-semibold">
+            <i class="fas fa-user-check mr-2"></i>
+            <span>Registration Period Active</span>
+          </div>
+          <div class="text-xs text-green-700 mt-1">
+            Registration is open for {{ getRegistrationSessionsForDate(selectedDate).length }} upcoming exam(s)
+          </div>
+          <div class="mt-2 space-y-1">
+            <div v-for="session in getRegistrationSessionsForDate(selectedDate)" :key="session.id" class="text-xs text-green-700">
+              • {{ getExamTypeColors(session.exam_type).name }} (Exam: {{ session.exam_date }})
+            </div>
+          </div>
+        </div>
+      </div>
       
       <!-- Capacity information for selected date -->
       <div v-if="selectedDate && getDateCapacity(selectedDate, 'morning')" class="mt-2 mb-2 md:mb-3 text-xs">
@@ -214,6 +326,10 @@ export default {
     timeSlotValue: {
       type: String,
       default: ''
+    },
+    testSessions: {
+      type: Array,
+      default: () => []
     }
   },
   emits: ['update:modelValue', 'update:timeSlotValue', 'date-selected', 'time-slot-selected'],
@@ -292,7 +408,151 @@ export default {
       return true;
     };
     
-    // Check if a date is today
+    // Check if a date is an exam date
+    const isExamDate = (day) => {
+      const dateStr = formatDateForApi(new Date(currentYear.value, currentMonth.value, day));
+      const result = props.testSessions.some(session => session.exam_date === dateStr);
+      
+      // Debug logging - only log for specific dates to avoid spam
+      if (dateStr === '2025-06-29' || dateStr === '2025-07-29' || dateStr === '2025-07-21' || dateStr === '2025-06-27') {
+        console.log(`📅 Checking exam date ${dateStr}: ${result}`, {
+          testSessionsCount: props.testSessions.length,
+          matchingSessions: props.testSessions.filter(s => s.exam_date === dateStr)
+        });
+      }
+      
+      return result;
+    };
+
+    // Check if a date is within registration period
+    const isRegistrationDate = (day) => {
+      const dateStr = formatDateForApi(new Date(currentYear.value, currentMonth.value, day));
+      const currentDate = new Date(dateStr);
+      
+      const result = props.testSessions.some(session => {
+        const regStart = new Date(session.registration_start_date);
+        const regEnd = new Date(session.registration_end_date);
+        return currentDate >= regStart && currentDate <= regEnd;
+      });
+      
+      // Debug logging - only log for specific dates
+      if (dateStr === '2025-06-29' || dateStr === '2025-06-30' || dateStr === '2025-07-01') {
+        const matchingSessions = props.testSessions.filter(session => {
+          const regStart = new Date(session.registration_start_date);
+          const regEnd = new Date(session.registration_end_date);
+          return currentDate >= regStart && currentDate <= regEnd;
+        });
+        console.log(`🟢 Checking registration date ${dateStr}: ${result}`, {
+          testSessionsCount: props.testSessions.length,
+          matchingSessions
+        });
+      }
+      
+      return result;
+    };
+
+    // Get test session for a date
+    const getTestSessionForDate = (day) => {
+      const dateStr = formatDateForApi(new Date(currentYear.value, currentMonth.value, day));
+      return props.testSessions.find(session => session.exam_date === dateStr);
+    };
+
+    // Get exam type color scheme
+    const getExamTypeColors = (examType) => {
+      const colorSchemes = {
+        'CET': {
+          background: 'bg-red-100',
+          border: 'border-red-500',
+          text: 'text-red-800',
+          selectedBg: 'bg-red-600',
+          dotColor: 'bg-red-600',
+          name: 'CET'
+        },
+        'EAT': {
+          background: 'bg-blue-100',
+          border: 'border-blue-500',
+          text: 'text-blue-800',
+          selectedBg: 'bg-blue-600',
+          dotColor: 'bg-blue-600',
+          name: 'EAT'
+        },
+        'NAT': {
+          background: 'bg-purple-100',
+          border: 'border-purple-500',
+          text: 'text-purple-800',
+          selectedBg: 'bg-purple-600',
+          dotColor: 'bg-purple-600',
+          name: 'NAT'
+        },
+        'WMSU-CET': {
+          background: 'bg-red-100',
+          border: 'border-red-500',
+          text: 'text-red-800',
+          selectedBg: 'bg-red-600',
+          dotColor: 'bg-red-600',
+          name: 'WMSU-CET'
+        },
+        'ENTRANCE': {
+          background: 'bg-yellow-100',
+          border: 'border-yellow-500',
+          text: 'text-yellow-800',
+          selectedBg: 'bg-yellow-600',
+          dotColor: 'bg-yellow-600',
+          name: 'Entrance Exam'
+        },
+        'PLACEMENT': {
+          background: 'bg-indigo-100',
+          border: 'border-indigo-500',
+          text: 'text-indigo-800',
+          selectedBg: 'bg-indigo-600',
+          dotColor: 'bg-indigo-600',
+          name: 'Placement Test'
+        }
+      };
+      
+      // Default to yellow if exam type not found
+      return colorSchemes[examType] || colorSchemes['ENTRANCE'];
+    };
+
+    // Get exam date styling classes
+    const getExamDateClasses = (day) => {
+      const session = getTestSessionForDate(day);
+      if (!session) return '';
+      
+      const colors = getExamTypeColors(session.exam_type);
+      
+      if (isDateSelected(day)) {
+        return `${colors.selectedBg} text-white border-4 shadow-lg transform scale-105`;
+      }
+      
+      return `${colors.background} border-4 ${colors.border} shadow-md hover:shadow-lg transform hover:scale-102 transition-all duration-200`;
+    };
+
+    // Get registration sessions for a date
+    const getRegistrationSessionsForDate = (day) => {
+      const dateStr = formatDateForApi(new Date(currentYear.value, currentMonth.value, day));
+      const currentDate = new Date(dateStr);
+      
+      return props.testSessions.filter(session => {
+        const regStart = new Date(session.registration_start_date);
+        const regEnd = new Date(session.registration_end_date);
+        return currentDate >= regStart && currentDate <= regEnd;
+      });
+    };
+
+    // Get registration date styling classes
+    const getRegistrationDateClasses = (day) => {
+      if (isExamDate(day)) return ''; // Exam dates take priority
+      
+      const sessions = getRegistrationSessionsForDate(day);
+      if (sessions.length === 0) return '';
+      
+      if (isDateSelected(day)) {
+        return `bg-green-600 text-white border-4 border-green-700 shadow-lg transform scale-105`;
+      }
+      
+      return `bg-green-50 border-4 border-green-400 shadow-md hover:shadow-lg hover:bg-green-100 transform hover:scale-102 transition-all duration-200`;
+    };
     const isDateToday = (day) => {
       const today = new Date();
       return (
@@ -472,6 +732,12 @@ export default {
       selectedTimeSlot.value = newValue;
     });
     
+    // Watch for test sessions changes
+    watch(() => props.testSessions, (newSessions) => {
+      console.log('🔄 CustomCalendar: Test sessions updated:', newSessions);
+      console.log('📊 CustomCalendar: Test sessions count:', newSessions?.length || 0);
+    }, { immediate: true });
+    
     return {
       currentMonth,
       currentYear,
@@ -486,6 +752,13 @@ export default {
       isDateSelectable,
       isDateToday,
       isDateSelected,
+      isExamDate,
+      isRegistrationDate,
+      getTestSessionForDate,
+      getRegistrationSessionsForDate,
+      getExamTypeColors,
+      getExamDateClasses,
+      getRegistrationDateClasses,
       hasDateAvailability,
       getDateCapacity,
       getCapacityColor,
@@ -508,6 +781,42 @@ export default {
   margin: 0 auto;
 }
 
+/* Enhanced animations and effects */
+@keyframes pulse-glow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse {
+  animation: pulse-glow 2s infinite;
+}
+
+/* Text shadow for better readability */
+.text-shadow-sm {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Hover scale effects */
+.hover\:scale-102:hover {
+  transform: scale(1.02);
+}
+
+.scale-105 {
+  transform: scale(1.05);
+}
+
+/* Enhanced tooltip styles */
+.group:hover .opacity-0 {
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+}
+
 /* Improve mobile tooltip behavior */
 @media (max-width: 640px) {
   .group:hover .group-hover\:opacity-100 {
@@ -522,5 +831,27 @@ export default {
     min-width: 100px;
     text-align: center;
   }
+  
+  /* Reduce animation intensity on mobile */
+  .animate-pulse {
+    animation: pulse-glow 3s infinite;
+  }
+}
+
+/* Custom border colors for different exam types */
+.border-red-500 { border-color: #ef4444; }
+.border-blue-500 { border-color: #3b82f6; }
+.border-purple-500 { border-color: #8b5cf6; }
+.border-yellow-500 { border-color: #eab308; }
+.border-indigo-500 { border-color: #6366f1; }
+.border-green-400 { border-color: #4ade80; }
+
+/* Enhanced shadow effects */
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.shadow-xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 </style> 

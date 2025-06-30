@@ -12,7 +12,10 @@
     <transition name="modal">
       <div v-if="modelValue"
            class="fixed inset-0 items-center justify-center z-50 flex">
-        <div class="bg-white p-6 md:p-8 rounded-xl shadow-xl w-full max-w-md md:max-w-3xl lg:max-w-4xl mx-2 md:mx-auto my-4 md:my-0 overflow-y-auto max-h-[90vh]">
+        <div :class="[
+          'bg-white p-6 md:p-8 lg:p-10 rounded-xl shadow-xl w-full mx-2 md:mx-auto my-2 md:my-4 overflow-y-auto',
+          currentStep === 3 ? 'max-w-sm md:max-w-5xl lg:max-w-6xl xl:max-w-7xl max-h-[95vh]' : 'max-w-sm md:max-w-4xl lg:max-w-5xl max-h-[92vh]'
+        ]">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-crimson-100 flex items-center justify-center">
@@ -63,6 +66,7 @@
                           <input 
                             id="lastName"
                             v-model="formData.lastName"
+                            @input="handleTextInput('lastName')"
                             @blur="markAsTouched('lastName'); validateLastName()"
                             type="text"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('lastName')]"
@@ -84,6 +88,7 @@
                           <input 
                             id="firstName"
                             v-model="formData.firstName"
+                            @input="handleTextInput('firstName')"
                             @blur="markAsTouched('firstName'); validateFirstName()"
                             type="text"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('firstName')]"
@@ -105,6 +110,7 @@
                           <input 
                             id="middleName"
                             v-model="formData.middleName"
+                            @input="handleTextInput('middleName')"
                             @blur="markAsTouched('middleName'); validateMiddleName()"
                             type="text"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('middleName')]"
@@ -126,6 +132,7 @@
                           <input 
                             id="contactNumber"
                             v-model="formData.contactNumber"
+                            @input="markAsTouched('contactNumber'); validateContactNumber()"
                             @blur="markAsTouched('contactNumber'); validateContactNumber()"
                             type="tel"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('contactNumber')]"
@@ -147,6 +154,7 @@
                           <input 
                             id="email"
                             v-model="formData.email"
+                            @input="markAsTouched('email'); validateEmail()"
                             @blur="markAsTouched('email'); validateEmail()"
                             type="email"
                             :class="['w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('email')]"
@@ -275,6 +283,7 @@
                           <input 
                             id="streetPurok"
                             v-model="formData.streetPurok"
+                            @input="handleTextInput('streetPurok')"
                             @blur="markAsTouched('streetPurok'); validateStreetPurok()"
                             type="text"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('streetPurok')]"
@@ -296,15 +305,21 @@
                           <input 
                             id="barangay"
                             v-model="formData.barangay"
+                            @input="handleTextInput('barangay')"
                             @blur="markAsTouched('barangay'); validateBarangay()"
                             type="text"
+                            list="barangay-list"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('barangay')]"
                             placeholder="Enter your Barangay"
+                            autocomplete="off"
                           />
                           <div v-if="isFieldValid('barangay')" class="absolute inset-y-0 right-3 flex items-center text-green-500 animate-fadeIn">
                             <i class="fas fa-check-circle"></i>
                           </div>
                         </div>
+                        <datalist id="barangay-list">
+                          <option v-for="barangay in philippineBarangays" :key="barangay" :value="barangay">{{ barangay }}</option>
+                        </datalist>
                         <p v-if="isFieldInvalid('barangay')" class="text-sm text-red-600 mt-1 error-text">
                           {{ validationErrors.barangay }}
                         </p>
@@ -317,15 +332,21 @@
                           <input 
                             id="city"
                             v-model="formData.city"
+                            @input="handleTextInput('city')"
                             @blur="markAsTouched('city'); validateCity()"
                             type="text"
+                            list="city-list"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('city')]"
                             placeholder="Enter your City/Municipality"
+                            autocomplete="off"
                           />
                           <div v-if="isFieldValid('city')" class="absolute inset-y-0 right-3 flex items-center text-green-500 animate-fadeIn">
                             <i class="fas fa-check-circle"></i>
                           </div>
                         </div>
+                        <datalist id="city-list">
+                          <option v-for="city in philippineCities" :key="city" :value="city">{{ city }}</option>
+                        </datalist>
                         <p v-if="isFieldInvalid('city')" class="text-sm text-red-600 mt-1 error-text">
                           {{ validationErrors.city }}
                         </p>
@@ -338,15 +359,21 @@
                           <input 
                             id="citizenship"
                             v-model="formData.citizenship"
+                            @input="handleTextInput('citizenship')"
                             @blur="markAsTouched('citizenship'); validateCitizenship()"
                             type="text"
+                            list="citizenship-list"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('citizenship')]"
                             placeholder="e.g., Filipino"
+                            autocomplete="off"
                           />
                           <div v-if="isFieldValid('citizenship')" class="absolute inset-y-0 right-3 flex items-center text-green-500 animate-fadeIn">
                             <i class="fas fa-check-circle"></i>
                           </div>
                         </div>
+                        <datalist id="citizenship-list">
+                          <option v-for="citizenship in citizenshipOptions" :key="citizenship" :value="citizenship">{{ citizenship }}</option>
+                        </datalist>
                         <p v-if="isFieldInvalid('citizenship')" class="text-sm text-red-600 mt-1 error-text">
                           {{ validationErrors.citizenship }}
                         </p>
@@ -468,6 +495,7 @@
                               <input 
                                 id="seniorGraduatingSchoolName"
                                 v-model="formData.seniorGraduating.schoolName"
+                                @input="handleTextInput('seniorGraduatingSchoolName', 'seniorGraduating.schoolName')"
                                 @blur="validateApplicantType()"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
@@ -482,6 +510,7 @@
                               <input 
                                 id="seniorGraduatingSchoolAddress"
                                 v-model="formData.seniorGraduating.schoolAddress"
+                                @input="handleTextInput('seniorGraduatingSchoolAddress', 'seniorGraduating.schoolAddress')"
                                 @blur="validateApplicantType()"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
@@ -513,6 +542,7 @@
                               <input 
                                 id="seniorGraduateSchoolName"
                                 v-model="formData.seniorGraduate.schoolName"
+                                @input="handleTextInput('seniorGraduateSchoolName', 'seniorGraduate.schoolName')"
                                 @blur="validateApplicantType()"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
@@ -527,6 +557,7 @@
                               <input 
                                 id="seniorGraduateSchoolAddress"
                                 v-model="formData.seniorGraduate.schoolAddress"
+                                @input="handleTextInput('seniorGraduateSchoolAddress', 'seniorGraduate.schoolAddress')"
                                 @blur="validateApplicantType()"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
@@ -558,6 +589,7 @@
                               <input 
                                 id="collegeSchoolName"
                                 v-model="formData.college.schoolName"
+                                @input="handleTextInput('collegeSchoolName', 'college.schoolName')"
                                 @blur="validateApplicantType()"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
@@ -572,6 +604,7 @@
                               <input 
                                 id="collegeSchoolAddress"
                                 v-model="formData.college.schoolAddress"
+                                @input="handleTextInput('collegeSchoolAddress', 'college.schoolAddress')"
                                 @blur="validateApplicantType()"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
@@ -637,7 +670,7 @@
 
                 <!-- STEP 3: Schedule Details Section (Spans 2 columns on LG) -->
                 <div v-if="currentStep === 3" class="lg:col-span-2">
-                  <div class="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm md:max-w-3xl md:mx-auto">
+                  <div class="space-y-6 bg-white rounded-xl p-6 md:p-8 border border-gray-200 shadow-sm">
                     <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
                       <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
                         <i class="fas fa-calendar-alt text-crimson-500"></i>
@@ -645,65 +678,68 @@
                       <h4>Schedule Details</h4>
                     </div>
                     
-                    <div class="grid grid-cols-1 gap-x-6 gap-y-5">
+                    <div class="grid grid-cols-1 gap-x-6 gap-y-6">
                       <!-- Preferred Date -->
-                      <div class="space-y-2">
+                      <div class="space-y-3">
                         <label class="block text-sm font-medium text-gray-700">Preferred Date</label>
                         <div class="relative">
-                          <!-- Calendar container -->
-                          <div v-if="showCalendar" class="absolute top-full left-0 right-0 mt-1 bg-white shadow-xl rounded-xl z-10 p-3 md:p-4 border border-gray-200" @click.stop>
+                          <!-- Calendar container with increased height -->
+                          <div v-if="showCalendar" class="absolute top-full left-0 right-0 mt-2 bg-white shadow-2xl rounded-xl z-10 p-4 md:p-6 border border-gray-200 min-h-[500px] md:min-h-[600px]" @click.stop>
                             <CustomCalendar 
                               v-model="formData.preferredDate"
                               v-model:timeSlotValue="formData.timeSlot"
                               :dateAvailability="dateAvailability"
+                              :testSessions="testSessions"
                               @time-slot-selected="closeCalendarWithDelay"
                             />
                           </div>
                           
-                          <!-- Date display field -->
+                          <!-- Date display field with larger size -->
                           <div 
                             @click="showCalendar = !showCalendar; markAsTouched('preferredDate')"
                             :class="[
-                              'w-full px-4 py-2.5 border rounded-lg flex justify-between items-center cursor-pointer transition-all',
-                              touchedFields.preferredDate && dateError ? 'border-red-500' : 'border-gray-300 hover:border-crimson-500'
+                              'w-full px-5 py-4 border rounded-xl flex justify-between items-center cursor-pointer transition-all text-lg font-medium',
+                              touchedFields.preferredDate && dateError ? 'border-red-500' : 'border-gray-300 hover:border-crimson-500 hover:shadow-md'
                             ]"
                             data-calendar-trigger
                           >
                             <span v-if="formData.preferredDate" class="text-gray-900">{{ formatDate(formData.preferredDate) }}</span>
                             <span v-else class="text-gray-400">Select a date</span>
-                            <i class="fas fa-calendar-alt text-gray-400"></i>
+                            <i class="fas fa-calendar-alt text-gray-400 text-xl"></i>
                           </div>
                         </div>
-                        <p v-if="touchedFields.preferredDate && dateError" class="text-sm text-red-600 mt-1 error-text">
+                        <p v-if="touchedFields.preferredDate && dateError" class="text-sm text-red-600 mt-2 error-text">
                           {{ dateError }}
                         </p>
-                        <p class="text-xs text-gray-500 mt-1">
+                        <p class="text-sm text-gray-500 mt-2">
                           Note: Today's date, past dates, and Sundays are not available for scheduling.
                         </p>
                       </div>
                       
-                      <!-- Time Slot Selection -->
-                      <div v-if="formData.preferredDate" class="space-y-2">
+                      <!-- Time Slot Selection with larger buttons -->
+                      <div v-if="formData.preferredDate" class="space-y-3">
                         <label class="block text-sm font-medium text-gray-700">Time Slot</label>
                         
-                        <div class="flex flex-col sm:flex-row gap-3 mt-3">
+                        <div class="flex flex-col sm:flex-row gap-4 mt-4">
                           <button 
                             type="button"
                             @click="selectTimeSlot('morning'); markAsTouched('timeSlot')"
                             :disabled="!isMorningAvailable"
                             :class="[
-                              'px-5 py-2.5 rounded-xl flex items-center justify-center transition-all flex-1',
+                              'px-6 py-4 rounded-xl flex items-center justify-center transition-all flex-1 text-lg font-medium',
                               formData.timeSlot === 'morning' 
-                                ? 'bg-gradient-to-r from-crimson-500 to-crimson-600 text-white shadow-md' 
-                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm',
+                                ? 'bg-gradient-to-r from-crimson-500 to-crimson-600 text-white shadow-lg transform scale-105' 
+                                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-crimson-300 shadow-md',
                               !isMorningAvailable ? 'opacity-50 cursor-not-allowed' : '',
                               touchedFields.timeSlot && dateError && !formData.timeSlot ? 'border-red-500' : ''
                             ]"
                           >
-                            <i class="fas fa-sun mr-2 text-yellow-500"></i>
-                            <span class="font-medium">Morning</span>
-                            <span class="hidden sm:inline ml-1">(8:00 AM - 12:00 PM)</span>
-                            <span v-if="!isMorningAvailable" class="ml-2 text-xs">(Full)</span>
+                            <i class="fas fa-sun mr-3 text-yellow-500 text-xl"></i>
+                            <div class="text-center">
+                              <div class="font-semibold">Morning</div>
+                              <div class="text-sm opacity-80">(8:00 AM - 12:00 PM)</div>
+                              <div v-if="!isMorningAvailable" class="text-xs mt-1 text-red-400">(Full)</div>
+                            </div>
                           </button>
                           
                           <button 
@@ -711,18 +747,20 @@
                             @click="selectTimeSlot('afternoon'); markAsTouched('timeSlot')"
                             :disabled="!isAfternoonAvailable"
                             :class="[
-                              'px-5 py-2.5 rounded-xl flex items-center justify-center transition-all flex-1',
+                              'px-6 py-4 rounded-xl flex items-center justify-center transition-all flex-1 text-lg font-medium',
                               formData.timeSlot === 'afternoon' 
-                                ? 'bg-gradient-to-r from-crimson-500 to-crimson-600 text-white shadow-md' 
-                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm',
+                                ? 'bg-gradient-to-r from-crimson-500 to-crimson-600 text-white shadow-lg transform scale-105' 
+                                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-crimson-300 shadow-md',
                               !isAfternoonAvailable ? 'opacity-50 cursor-not-allowed' : '',
                               touchedFields.timeSlot && dateError && !formData.timeSlot ? 'border-red-500' : ''
                             ]"
                           >
-                            <i class="fas fa-moon mr-2 text-blue-400"></i>
-                            <span class="font-medium">Afternoon</span>
-                            <span class="hidden sm:inline ml-1">(1:00 PM - 5:00 PM)</span>
-                            <span v-if="!isAfternoonAvailable" class="ml-2 text-xs">(Full)</span>
+                            <i class="fas fa-moon mr-3 text-blue-400 text-xl"></i>
+                            <div class="text-center">
+                              <div class="font-semibold">Afternoon</div>
+                              <div class="text-sm opacity-80">(1:00 PM - 5:00 PM)</div>
+                              <div v-if="!isAfternoonAvailable" class="text-xs mt-1 text-red-400">(Full)</div>
+                            </div>
                           </button>
                         </div>
                       </div>
@@ -811,6 +849,7 @@ export default {
     const loading = ref(false);
     const error = ref(null);
     const apiData = ref(null);
+    const testSessions = ref([]);
     const showCalendar = ref(false);
     const dateError = ref('');
     const currentStep = ref(1); // To manage the current step of the form
@@ -897,6 +936,196 @@ export default {
       }
     });
     
+    // Philippine Barangays (Common barangays across different cities/municipalities)
+    const philippineBarangays = ref([
+      'Poblacion', 'San Jose', 'San Antonio', 'San Juan', 'Santa Maria', 'Santo Niño', 'Barangay 1', 'Barangay 2', 
+      'Barangay 3', 'Barangay 4', 'Barangay 5', 'Barangay 6', 'Barangay 7', 'Barangay 8', 'Barangay 9', 'Barangay 10',
+      'Bagong Silang', 'Bagong Pag-asa', 'Bagong Buhay', 'Malate', 'Ermita', 'Intramuros', 'Binondo', 'Quiapo',
+      'Sampaloc', 'Santa Cruz', 'San Miguel', 'Tondo', 'San Nicolas', 'Manila', 'Makati', 'Mandaluyong', 'Marikina',
+      'Pasig', 'Quezon City', 'Caloocan', 'Malabon', 'Navotas', 'Valenzuela', 'Las Piñas', 'Makati', 'Muntinlupa',
+      'Parañaque', 'Pasay', 'Pateros', 'Taguig', 'Antipolo', 'Bacoor', 'Biñan', 'Cabuyao', 'Calamba', 'Carmona',
+      'Dasmariñas', 'General Trias', 'Imus', 'Kawit', 'Laguna', 'Lipa', 'Los Baños', 'Lucena', 'Majayjay', 'Naic',
+      'Noveleta', 'Rosario', 'San Pablo', 'Santa Rosa', 'Silang', 'Tagaytay', 'Talisay', 'Tanauan', 'Trece Martires',
+      'Alicia', 'Angono', 'Baras', 'Binangonan', 'Cainta', 'Cardona', 'Jalajala', 'Morong', 'Pililla', 'Rodriguez',
+      'San Mateo', 'Tanay', 'Teresa', 'Taytay', 'Barangka', 'Bayan-Bayanan', 'Concepcion', 'Dagat-Dagatan', 'Longos',
+      'Maysilo', 'Panghulo', 'Potrero', 'Sangandaan', 'Tonsuya', 'Tubigan', 'Bagbaguin', 'Bagong Barrio', 'Bignay',
+      'Bisig', 'Canumay East', 'Canumay West', 'Coloong', 'Dalandanan', 'Gen. T. de Leon', 'Isla', 'Karuhatan',
+      'Lawang Bato', 'Lingunan', 'Mabolo', 'Malanday', 'Malinta', 'Mapulang Lupa', 'Marulas', 'Maysan', 'Palasan',
+      'Parada', 'Pariancillo Villa', 'Paso de Blas', 'Poblacion', 'Polo', 'Punturin', 'Rincon', 'Tagalag', 'Ugong',
+      'Viente Reales', 'Wawang Pulo', 'Arkong Bato', 'Bagbag', 'Balangkas', 'Bignay', 'Canumay', 'Catmon', 'Coloong',
+      'Dalandanan', 'Fish Port', 'Hulong Duhat', 'Isla', 'Longos', 'Maysilo', 'Muzon', 'Panghulo', 'Poblacion',
+      'Potrero', 'Rincon', 'Sangandaan', 'Tonsuya', 'Tanza', 'Tubigan', 'Ugong Norte', 'Ugong Sur',
+      
+      // Region 9 (Zamboanga Peninsula) - Comprehensive barangay list
+      // Zamboanga City barangays
+      'Ayala', 'Baliwasan', 'Boalan', 'Bolong', 'Buenavista', 'Bunguiao', 'Busay', 'Cabaluay', 'Cabatangan', 'Cacao',
+      'Calabasa', 'Calarian', 'Camino Nuevo', 'Campo Islam', 'Canelar', 'Capisan', 'Caputian', 'Cawit', 'Culianan',
+      'Curuan', 'Divisoria', 'Dulian', 'Guisao', 'Guiwan', 'La Paz', 'Labuan', 'Lamisahan', 'Landang Gua', 'Landang Laum',
+      'Lapakan', 'Latuan', 'Limaong', 'Limpapa', 'Lubigan', 'Lumayang', 'Lunzuran', 'Maasin', 'Malagutay', 'Manicahan',
+      'Mariki', 'Mercedes', 'Muti', 'Pamucutan', 'Pangapuyan', 'Pasonanca', 'Patalon', 'Putik', 'Quiniput', 'Rio Hondo',
+      'Salaan', 'San Jose Cawa', 'San Jose Gusu', 'San Roque', 'Sangali', 'Santa Barbara', 'Santa Catalina', 'Santa Maria',
+      'Sinubung', 'Sinunoc', 'Suterville', 'Tagasilay', 'Taguiti', 'Talabaan', 'Taluksangay', 'Talon-Talon', 'Tictapul',
+      'Tigbalabag', 'Tolosa', 'Tumaga', 'Tumitus', 'Victoria', 'Vitali', 'Yakan Village', 'Zambowood',
+      
+      // Pagadian City barangays
+      'Balangasan', 'Balintawak', 'Banale', 'Banga', 'Bomba', 'Bogo', 'Bulatok', 'Canaway', 'Danlugan', 'Datagan',
+      'Gatas', 'Gubac', 'Kagawasan', 'Kawit', 'Lacanan', 'Lala', 'Lenienza', 'Lizon Valley', 'Lower Sibatang',
+      'Macasing', 'Muricay', 'Napolan', 'Palpalan', 'San Francisco', 'San Pedro', 'Santiago', 'Santo Niño', 'Tiguma',
+      'Tuyoron', 'Upper Sibatang', 'White Beach',
+      
+      // Dipolog City barangays
+      'Barra', 'Biasong', 'Central', 'Cogon', 'Dicayas', 'Diwan', 'Estaka', 'Galas', 'Gulayon', 'Lugdungan',
+      'Miputak', 'Napo', 'Olingan', 'Pag-asa', 'Pangabuan', 'Santa Isabel', 'Sicayab', 'Sinaman', 'Sta. Filomena',
+      'Turno', 'Unhawan',
+      
+      // Dapitan City barangays
+      'Aliguay', 'Ba-ao', 'Bagacay', 'Bagting', 'Barcelona', 'Baylimango', 'Burgos', 'Carang', 'Cawa-Cawa',
+      'Dawo', 'Dapitan', 'Derilon', 'Liboron', 'Masidlakon', 'Opao', 'Polo', 'Potol', 'San Nicolas', 'San Pedro',
+      'San Vicente', 'Santa Cruz', 'Siayan', 'Sulangon', 'Talisay', 'Tomasa', 'Tulawan', 'Vila',
+      
+      // Isabela City barangays
+      'Baluno', 'Binuangan', 'Cabunbata', 'Calvario', 'Isabela Proper', 'Kaumpurnah', 'Kumalarang', 'Lampinigan',
+      'Lukbuton', 'Malamawi', 'Maluso', 'Marang-Marang', 'Menzi', 'Panigayan', 'Santa Barbara', 'Small Kalamansig',
+      'Sumagdang', 'Tabuk', 'Tabiawan', 'Tampalan'
+    ].sort());
+    
+    // Philippine Cities and Municipalities (Major cities and municipalities)
+    const philippineCities = ref([
+      // National Capital Region (NCR)
+      'Manila', 'Quezon City', 'Makati', 'Pasig', 'Taguig', 'Marikina', 'Mandaluyong', 'San Juan', 'Muntinlupa',
+      'Las Piñas', 'Parañaque', 'Pasay', 'Caloocan', 'Malabon', 'Navotas', 'Valenzuela', 'Pateros',
+
+      // Region I (Ilocos Region)
+      'Dagupan', 'San Carlos', 'Alaminos', 'Urdaneta', 'Laoag', 'Batac', 'Candon', 'Vigan', 'Agoo', 'Bauang',
+      'Naguilian', 'San Fernando', 'San Juan', 'Alaminos', 'Bolinao', 'Bugallon', 'Calasiao', 'Dasol', 'Infanta',
+      'Labrador', 'Lingayen', 'Mabini', 'Malasiqui', 'Manaoag', 'Mangaldan', 'Mangatarem', 'Mapandan', 'Natividad',
+      
+      // Region II (Cagayan Valley)
+      'Tuguegarao', 'Cauayan', 'Ilagan', 'Santiago', 'Tabuk', 'Lamut', 'Bayombong', 'Solano',
+      
+      // Region III (Central Luzon)
+      'San Jose del Monte', 'Malolos', 'Meycauayan', 'Marilao', 'Bocaue', 'Balagtas', 'Guiguinto', 'Hagonoy',
+      'Paombong', 'Pulilan', 'Calumpit', 'Plaridel', 'San Rafael', 'Angat', 'Bustos', 'San Ildefonso', 'San Miguel',
+      'Doña Remedios Trinidad', 'Norzagaray', 'Santa Maria', 'Pandi', 'Obando', 'Bulakan', 'San Jose', 'Balanga',
+      'Dinalupihan', 'Hermosa', 'Limay', 'Mariveles', 'Morong', 'Orani', 'Orion', 'Pilar', 'Samal', 'Bagac',
+      'Abucay', 'Olongapo', 'Subic', 'Castillejos', 'San Antonio', 'San Felipe', 'San Marcelino', 'San Narciso',
+      'Botolan', 'Cabangan', 'Candelaria', 'Iba', 'Masinloc', 'Palauig', 'Santa Cruz', 'Angeles', 'San Fernando',
+      'Mabalacat', 'Porac', 'Floridablanca', 'Guagua', 'Lubao', 'Sasmuan', 'Macabebe', 'Masantol', 'Mexico',
+      'Santa Ana', 'Arayat', 'Candaba', 'San Luis', 'San Simon', 'Santo Tomas', 'Bacolor', 'Minalin', 'Cabanatuan',
+      'Gapan', 'San Jose', 'Palayan', 'Muñoz', 'Talavera', 'Aliaga', 'Bongabon', 'Cabiao', 'Carranglan', 'Cuyapo',
+      'Gabaldon', 'General Mamerto Natividad', 'General Tinio', 'Guimba', 'Jaen', 'Laur', 'Licab', 'Llanera',
+      'Lupao', 'Nampicuan', 'Pantabangan', 'Peñaranda', 'Quezon', 'Rizal', 'San Antonio', 'San Isidro', 'San Leonardo',
+      'Santa Rosa', 'Santo Domingo', 'Zaragoza', 'Tarlac', 'Concepcion', 'Capas', 'Bamban', 'Camiling', 'Gerona',
+      'La Paz', 'Paniqui', 'Moncada', 'San Carlos', 'San Jose', 'Santa Ignacia', 'Victoria', 'Ramos', 'Mayantoc',
+      'San Clemente', 'Pura', 'Anao', 'San Manuel',
+      
+      // Region IV-A (CALABARZON)
+      'Antipolo', 'Bacoor', 'Biñan', 'Cabuyao', 'Calamba', 'Carmona', 'Dasmariñas', 'General Trias', 'Imus',
+      'Kawit', 'Laguna', 'Lipa', 'Los Baños', 'Lucena', 'Majayjay', 'Naic', 'Noveleta', 'Rosario', 'San Pablo',
+      'Santa Rosa', 'Silang', 'Tagaytay', 'Talisay', 'Tanauan', 'Trece Martires', 'Cavite City', 'Tagaytay',
+      'Bacoor', 'Imus', 'Dasmariñas', 'Carmona', 'General Trias', 'Trece Martires', 'Cavite City', 'Kawit',
+      'Noveleta', 'Rosario', 'Tanza', 'Naic', 'Maragondon', 'Ternate', 'Magallanes', 'Alfonso', 'Amadeo',
+      'General Emilio Aguinaldo', 'Indang', 'Mendez', 'Silang', 'Tagaytay', 'Calamba', 'Biñan', 'Santa Rosa',
+      'Cabuyao', 'San Pablo', 'Tanauan', 'Lipa', 'Santo Tomas', 'Alaminos', 'Batangas City', 'Lemery', 'Taal',
+      'Cuenca', 'Ibaan', 'Taysan', 'Lobo', 'Batangas', 'Bauan', 'San Pascual', 'Tingloy', 'Calatagan', 'Balayan',
+      'Calaca', 'Laurel', 'Agoncillo', 'Malvar', 'Mataasnakahoy', 'Padre Garcia', 'Rosario', 'San Jose', 'San Juan',
+      'San Luis', 'Santa Teresita', 'Talisay', 'Tuy', 'Nasugbu', 'Lian', 'Calatagan', 'Lemery', 'Taal', 'San Nicolas',
+      'Sta. Teresita', 'Mabini', 'Lucena', 'Tayabas', 'Sariaya', 'Candelaria', 'Dolores', 'Tiaong', 'San Antonio',
+      'Lucban', 'Sampaloc', 'Padre Burgos', 'Quezon', 'Pagbilao', 'Atimonan', 'Plaridel', 'Gumaca', 'Lopez',
+      'Calauag', 'Guinayangan', 'Tagkawayan', 'Buenavista', 'Catanauan', 'General Luna', 'Macalelon', 'Mulanay',
+      'San Andres', 'San Francisco', 'San Narciso', 'Unisan', 'Agdangan', 'Alabat', 'Perez', 'Pitogo', 'Cainta',
+      'Taytay', 'Angono', 'Binangonan', 'Cardona', 'Morong', 'Baras', 'Tanay', 'Pililla', 'Jalajala', 'Rodriguez',
+      'San Mateo', 'Teresa',
+      
+      // Region IV-B (MIMAROPA)
+      'Puerto Princesa', 'Calapan', 'Mamburao', 'Boac', 'Romblon', 'Odiongan',
+      
+      // Region V (Bicol Region)
+      'Naga', 'Iriga', 'Legazpi', 'Ligao', 'Tabaco', 'Masbate', 'Sorsogon', 'Virac',
+      
+      // Region VI (Western Visayas)
+      'Iloilo City', 'Bacolod', 'Roxas', 'Kalibo', 'San Jose de Buenavista', 'Boracay',
+      
+      // Region VII (Central Visayas)
+      'Cebu City', 'Mandaue', 'Lapu-Lapu', 'Talisay', 'Toledo', 'Danao', 'Carcar', 'Bogo', 'Dumaguete', 'Bais',
+      'Bayawan', 'Canlaon', 'Guihulngan', 'Tanjay', 'Tagbilaran', 'Ubay',
+      
+      // Region VIII (Eastern Visayas)
+      'Tacloban', 'Ormoc', 'Baybay', 'Maasin', 'Calbayog', 'Catbalogan', 'Borongan',
+      
+      // Region IX (Zamboanga Peninsula)  
+      'Zamboanga City', 'Pagadian', 'Dipolog', 'Dapitan', 'Isabela',
+      
+      // Region X (Northern Mindanao)
+      'Cagayan de Oro', 'Iligan', 'Butuan', 'Malaybalay', 'Valencia', 'Oroquieta', 'Ozamiz', 'Tangub', 'Tubod',
+      'Gingoog', 'Balingoan', 'Jasaan', 'Villanueva', 'Tagoloan', 'Laguindingan', 'Gitagum', 'Medina', 'Salay',
+      'Binuangan', 'Catarman', 'Guinsiliban', 'Mahinog', 'Mambajao', 'Sagay',
+      
+      // Region XI (Davao Region)
+      'Davao City', 'Tagum', 'Panabo', 'Samal', 'Digos', 'Mati',
+      
+      // Region XII (SOCCSKSARGEN)
+      'General Santos', 'Koronadal', 'Tacurong', 'Kidapawan', 'Cotabato City', 'Surallah',
+      
+      // Region XIII (Caraga)
+      'Butuan', 'Surigao City', 'Tandag', 'Bislig', 'Bayugan',
+      
+      // Cordillera Administrative Region (CAR)
+      'Baguio', 'Tabuk', 'Lamut', 'Bontoc', 'Sagada', 'Mayoyao', 'Lagawe',
+      
+      // Autonomous Region in Muslim Mindanao (ARMM) - now BARMM
+      'Cotabato City', 'Marawi', 'Lamitan', 'Jolo', 'Bongao'
+    ].sort());
+    
+    // Common Citizenships (Philippines and International)
+    const citizenshipOptions = ref([
+      // Southeast Asian Countries
+      'Filipino', 'Philippine', 'Indonesian', 'Malaysian', 'Singaporean', 'Thai', 'Vietnamese', 'Cambodian', 
+      'Laotian', 'Bruneian', 'Myanmar', 'Burmese',
+      
+      // East Asian Countries
+      'Chinese', 'Japanese', 'Korean', 'South Korean', 'North Korean', 'Taiwanese', 'Mongolian', 'Hong Kong',
+      
+      // South Asian Countries  
+      'Indian', 'Pakistani', 'Bangladeshi', 'Sri Lankan', 'Nepalese', 'Bhutanese', 'Maldivian', 'Afghan',
+      
+      // Middle Eastern Countries
+      'Saudi Arabian', 'Emirati', 'Qatari', 'Kuwaiti', 'Bahraini', 'Omani', 'Yemeni', 'Jordanian', 'Lebanese',
+      'Syrian', 'Iraqi', 'Iranian', 'Turkish', 'Israeli', 'Palestinian',
+      
+      // European Countries
+      'British', 'English', 'Scottish', 'Welsh', 'Irish', 'French', 'German', 'Italian', 'Spanish', 'Portuguese',
+      'Dutch', 'Belgian', 'Swiss', 'Austrian', 'Swedish', 'Norwegian', 'Danish', 'Finnish', 'Polish', 'Czech',
+      'Slovak', 'Hungarian', 'Romanian', 'Bulgarian', 'Croatian', 'Serbian', 'Bosnian', 'Montenegrin', 'Albanian',
+      'Greek', 'Cypriot', 'Maltese', 'Luxembourgish', 'Estonian', 'Latvian', 'Lithuanian', 'Slovenian', 'Ukrainian',
+      'Belarusian', 'Moldovan', 'Russian',
+      
+      // North American Countries
+      'American', 'Canadian', 'Mexican', 'Guatemalan', 'Belizean', 'Salvadoran', 'Honduran', 'Nicaraguan',
+      'Costa Rican', 'Panamanian',
+      
+      // South American Countries
+      'Brazilian', 'Argentine', 'Chilean', 'Peruvian', 'Colombian', 'Venezuelan', 'Ecuadorian', 'Bolivian',
+      'Paraguayan', 'Uruguayan', 'Guyanese', 'Surinamese',
+      
+      // African Countries
+      'South African', 'Egyptian', 'Moroccan', 'Algerian', 'Tunisian', 'Libyan', 'Nigerian', 'Ghanaian',
+      'Kenyan', 'Ethiopian', 'Sudanese', 'Ugandan', 'Tanzanian', 'Rwandan', 'Burundian', 'Congolese',
+      'Zambian', 'Zimbabwean', 'Botswanan', 'Namibian', 'Malawian', 'Mozambican', 'Madagascan', 'Mauritian',
+      'Seychellois', 'Senegalese', 'Malian', 'Burkinabe', 'Ivorian', 'Gabonese', 'Cameroonian', 'Chadian',
+      
+      // Oceania Countries
+      'Australian', 'New Zealand', 'Fijian', 'Samoan', 'Tongan', 'Papua New Guinean', 'Solomon Islander',
+      'Vanuatuan', 'Palauan', 'Marshallese', 'Micronesian', 'Nauruan', 'Kiribati', 'Tuvaluan',
+      
+      // Caribbean Countries
+      'Jamaican', 'Cuban', 'Dominican', 'Haitian', 'Puerto Rican', 'Trinidadian', 'Tobagonian', 'Barbadian',
+      'Bahamian', 'Antiguan', 'Barbudan', 'Saint Lucian', 'Grenadian', 'Saint Vincentian', 'Grenadine',
+      
+      // Additional Common Terms
+      'Dual Citizen', 'Stateless', 'Refugee', 'Asylum Seeker'
+    ].sort());
+    
     // Function to mark field as touched
     const markAsTouched = (fieldName) => {
       touchedFields.value[fieldName] = true;
@@ -921,10 +1150,82 @@ export default {
       };
     };
     
+    // Handle text input with auto-uppercase and real-time validation
+    const handleTextInput = (fieldName, modelPath = null) => {
+      const actualPath = modelPath || fieldName;
+      const keys = actualPath.split('.');
+      let target = formData.value;
+      
+      // Navigate to the correct nested object
+      for (let i = 0; i < keys.length - 1; i++) {
+        target = target[keys[i]];
+      }
+      
+      const finalKey = keys[keys.length - 1];
+      const currentValue = target[finalKey];
+      
+      // Convert to uppercase for name and address fields
+      const fieldsToUppercase = [
+        'lastName', 'firstName', 'middleName', 
+        'streetPurok', 'barangay', 'city', 'citizenship',
+        'seniorGraduatingSchoolName', 'seniorGraduatingSchoolAddress',
+        'seniorGraduateSchoolName', 'seniorGraduateSchoolAddress',
+        'collegeSchoolName', 'collegeSchoolAddress'
+      ];
+      
+      if (fieldsToUppercase.includes(fieldName)) {
+        target[finalKey] = currentValue.toUpperCase();
+      }
+      
+      // Mark field as touched for real-time validation
+      markAsTouched(fieldName);
+      
+      // Perform real-time validation based on field type
+      switch(fieldName) {
+        case 'lastName':
+          validateLastName();
+          break;
+        case 'firstName':
+          validateFirstName();
+          break;
+        case 'middleName':
+          validateMiddleName();
+          break;
+        case 'streetPurok':
+          validateStreetPurok();
+          break;
+        case 'barangay':
+          validateBarangay();
+          break;
+        case 'city':
+          validateCity();
+          break;
+        case 'citizenship':
+          validateCitizenship();
+          break;
+        default:
+          // For nested fields like school names/addresses
+          if (fieldName.includes('School')) {
+            validateApplicantType();
+          }
+          break;
+      }
+    };
+    
     // Computed property for birth years (100 years back from current year)
     const birthYears = computed(() => {
       const currentYear = new Date().getFullYear();
       return Array.from({ length: 100 }, (_, i) => currentYear - i);
+    });
+    
+    // Computed property for filtered barangays (for better performance)
+    const filteredBarangays = computed(() => {
+      return philippineBarangays.value;
+    });
+    
+    // Computed property for filtered cities (for better performance)
+    const filteredCities = computed(() => {
+      return philippineCities.value;
     });
     
     // Computed property to check if the form is valid
@@ -1267,6 +1568,10 @@ export default {
       if (touchedFields.value.contactNumber) validateContactNumber();
     });
     
+    watch(() => formData.value.email, () => {
+      if (touchedFields.value.email) validateEmail();
+    });
+    
     watch(() => formData.value.streetPurok, () => {
       if (touchedFields.value.streetPurok) validateStreetPurok();
     });
@@ -1446,6 +1751,17 @@ export default {
       document.removeEventListener('click', handleClickOutside);
     });
     
+    // Add debugging on mount
+    onMounted(() => {
+      console.log('ScheduleModal mounted');
+      console.log('philippineBarangays length:', philippineBarangays.value.length);
+      console.log('philippineCities length:', philippineCities.value.length);
+      console.log('citizenshipOptions length:', citizenshipOptions.value.length);
+      console.log('First 5 barangays:', philippineBarangays.value.slice(0, 5));
+      console.log('First 5 cities:', philippineCities.value.slice(0, 5));
+      console.log('First 5 citizenships:', citizenshipOptions.value.slice(0, 5));
+    });
+    
     // Add cleanup for when the modal is closed
     watch(() => props.modelValue, (newVal) => {
       if (!newVal) {
@@ -1612,6 +1928,9 @@ export default {
         // Process your data
         apiData.value = response.data;
         
+        // Also fetch test sessions for highlighting exam dates
+        await fetchTestSessions();
+        
       } catch (err) {
         // Check if modal was closed during API call
         if (!props.modelValue) return;
@@ -1629,6 +1948,109 @@ export default {
       } finally {
         loading.value = false;
       }
+    };
+
+    // Fetch test sessions for highlighting exam dates
+    const fetchTestSessions = async () => {
+      try {
+        console.log('🔄 Fetching test sessions...');
+        
+        // Try different endpoints to find the working one
+        const endpoints = [
+          '/api/public/test-sessions/',  // New public endpoint (no auth required)
+          '/api/public/test-sessions',   // Without trailing slash
+          '/api/admin/test-sessions/',   // Admin endpoint (auth required)
+          '/api/test-sessions/',         // Generic endpoint
+          '/admin/test-sessions/',       // Admin endpoint alt
+          '/test-sessions/'             // Basic endpoint
+        ];
+        
+        let response = null;
+        let workingEndpoint = null;
+        
+        for (const endpoint of endpoints) {
+          try {
+            console.log(`🔍 Trying endpoint: ${endpoint}`);
+            response = await axios.get(endpoint);
+            workingEndpoint = endpoint;
+            console.log(`✅ Success with endpoint: ${endpoint}`);
+            break;
+          } catch (err) {
+            console.log(`❌ Failed endpoint: ${endpoint}`, err.response?.status || err.message);
+            continue;
+          }
+        }
+        
+        if (!response) {
+          console.warn('⚠️ No test sessions endpoint available - calendar highlighting will be disabled');
+          testSessions.value = [];
+          return;
+        }
+        
+        testSessions.value = response.data;
+        console.log('✅ Test sessions loaded:', testSessions.value);
+        console.log('📊 Test sessions count:', testSessions.value.length);
+        console.log('🌐 Working endpoint:', workingEndpoint);
+        
+        // Log individual test sessions for debugging
+        testSessions.value.forEach((session, index) => {
+          console.log(`📋 Session ${index + 1}:`, {
+            id: session.id,
+            exam_type: session.exam_type,
+            exam_date: session.exam_date,
+            registration_start: session.registration_start_date,
+            registration_end: session.registration_end_date,
+            status: session.status,
+            raw: session
+          });
+        });
+        
+        // Test the date formatting
+        const today = new Date();
+        const todayStr = formatDateForApi(today);
+        console.log('🗓️ Today formatted:', todayStr);
+        
+        // Check if today matches any exam dates
+        const todayExams = testSessions.value.filter(session => session.exam_date === todayStr);
+        console.log('📅 Exams today:', todayExams);
+        
+        // Check if today is in any registration period
+        const todayRegistrations = testSessions.value.filter(session => {
+          const regStart = new Date(session.registration_start_date);
+          const regEnd = new Date(session.registration_end_date);
+          const currentDate = new Date(todayStr);
+          return currentDate >= regStart && currentDate <= regEnd;
+        });
+        console.log('🟢 Registration periods active today:', todayRegistrations);
+        
+        // Test specific dates from your test sessions
+        const testDates = ['2025-06-29', '2025-07-29', '2025-07-21', '2025-06-27'];
+        testDates.forEach(dateStr => {
+          const exams = testSessions.value.filter(session => session.exam_date === dateStr);
+          const registrations = testSessions.value.filter(session => {
+            const regStart = new Date(session.registration_start_date);
+            const regEnd = new Date(session.registration_end_date);
+            const currentDate = new Date(dateStr);
+            return currentDate >= regStart && currentDate <= regEnd;
+          });
+          console.log(`🎯 ${dateStr} - Exams: ${exams.length}, Registrations: ${registrations.length}`);
+        });
+        
+      } catch (err) {
+        console.error('❌ Error fetching test sessions:', err);
+        console.error('📝 Error details:', err.response?.data || err.message);
+        console.error('🔍 Full error:', err);
+        // Don't throw error, just set empty array so calendar still works
+        testSessions.value = [];
+      }
+    };
+
+    // Helper function to format dates for API (moved up for use in fetchTestSessions)
+    const formatDateForApi = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     };
     
     // Form submission
@@ -1938,6 +2360,12 @@ export default {
       isAfternoonAvailable,
       validationErrors,
       birthYears,
+      philippineBarangays,
+      philippineCities,
+      citizenshipOptions,
+      testSessions,
+      filteredBarangays,
+      filteredCities,
       fetchData,
       formatDate,
       selectTimeSlot,
@@ -1950,11 +2378,28 @@ export default {
       isFieldValid,
       isFieldInvalid,
       getInputClasses,
+      handleTextInput,
       calculateAndSetAge,
       currentStep,
       nextStep,
       prevStep,
-      validateCurrentStep
+      validateCurrentStep,
+      // Add all validation functions
+      validateLastName,
+      validateFirstName,
+      validateMiddleName,
+      validateContactNumber,
+      validateEmail,
+      validateBirthDate,
+      validateAge,
+      validateGender,
+      validateStreetPurok,
+      validateBarangay,
+      validateCity,
+      validateCitizenship,
+      validateWmsucetExperience,
+      validateApplicantType,
+      validateDateTime
     };
   }
 }
