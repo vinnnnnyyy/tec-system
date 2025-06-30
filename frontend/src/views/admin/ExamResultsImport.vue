@@ -409,10 +409,10 @@ export default {
     },    // Fetch available years from API
     async fetchAvailableYears() {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        console.log('Attempting to fetch exam years from:', `${apiUrl}/api/exam-years/`);
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        console.log('Attempting to fetch exam years from:', `${apiUrl}/api/api/exam-years/`);
         
-        const response = await axios.get(`${apiUrl}/api/exam-years/`);
+        const response = await axios.get(`${apiUrl}/api/api/exam-years/`);
         
         if (response.data && Array.isArray(response.data)) {
           // Make sure years are strings and filter out any invalid values

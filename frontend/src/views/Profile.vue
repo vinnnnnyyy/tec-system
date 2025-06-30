@@ -189,7 +189,8 @@ export default {
   methods: {
     async fetchUserProfile() {
       try {
-        const response = await axios.get('/api/profile/')
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        const response = await axios.get(`${apiUrl}/api/profile/`)
         this.userProfile = response.data
       } catch (error) {
         console.error('Error fetching user profile:', error)

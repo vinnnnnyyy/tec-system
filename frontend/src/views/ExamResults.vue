@@ -437,10 +437,10 @@ export default {
       
       try {
         // Use the API URL from environment variables or fallback to localhost
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
         
         // Build the URL with query parameters
-        let url = `${apiUrl}api/admin/results/`;
+        let url = `${apiUrl}/api/admin/results/`;
         const params = new URLSearchParams();
         
         if (examType) {
@@ -484,8 +484,8 @@ export default {
       this.error = null;
       try {
         // Use the API URL from environment variables or fallback to localhost
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const response = await axios.get(`${apiUrl}api/programs/`);
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        const response = await axios.get(`${apiUrl}/api/programs/`);
         console.log('API Response:', response.data); // Debug log
         
         if (response.data && Array.isArray(response.data)) {
@@ -531,8 +531,8 @@ export default {
     // Fetch available exam years from API
     async fetchAvailableYears() {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const response = await axios.get(`${apiUrl}/api/exam-years/`);
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        const response = await axios.get(`${apiUrl}/api/api/exam-years/`);
         
         if (response.data && Array.isArray(response.data)) {
           this.availableYears = response.data;

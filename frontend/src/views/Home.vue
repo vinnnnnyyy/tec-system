@@ -205,8 +205,8 @@ import { useToast } from '../composables/useToast'
 import axiosInstance from '../services/axios.interceptor'
 import { useAnnouncementStore } from '../stores/announcement'
 
-const API_URL = import.meta.env.VITE_API_URL;
-const API_ENDPOINT = `${API_URL}/`;
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const API_ENDPOINT = `${API_URL}/api/`;
 
 export default {
   name: 'Home',

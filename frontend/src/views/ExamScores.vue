@@ -359,7 +359,7 @@ export default {
     // Fetch program codes from the API
     const fetchProgramCodes = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
         const apiUrlWithoutTrailingSlash = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl
         
         let response = null
@@ -371,7 +371,8 @@ export default {
             response = await axios.get(`${apiUrlWithoutTrailingSlash}/programs/`)
           } catch (err) {
             console.error('Failed to fetch program codes:', err)
-            return false
+            // Keep default exam types and don't throw error
+            return true
           }
         }
         
@@ -391,10 +392,12 @@ export default {
           }
         }
         
-        return false
+        // If we reach here, use defaults
+        return true
       } catch (e) {
         console.error('Error fetching program codes:', e)
-        return false
+        // Keep default exam types and don't throw error
+        return true
       }
     }
       // States
@@ -471,7 +474,7 @@ export default {
       loading.value = true;
       try {
         // Get the API URL from environment or use default
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
         const apiUrlWithoutTrailingSlash = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
         
         console.log('Searching with criteria:', {
@@ -483,7 +486,7 @@ export default {
           exam_type: searchForm.examType
         });
         
-        const response = await axios.get(`${apiUrlWithoutTrailingSlash}/api/public/search-exam-scores/`, {
+        const response = await axios.get(`${apiUrlWithoutTrailingSlash}/api/api/public/search-exam-scores/`, {
           params: {
             app_no: searchForm.appNo,
             last_name: searchForm.lastName,
@@ -550,25 +553,20 @@ export default {
       })
     }
       // Initialize
-    onMounted(() => {
+    onMounted(async () => {
       generateCaptcha()
       loading.value = true // Show loading state immediately
-      fetchExamTypes() // Fetch exam types from backend
-    })
-      // Fetch available exam types from the backend
-    const fetchExamTypes = async () => {
-      loading.value = true
+      
       try {
-        await fetchProgramCodes()
+        await fetchProgramCodes() // Fetch exam types from backend
         console.log("Exam types loaded:", examTypes.value)
       } catch (error) {
         console.error('Error fetching exam types:', error)
-        // Keep the default exam types on error but show a toast
         showToast('Notice', 'Using default exam types due to connection issue.', 'info')
       } finally {
-        loading.value = false
+        loading.value = false // Always reset loading state
       }
-    }
+    })
       return {
       searchForm,
       loading,

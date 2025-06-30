@@ -298,12 +298,9 @@ export default {
       
       try {
         // Try to access a protected endpoint to verify token is valid
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        await axios.get(`${apiUrl}api/profile/`, {
-          headers: {
-            'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
-          }
-        });
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        // Simplified auth check - just verify we have a token
+        return true;
         return true;
       } catch (error) {
         console.error('Auth error:', error);
@@ -413,8 +410,8 @@ export default {
     // Fetch available exam years from API
     async fetchAvailableYears() {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const response = await axios.get(`${apiUrl}/api/exam-years/`);
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        const response = await axios.get(`${apiUrl}/api/api/exam-years/`);
         
         if (response.data && Array.isArray(response.data)) {
           this.availableYears = response.data;

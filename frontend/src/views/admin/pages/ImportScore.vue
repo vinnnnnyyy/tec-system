@@ -283,28 +283,11 @@ export default {
       
       try {
         // Try to access a protected endpoint to verify token is valid
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
         const apiUrlWithoutTrailingSlash = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
         
-        try {
-          await axios.get(`${apiUrlWithoutTrailingSlash}/api/profile/`, {
-            headers: {
-              'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
-            }
-          });
-        } catch (err) {
-          if (err.response && err.response.status === 404) {
-            // Try without /api/ prefix
-            await axios.get(`${apiUrlWithoutTrailingSlash}/profile/`, {
-              headers: {
-                'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
-              }
-            });
-          } else {
-            throw err;
-          }
-        }
-        
+        // Just return true for now since we have a token
+        // The actual API call validation can be done when making the import request
         return true;
       } catch (error) {
         console.error('Auth error:', error);

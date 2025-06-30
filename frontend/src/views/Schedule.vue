@@ -158,6 +158,24 @@ import AuthService from '../services/auth.service'
 import { useToast } from '../composables/useToast'
 import ApplicationFormStore from '../services/ApplicationFormStore'
 
+// Fallback programs in case API is not available
+const fallbackPrograms = [
+  {
+    id: 1,
+    name: 'WMSU College Entrance Test (WMSU-CET)',
+    description: 'College entrance examination for WMSU undergraduate programs',
+    status: 'active',
+    capacity_limit: 50
+  },
+  {
+    id: 2,
+    name: 'Graduate School Entrance Test',
+    description: 'Entrance examination for graduate school programs',
+    status: 'active', 
+    capacity_limit: 30
+  }
+];
+
 export default {
   name: 'Schedule',
   components: {
