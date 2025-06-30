@@ -11,7 +11,7 @@ from .views import (
     create_individual_test_detail, create_bulk_test_details, AnnouncementViewSet,
     get_student_exam_score, import_scores_api, get_exam_years,
     get_dashboard_stats, get_recent_appointments, reset_test_session_rooms,
-    search_public_exam_scores
+    search_public_exam_scores, get_public_test_sessions
 )
 from .date_availability_view import program_availability
 from .auth_views import (
@@ -31,17 +31,20 @@ router.register(r'announcements', AnnouncementViewSet)
 
 urlpatterns = [
     # Score import endpoints - try multiple variations to ensure accessibility
-    path('api/score-import/', import_scores_api, name='import_scores_api'),
-    path('api/appointments/import-scores/', import_scores_api, name='import_scores_api2'),
+    path('score-import/', import_scores_api, name='import_scores_api'),
+    path('appointments/import-scores/', import_scores_api, name='import_scores_api2'),
     path('appointments/import-scores/', import_scores_api, name='import_scores_api3'),
     path('admin/import-scores/', import_scores_api, name='import_scores_api4'),  # Additional admin path    # Student exam scores
     path('student/exam-score/', get_student_exam_score, name='get_student_exam_score'),
     
     # Public exam scores search endpoint
-    path('api/public/search-exam-scores/', search_public_exam_scores, name='search_public_exam_scores'),
+    path('public/search-exam-scores/', search_public_exam_scores, name='search_public_exam_scores'),
+    
+    # Public test sessions endpoint (for calendar highlighting)
+    path('public/test-sessions/', get_public_test_sessions, name='get_public_test_sessions'),
     
     # Exam years endpoint
-    path('api/exam-years/', get_exam_years, name='get_exam_years'),
+    path('exam-years/', get_exam_years, name='get_exam_years'),
     
     # Dashboard statistics endpoints
     path('admin/dashboard/stats/', get_dashboard_stats, name='get_dashboard_stats'),
