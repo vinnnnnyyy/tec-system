@@ -8,6 +8,7 @@ from .serializers import (
     TestCenterSerializer, TestRoomSerializer, AnnouncementSerializer, ExamScoreDetailSerializer
 )
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import AllowAny
 import csv
 import io
 import json
@@ -1211,3 +1212,29 @@ def search_public_exam_scores(request):
             'status': 'error',
             'detail': 'An error occurred while searching for exam scores.'
         }, status=500)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_public_test_sessions(request):
+    """
+    Public endpoint to get test sessions for calendar highlighting.
+    Returns only basic information needed for date highlighting.
+    """
+    try:
+        # Get all test sessions for public viewing (changed from filtering by SCHEDULED)
+        test_sessions = TestSession.objects.all().select_related()
+        
+        sessions_data = []
+        for session in test_sessions:
+            sessions_data.append({
+                'id': session.id,
+                'exam_type': session.exam_type,
+                'exam_date': session.exam_date.strftime('%Y-%m-%d') if session.exam_date else None,
+                'registration_start_date': session.registration_start_date.strftime('%Y-%m-%d') if session.registration_start_date else None,
+                'registration_end_date': session.registration_end_date.strftime('%Y-%m-%d') if session.registration_end_date else None,
+                'status': session.status,
+            })
+        
+        return Response(sessions_data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
