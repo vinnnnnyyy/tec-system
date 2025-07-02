@@ -1137,16 +1137,23 @@ export default {
       isLoadingFaqs.value = true
       try {
         const response = await axiosInstance.get(API_ENDPOINT + 'admin/faqs/')
-        faqs.value = response.data.map(faq => ({
+        // Handle both array and object responses
+        const faqData = Array.isArray(response.data) ? response.data : (response.data.results || []);
+        faqs.value = faqData.map(faq => ({
           ...faq,
           is_active: faq.is_active || false,
           icon: faq.icon || 'fas fa-question'
-        }))
+        }));
       } catch (error) {
-        console.error('Failed to fetch FAQs:', error)
-        alert('Failed to fetch FAQs')
+        console.error('Failed to fetch FAQs:', error);
+        // Use toast for more user-friendly error messages
+        if (error.response?.status === 403) {
+          alert('You do not have permission to view FAQs');
+        } else {
+          alert('Failed to fetch FAQs. Please try again later.');
+        }
       } finally {
-        isLoadingFaqs.value = false
+        isLoadingFaqs.value = false;
       }
     }
 
