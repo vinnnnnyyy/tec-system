@@ -184,11 +184,29 @@ class TestSessionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Auto-update status for all test sessions based on dates
+        self.auto_update_test_session_status()
+        
         # If an admin user is performing the request, return all test sessions
         if self.request.user.is_staff or self.request.user.is_superuser:
             return TestSession.objects.all()
         # Otherwise, return only active sessions
         return TestSession.objects.filter(status='SCHEDULED')
+
+    def auto_update_test_session_status(self):
+        """
+        Automatically update test session status based on registration and exam dates
+        """
+        from datetime import date
+        today = date.today()
+        
+        # Get all test sessions that are not completed or cancelled
+        active_sessions = TestSession.objects.filter(
+            status__in=['SCHEDULED', 'ONGOING']
+        )
+        
+        for session in active_sessions:
+            session.check_and_update_status()
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -251,50 +269,73 @@ class TestSessionViewSet(viewsets.ModelViewSet):
         Get room allocations for a specific test session
         """
         try:
-            session = self.get_object()
-            # Get all rooms
-            rooms = TestRoom.objects.filter(is_active=True)
+            test_session = self.get_object()
             
-            # Prepare the response data
-            room_data = []
-            for room in rooms:
-                # Get the test center for this room
-                test_center = room.test_center
+            # Get all appointments for this test session with room assignments
+            appointments = Appointment.objects.filter(
+                test_session=test_session,
+                test_room__isnull=False
+            ).select_related('test_room', 'test_room__test_center')
+            
+            # Group by room
+            allocations = {}
+            for appointment in appointments:
+                room_key = f"{appointment.test_room.test_center.name} - {appointment.test_room.name}"
+                if room_key not in allocations:
+                    allocations[room_key] = {
+                        'room': {
+                            'id': appointment.test_room.id,
+                            'name': appointment.test_room.name,
+                            'code': appointment.test_room.room_code,
+                            'capacity': appointment.test_room.capacity,
+                            'time_slot': appointment.test_room.time_slot,
+                            'center_name': appointment.test_room.test_center.name
+                        },
+                        'appointments': []
+                    }
                 
-                # Count assigned appointments for this room
-                assigned_count = Appointment.objects.filter(
-                    test_room=room,
-                    test_session=session
-                ).count()
-                
-                # Calculate available capacity
-                available_capacity = max(0, room.capacity - assigned_count)
-                
-                # Add room data to the response
-                room_data.append({
-                    'id': room.id,
-                    'room_name': room.name,
-                    'room_code': room.room_code,
-                    'center_name': test_center.name if test_center else 'Unknown',
-                    'test_center_id': test_center.id if test_center else None,
-                    'capacity': room.capacity,
-                    'assigned_count': assigned_count,
-                    'available_capacity': available_capacity,
-                    'time_slot': room.time_slot
+                allocations[room_key]['appointments'].append({
+                    'id': appointment.id,
+                    'first_name': appointment.first_name,
+                    'last_name': appointment.last_name,
+                    'email': appointment.email,
+                    'phone': appointment.phone,
+                    'preferred_time': appointment.preferred_time,
+                    'status': appointment.status
                 })
             
+            return Response(list(allocations.values()))
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['POST'], url_path='update-status')
+    def update_session_status(self, request):
+        """
+        Manually trigger status update for all test sessions based on dates
+        """
+        try:
+            updated_count = 0
+            sessions = TestSession.objects.filter(status__in=['SCHEDULED', 'ONGOING'])
+            
+            for session in sessions:
+                if session.check_and_update_status():
+                    updated_count += 1
+            
             return Response({
-                'session_id': session.id,
-                'exam_date': session.exam_date,
-                'rooms': room_data
+                'message': f'Successfully updated {updated_count} test session(s) to COMPLETED status',
+                'updated_count': updated_count
             })
             
         except Exception as e:
-            print(f"Error getting room allocations: {str(e)}")
-            return Response({
-                'error': 'Failed to retrieve room allocations'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
 class AnnouncementViewSet(viewsets.ModelViewSet):
     queryset = Announcement.objects.all()
     serializer_class = AnnouncementSerializer

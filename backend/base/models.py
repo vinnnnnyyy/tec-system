@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import date
 
 ## program model
 class Program(models.Model):
@@ -135,6 +137,15 @@ class Appointment(models.Model):
         # Only prevent duplicate bookings for the same program, date, and time slot
         unique_together = ['email', 'program', 'preferred_date', 'time_slot']
 
+    def save(self, *args, **kwargs):
+        # Auto-update status based on current date and registration dates
+        current_date = date.today()
+        if self.status == 'pending':
+            if self.program.availability_date <= current_date:
+                self.status = 'waiting_for_test_details'
+        
+        super().save(*args, **kwargs)
+
 # Exam Score Model
 class ExamScore(models.Model):
     appointment = models.OneToOneField(Appointment, on_delete=models.CASCADE, related_name='exam_score', null=True, blank=True)
@@ -247,6 +258,21 @@ class TestSession(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    def check_and_update_status(self):
+        """
+        Check if the registration and exam dates have passed and update status to COMPLETED
+        """
+        today = date.today()
+        
+        # If both registration end date and exam date have passed, mark as completed
+        if (self.registration_end_date < today and 
+            self.exam_date < today and 
+            self.status not in ['COMPLETED', 'CANCELLED']):
+            self.status = 'COMPLETED'
+            self.save(update_fields=['status', 'updated_at'])
+            return True
+        return False
     
     def __str__(self):
         return f"{self.exam_type} - {self.exam_date}"
