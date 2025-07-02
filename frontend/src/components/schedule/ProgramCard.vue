@@ -331,11 +331,31 @@ export default {
       console.log('ProgramCard: Final exam type determined:', examType);
       
       // Find the most relevant test session for this exam type
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time for accurate date comparison
+      
       const relevantSessions = this.testSessions
         .filter(session => {
-          const matches = session.exam_type === examType;
-          console.log(`ProgramCard: Session ${session.id} (${session.exam_type}) matches ${examType}:`, matches);
-          return matches;
+          // Match exam type
+          const matchesType = session.exam_type === examType;
+          
+          // Check if session is valid (not completed/cancelled)
+          const isValidStatus = session.status === 'SCHEDULED' || session.status === 'ONGOING';
+          
+          // Check if exam date hasn't passed
+          const examDate = new Date(session.exam_date);
+          examDate.setHours(0, 0, 0, 0);
+          const isUpcoming = examDate >= today;
+          
+          const isValid = matchesType && isValidStatus && isUpcoming;
+          console.log(`ProgramCard: Session ${session.id} (${session.exam_type}):`, {
+            matchesType,
+            isValidStatus,
+            isUpcoming,
+            isValid
+          });
+          
+          return isValid;
         })
         .sort((a, b) => {
           // Sort by exam date - closest upcoming first
@@ -387,10 +407,18 @@ export default {
     // Check if exam date is in the past
     isExamDatePast() {
       if (!this.programTestSession) return false;
+      
+      // Consider both the exam date and session status
       const examDate = new Date(this.programTestSession.exam_date);
+      examDate.setHours(0, 0, 0, 0);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      return examDate < today;
+      
+      // Session is considered past if:
+      // 1. Exam date is in the past OR
+      // 2. Status is COMPLETED or CANCELLED
+      return examDate < today || 
+             ['COMPLETED', 'CANCELLED'].includes(this.programTestSession.status);
     },
     
     // Check registration period status
