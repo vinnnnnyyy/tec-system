@@ -15,7 +15,81 @@
           <div class="flex-grow min-w-0">
             <h3 class="font-semibold text-gray-800 text-lg truncate" :title="program.name">{{ program.name }}</h3>
             <p class="text-sm text-gray-500">{{ program.code }}</p>
-          </div>
+            <div v-if="programTestSession" class="mt-2 space-y-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" 
+                  :class="{'bg-red-100 text-red-800': examType === 'CET',
+                           'bg-blue-100 text-blue-800': examType === 'EAT',
+                           'bg-purple-100 text-purple-800': examType === 'NAT',
+                           'bg-crimson-100 text-crimson-800': !['CET', 'EAT', 'NAT'].includes(examType)}">
+                  <i class="fas fa-graduation-cap mr-1"></i> {{ examType }}
+                </span>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                  :class="{
+                    'bg-gray-100 text-gray-600': isExamDatePast,
+                    'bg-crimson-100 text-crimson-800': !isExamDatePast
+                  }">
+                  <i :class="['mr-1', isExamDatePast ? 'fas fa-calendar-times' : 'fas fa-calendar-day']"></i> 
+                  Exam: {{ examDateFormatted }}
+                </span>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                  :class="{
+                    'bg-red-100 text-red-600': registrationStatus === 'closed',
+                    'bg-yellow-100 text-yellow-700': registrationStatus === 'not_started',
+                    'bg-green-100 text-green-800': registrationStatus === 'open'
+                  }">
+                  <i :class="[
+                    'mr-1',
+                    registrationStatus === 'closed' ? 'fas fa-times-circle' :
+                    registrationStatus === 'not_started' ? 'fas fa-pause-circle' :
+                    'fas fa-clock'
+                  ]"></i> 
+                  Registration: {{ registrationPeriodFormatted }}
+                </span>
+              </div>
+              <!-- Warning message for past exam dates -->
+              <div v-if="isExamDatePast" class="mt-1">
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-700">
+                  <i class="fas fa-exclamation-triangle mr-1"></i>
+                  This exam date has already passed
+                </span>
+              </div>
+              <!-- Warning message for closed registration -->
+              <div v-else-if="registrationStatus === 'closed'" class="mt-1">
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">
+                  <i class="fas fa-exclamation-circle mr-1"></i>
+                  Registration period has ended
+                </span>
+              </div>
+              <!-- Info message for future registration -->
+              <div v-else-if="registrationStatus === 'not_started'" class="mt-1">
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                  <i class="fas fa-info-circle mr-1"></i>
+                  Registration not yet started
+                </span>
+              </div>
+            </div>
+            <!-- Debug info when no test session matches -->
+            <div v-else-if="testSessions && testSessions.length > 0" class="mt-2 text-xs">
+              <div class="bg-yellow-50 border border-yellow-200 p-2 rounded text-gray-700">
+                <p><strong>Debug:</strong> Available exam types: {{ testSessions.map(s => s.exam_type).join(', ') }}</p>
+                <p><strong>Program:</strong> {{ program.name }} ({{ program.code }})</p>
+                <p><strong>Test sessions count:</strong> {{ testSessions.length }}</p>
+                <div v-if="testSessions[0]" class="mt-2 text-xs">
+                  <p><strong>First session:</strong> {{ testSessions[0].exam_type }} - {{ testSessions[0].exam_date }}</p>
+                  <p><strong>Registration:</strong> {{ testSessions[0].registration_start_date }} to {{ testSessions[0].registration_end_date }}</p>
+                </div>
+              </div>
+            </div>
+            <!-- When no test sessions at all -->
+            <div v-else class="mt-2 text-xs text-gray-400">
+              <p>No test sessions available ({{ testSessions ? testSessions.length : 'undefined' }})</p>
+            </div>
+            </div>
         </div>
       </div>
       
@@ -41,17 +115,17 @@
             @click="handleButtonClick"
             class="w-full font-semibold text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
             :class="[
-              isRestricted 
+              isRestricted || isExamDatePast || registrationStatus === 'closed'
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                 : isScheduled && !hasClaimedAppointment
                   ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white' 
                   : 'bg-gradient-to-r from-crimson-600 to-crimson-700 hover:from-crimson-700 hover:to-crimson-800 text-white'
             ]"
-            :disabled="isRestricted"
-            :title="isRestricted ? restrictionReason : (isScheduled && !hasClaimedAppointment ? 'Check your appointment status' : 'Schedule an appointment')"
+            :disabled="isRestricted || isExamDatePast || registrationStatus === 'closed'"
+            :title="getButtonTitle()"
           >
             <i :class="['mr-2 text-xs', isScheduled && !hasClaimedAppointment ? 'fas fa-hourglass-half' : 'fas fa-calendar-check']"></i>
-            <span>{{ isScheduled && !hasClaimedAppointment ? 'Check Status' : 'Schedule Now' }}</span>
+            <span>{{ getButtonText() }}</span>
           </button>
           
           <!-- Requirements Button -->
@@ -134,6 +208,10 @@ export default {
     restrictionReason: {
       type: String,
       default: ''
+    },
+    testSessions: {
+      type: Array,
+      default: () => []
     }
   },
   data() {
@@ -148,6 +226,199 @@ export default {
   },
   updated() {
     this.checkDescriptionLength();
+  },
+  computed: {
+    // Find relevant test session based on program exam type
+    programTestSession() {
+      console.log('ProgramCard: Computing programTestSession for program:', this.program.name);
+      console.log('ProgramCard: Available test sessions:', this.testSessions);
+      
+      if (!this.testSessions || !this.testSessions.length) {
+        console.log('ProgramCard: No test sessions available');
+        return null;
+      }
+      
+      // Map program names to potential exam types - expanded and more flexible
+      const examTypeMap = {
+        'CET': ['CET', 'COLLEGE ENTRANCE', 'COLLEGE'],
+        'NAT': ['NAT', 'NURSING APTITUDE', 'NURSING'],
+        'EAT': ['EAT', 'ENGINEERING APTITUDE', 'ENGINEERING'],
+        'UPCAT': ['UPCAT', 'UNIVERSITY OF THE PHILIPPINES'],
+        'DCAT': ['DCAT', 'DE LA SALLE']
+      };
+      
+      // Get the program text to match against
+      const programText = (this.program.name + ' ' + (this.program.code || '')).toUpperCase();
+      const descText = (this.program.description || '').toUpperCase();
+      const fullText = programText + ' ' + descText;
+      
+      console.log('ProgramCard: Full text to match:', fullText);
+      
+      // Determine the likely exam type for this program
+      let examType = null;
+      
+      // Method 1: Check exact matches with test session exam types first
+      const availableExamTypes = [...new Set(this.testSessions.map(s => s.exam_type))];
+      console.log('ProgramCard: Available exam types in sessions:', availableExamTypes);
+      
+      // Direct match with available exam types
+      for (const sessionExamType of availableExamTypes) {
+        if (fullText.includes(sessionExamType.toUpperCase())) {
+          examType = sessionExamType;
+          console.log('ProgramCard: Found direct match with session exam type:', examType);
+          break;
+        }
+      }
+      
+      // Method 2: Use mapping if no direct match
+      if (!examType) {
+        for (const [type, keywords] of Object.entries(examTypeMap)) {
+          if (keywords.some(keyword => fullText.includes(keyword))) {
+            // Check if this exam type exists in our test sessions
+            if (availableExamTypes.includes(type)) {
+              examType = type;
+              console.log('ProgramCard: Found mapped exam type:', type, 'via keywords:', keywords);
+              break;
+            }
+          }
+        }
+      }
+      
+      // Method 3: Fallback - try to match program name parts with exam types
+      if (!examType) {
+        const programWords = this.program.name.toUpperCase().split(' ');
+        for (const word of programWords) {
+          const matchingSession = this.testSessions.find(session => 
+            session.exam_type && session.exam_type.toUpperCase().includes(word)
+          );
+          if (matchingSession) {
+            examType = matchingSession.exam_type;
+            console.log('ProgramCard: Found word-based match:', examType, 'for word:', word);
+            break;
+          }
+        }
+      }
+      
+      // Method 4: Special case handling based on program names
+      if (!examType) {
+        if (fullText.includes('ENGINEERING') || fullText.includes('EAT')) {
+          examType = 'EAT';
+        } else if (fullText.includes('NURSING') || fullText.includes('NAT')) {
+          examType = 'NAT';
+        } else if (fullText.includes('COLLEGE') || fullText.includes('CET')) {
+          examType = 'CET';
+        }
+        
+        // Verify this exam type exists in sessions
+        if (examType && !availableExamTypes.includes(examType)) {
+          console.log('ProgramCard: Special case exam type not found in sessions:', examType);
+          examType = null;
+        } else if (examType) {
+          console.log('ProgramCard: Using special case exam type:', examType);
+        }
+      }
+      
+      if (!examType) {
+        console.log('ProgramCard: No exam type could be determined for program:', this.program.name);
+        // Fallback: Use the first available test session if any
+        if (this.testSessions.length > 0) {
+          console.log('ProgramCard: Using first available test session as fallback');
+          return this.testSessions[0];
+        }
+        return null;
+      }
+      
+      console.log('ProgramCard: Final exam type determined:', examType);
+      
+      // Find the most relevant test session for this exam type
+      const relevantSessions = this.testSessions
+        .filter(session => {
+          const matches = session.exam_type === examType;
+          console.log(`ProgramCard: Session ${session.id} (${session.exam_type}) matches ${examType}:`, matches);
+          return matches;
+        })
+        .sort((a, b) => {
+          // Sort by exam date - closest upcoming first
+          const dateA = new Date(a.exam_date);
+          const dateB = new Date(b.exam_date);
+          return dateA - dateB;
+        });
+      
+      console.log('ProgramCard: Relevant sessions found:', relevantSessions.length);
+      
+      const result = relevantSessions.length ? relevantSessions[0] : null;
+      console.log('ProgramCard: Final result session:', result);
+      
+      return result;
+    },
+    
+    // Format the exam date nicely with status checking
+    examDateFormatted() {
+      if (!this.programTestSession) return null;
+      const examDate = new Date(this.programTestSession.exam_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+      
+      if (examDate < today) {
+        return `${this.formatDate(this.programTestSession.exam_date)} (Past)`;
+      }
+      return this.formatDate(this.programTestSession.exam_date);
+    },
+    
+    // Registration period formatted with status checking
+    registrationPeriodFormatted() {
+      if (!this.programTestSession) return null;
+      const startDate = this.formatDate(this.programTestSession.registration_start_date);
+      const endDate = this.formatDate(this.programTestSession.registration_end_date);
+      
+      const regStartDate = new Date(this.programTestSession.registration_start_date);
+      const regEndDate = new Date(this.programTestSession.registration_end_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (regEndDate < today) {
+        return `${startDate} - ${endDate} (Closed)`;
+      } else if (regStartDate > today) {
+        return `${startDate} - ${endDate} (Not Started)`;
+      }
+      return `${startDate} - ${endDate}`;
+    },
+    
+    // Check if exam date is in the past
+    isExamDatePast() {
+      if (!this.programTestSession) return false;
+      const examDate = new Date(this.programTestSession.exam_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return examDate < today;
+    },
+    
+    // Check registration period status
+    registrationStatus() {
+      if (!this.programTestSession) return 'unknown';
+      const regStartDate = new Date(this.programTestSession.registration_start_date);
+      const regEndDate = new Date(this.programTestSession.registration_end_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (regEndDate < today) return 'closed';
+      if (regStartDate > today) return 'not_started';
+      return 'open';
+    },
+    
+    // Exam type from the test session
+    examType() {
+      return this.programTestSession?.exam_type || null;
+    }
+  },
+  watch: {
+    testSessions: {
+      handler(newSessions) {
+        console.log('ProgramCard: testSessions changed for program', this.program.name, ':', newSessions);
+      },
+      immediate: true,
+      deep: true
+    }
   },
   methods: {
     checkDescriptionLength() {
@@ -167,7 +438,10 @@ export default {
       this.showRequirements = !this.showRequirements
     },
     handleButtonClick() {
-      if (this.isRestricted) return;
+      // Prevent action if restricted, exam date is past, or registration is closed
+      if (this.isRestricted || this.isExamDatePast || this.registrationStatus === 'closed') {
+        return;
+      }
       
       if (this.isScheduled && !this.hasClaimedAppointment) {
         const latestAppointmentId = Array.isArray(this.appointmentId) 
@@ -198,11 +472,14 @@ export default {
     formatDate(dateString) {
       if (!dateString) return 'Ongoing';
       const date = new Date(dateString);
+      
       // Check if date is valid
       if (isNaN(date.getTime())) {
         return 'Invalid Date';
       }
+      
       try {
+        // Format the date as Month Day, Year (e.g. July 15, 2025)
         return new Intl.DateTimeFormat('en-US', {
           month: 'short', day: 'numeric', year: 'numeric'
         }).format(date);
@@ -210,6 +487,21 @@ export default {
         console.error("Error formatting date:", e);
         return dateString; // Fallback to original string
       }
+    },
+    getButtonText() {
+      if (this.isExamDatePast) return 'Exam Ended';
+      if (this.registrationStatus === 'closed') return 'Registration Closed';
+      if (this.registrationStatus === 'not_started') return 'Registration Soon';
+      if (this.isScheduled && !this.hasClaimedAppointment) return 'Check Status';
+      return 'Schedule Now';
+    },
+    getButtonTitle() {
+      if (this.isRestricted) return this.restrictionReason;
+      if (this.isExamDatePast) return 'This exam has already taken place';
+      if (this.registrationStatus === 'closed') return 'Registration period has ended';
+      if (this.registrationStatus === 'not_started') return 'Registration has not started yet';
+      if (this.isScheduled && !this.hasClaimedAppointment) return 'Check your appointment status';
+      return 'Schedule an appointment';
     }
   }
 }
@@ -219,6 +511,7 @@ export default {
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -320,4 +613,4 @@ button.bg-gradient-to-r.from-green-500:not(:disabled):hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-</style> 
+</style>

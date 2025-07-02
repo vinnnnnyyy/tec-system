@@ -61,6 +61,7 @@
               :has-claimed-appointment="claimedProgramIds.has(program.id)"
               :is-restricted="!!restrictedPrograms[program.id]"
               :restriction-reason="restrictedPrograms[program.id]?.reason"
+              :test-sessions="testSessions"
               @schedule="handleSchedule"
               @check-status="handleStatusCheck"
               class="w-full"
@@ -211,11 +212,16 @@ export default {
       currentPage: 1,
       itemsPerPage: 4,
       paginationLoading: false,
+      // Test sessions for exam dates
+      testSessions: [],
     }
   },
   async created() {
     // First fetch programs
     await this.fetchPrograms();
+    
+    // Fetch test sessions for exam dates
+    await this.fetchTestSessions();
     
     // Check if the user just logged in or registered by looking at the navigation state
     if (this.$route.params.justLoggedIn || 
@@ -246,6 +252,7 @@ export default {
         if (newRouteName === 'Schedule') {
           this.fetchUserAppointments().then(() => {
             this.fetchUserExamScores();
+            this.fetchTestSessions();
           });
         }
       }
@@ -259,6 +266,7 @@ export default {
         if (newRouteName === 'Schedule') {
           this.fetchUserAppointments().then(() => {
             this.fetchUserExamScores();
+            this.fetchTestSessions();
           });
         }
       }
@@ -267,6 +275,58 @@ export default {
   methods: {
     dismissWelcomeNotification() {
       this.showWelcomeNotification = false
+    },
+    async fetchTestSessions() {
+      try {
+        // Try different endpoints to find the working one
+        const endpoints = [
+          '/api/public/test-sessions/',  // Public endpoint (no auth required)
+          '/api/admin/test-sessions/'    // Admin endpoint (auth required)
+        ];
+        
+        let response = null;
+        
+        for (const endpoint of endpoints) {
+          try {
+            response = await axios.get(endpoint);
+            if (response.data) break;
+          } catch (err) {
+            console.log(`Failed to fetch from ${endpoint}`, err.message);
+            continue;
+          }
+        }
+        
+        if (!response) {
+          console.warn('No test sessions available');
+          this.testSessions = [];
+          return;
+        }
+        
+        this.testSessions = response.data;
+        console.log('Test sessions loaded:', this.testSessions.length);
+        console.log('Test sessions data:', this.testSessions);
+        
+        // Log each session for debugging
+        this.testSessions.forEach((session, index) => {
+          console.log(`Session ${index + 1}:`, {
+            id: session.id,
+            exam_type: session.exam_type,
+            exam_date: session.exam_date,
+            registration_start: session.registration_start_date,
+            registration_end: session.registration_end_date,
+            status: session.status
+          });
+        });
+        
+        // Also log what programs we have for comparison
+        console.log('Available programs for matching:', this.programs.map(p => ({
+          name: p.name,
+          code: p.code
+        })));
+      } catch (err) {
+        console.error('Error fetching test sessions:', err);
+        this.testSessions = [];
+      }
     },
     async fetchPrograms() {
       this.loading = true
