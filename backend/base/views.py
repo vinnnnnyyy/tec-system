@@ -71,13 +71,11 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            try:
-                self.perform_create(serializer)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            except Program.DoesNotExist:
-                return Response({"error": "Program not found"}, status=status.HTTP_404_NOT_FOUND)
-            except Exception as e:
-                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            # Set initial status to waiting_for_submission
+            serializer.validated_data['status'] = 'waiting_for_submission'
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, *args, **kwargs):
@@ -506,15 +504,19 @@ def assign_test_details(request):
             except TestRoom.DoesNotExist:
                 return Response({'error': 'Test room not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        # If both test center and test room were assigned, update the status
+        # If both test center and test room were assigned, update the status to approved directly
         if appointment.test_center and appointment.test_room:
-            appointment.status = 'waiting_for_submission'
+            appointment.status = 'approved'
+            print(f"Setting appointment {appointment.id} status to 'approved'")
+        else:
+            print(f"Not setting to approved - test_center: {bool(appointment.test_center)}, test_room: {bool(appointment.test_room)}")
         
         appointment.save()
         
         return Response({
             'success': True,
             'message': 'Appointment test details updated successfully',
+            'status': appointment.status,
             'appointment': {
                 'id': appointment.id,
                 'status': appointment.status,
@@ -734,11 +736,36 @@ def get_exam_years(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def update_appointment_status(request):
+def update_appointment_status(request, appointment_id=None):
     """
-    Update status for multiple appointments
+    Update status for a single appointment (if appointment_id is provided)
+    or for multiple appointments
     """
     try:
+        # Handle single appointment update if appointment_id is provided in URL
+        if appointment_id:
+            new_status = request.data.get('status')
+            if not new_status:
+                return Response({'error': 'Missing status parameter'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get the appointment to update
+            try:
+                appointment = Appointment.objects.get(id=appointment_id)
+                
+                # Update the status
+                appointment.status = new_status
+                appointment.save()
+                
+                return Response({
+                    'success': True,
+                    'message': f'Appointment {appointment_id} status updated to {new_status}',
+                    'appointment_id': appointment_id,
+                    'status': new_status
+                })
+            except Appointment.DoesNotExist:
+                return Response({'error': f'Appointment {appointment_id} not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Handle batch update for multiple appointments
         appointment_ids = request.data.get('appointment_ids', [])
         new_status = request.data.get('new_status')
         
@@ -845,6 +872,7 @@ def get_test_details(request, appointment_id):
             response_data['test_session'] = {
                 'id': appointment.test_session.id,
                 'exam_date': appointment.test_session.exam_date,
+                'date': appointment.test_session.exam_date,  # Add date as an alias for consistency
                 'exam_type': appointment.test_session.exam_type
             }
         
@@ -852,16 +880,27 @@ def get_test_details(request, appointment_id):
             response_data['test_center'] = {
                 'id': appointment.test_center.id,
                 'name': appointment.test_center.name,
-                'address': appointment.test_center.address
+                'center_name': appointment.test_center.name,  # Add center_name as an alias for consistency
+                'address': appointment.test_center.address,
+                'location': appointment.test_center.address,  # Add location as an alias for consistency
+                'code': appointment.test_center.id  # Add code field for consistency
             }
         
         if appointment.test_room:
             response_data['test_room'] = {
                 'id': appointment.test_room.id,
-                'name': appointment.test_room.name,
+                'name': appointment.test_room.name or f"Room {appointment.test_room.room_code}",  # Ensure name has a value
+                'room_code': appointment.test_room.room_code,
                 'capacity': appointment.test_room.capacity,
                 'time_slot': appointment.test_room.time_slot
             }
+        
+        # Also provide legacy format for compatibility with older frontend code
+        response_data['test_details'] = {
+            'session': response_data.get('test_session'),
+            'center': response_data.get('test_center'),
+            'room': response_data.get('test_room')
+        }
         
         return Response(response_data)
     except Appointment.DoesNotExist:
