@@ -58,6 +58,7 @@ class Appointment(models.Model):
         ('claimed', 'Claimed'),
         ('rescheduled', 'Rescheduled'),
         ('submitted', 'Submitted'),
+        ('waiting_for_claiming', 'Waiting to be Claimed'),
     ]
     
     COLLEGE_LEVEL_CHOICES = [
@@ -86,7 +87,7 @@ class Appointment(models.Model):
     college_level = models.CharField(max_length=20, choices=COLLEGE_LEVEL_CHOICES, default='', blank=True)
     preferred_date = models.DateField()
     time_slot = models.CharField(max_length=20, choices=TIME_SLOT_CHOICES)
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='waiting_for_test_details')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='waiting_for_submission')
     
     # New field for admin-assigned test time slot
     assigned_test_time_slot = models.CharField(max_length=20, choices=TIME_SLOT_CHOICES, blank=True, null=True)
