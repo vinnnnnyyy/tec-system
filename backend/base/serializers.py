@@ -17,8 +17,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = [
-            'id', 'program', 'program_name', 'full_name', 'email', 'contact_number',
-            'school_name', 'college_level', 'preferred_date', 'time_slot', 'status',
+            'id', 'program', 'program_name', 'full_name', 'last_name', 'first_name', 'middle_name',
+            'email', 'contact_number', 'school_name', 'college_level', 'preferred_date', 'time_slot', 'status',
             'created_at', 'updated_at', 'birth_month', 'birth_day', 'birth_year',
             'gender', 'age', 'home_address', 'citizenship', 'is_first_time',
             'times_taken', 'applicant_type', 'high_school_code', 'school_graduation_date',

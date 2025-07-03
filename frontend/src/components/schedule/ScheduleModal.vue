@@ -2148,7 +2148,10 @@ export default {
         const homeAddressString = `${formData.value.streetPurok}, ${formData.value.barangay}, ${formData.value.city}`.trim();
         const applicationData = {
           // Personal info
-          full_name: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName}`,
+          full_name: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName}`.trim(),
+          last_name: formData.value.lastName.trim(),
+          first_name: formData.value.firstName.trim(),
+          middle_name: formData.value.middleName.trim(),
           contact_number: formData.value.contactNumber,
           email: formData.value.email,
           birth_month: formData.value.birthMonth,

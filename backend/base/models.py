@@ -81,6 +81,12 @@ class Appointment(models.Model):
     # Base appointment fields
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='appointments')
     full_name = models.CharField(max_length=255)
+    
+    # Individual name components for CSV import matching
+    last_name = models.CharField(max_length=100, blank=True, null=True)
+    first_name = models.CharField(max_length=100, blank=True, null=True)
+    middle_name = models.CharField(max_length=100, blank=True, null=True)
+    
     email = models.EmailField()
     contact_number = models.CharField(max_length=20)
     school_name = models.CharField(max_length=255, blank=True, null=True)
