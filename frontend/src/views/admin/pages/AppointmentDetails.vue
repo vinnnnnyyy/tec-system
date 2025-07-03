@@ -54,7 +54,16 @@
               <span>{{ formatTimeSlot(appointment.assigned_test_time_slot || appointment.time_slot) }}</span>
             </div>
           </div>
-          <div class="flex flex-wrap items-center gap-3">            <button v-if="canApprove()"
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Application Approve button for 'submitted' status -->
+            <button v-if="canApproveSubmitted()"
+                    @click="approveSubmittedApplication"
+                    class="button button-success">
+              <i class="fas fa-check-circle mr-2"></i>
+              Application Approve
+            </button>
+            
+            <button v-if="canApprove()"
                     @click="approveAppointment"
                     class="button button-success">
               <i class="fas fa-check mr-2"></i>
@@ -70,6 +79,12 @@
                     class="button button-primary">
               <i class="fas fa-clipboard-check mr-2"></i>
               Mark as Submitted
+            </button>
+            <button v-if="canSetWaitingForClaiming()"
+                    @click="setWaitingForClaiming"
+                    class="button button-success">
+              <i class="fas fa-hourglass-start mr-2"></i>
+              Set Waiting to be Claimed
             </button>
             <button v-if="canMarkAsClaimed()"
                     @click="markAsClaimed"
@@ -202,8 +217,8 @@
           </div>
         </div>
 
-        <!-- Test Assignment Section - Only show when status is waiting_for_test_details -->
-        <div v-if="appointment && appointment.status === 'waiting_for_test_details'" 
+        <!-- Test Assignment Section - Only show when status is submitted -->
+        <div v-if="appointment && appointment.status === 'submitted'" 
              class="lg:col-span-3 bg-white rounded-lg border border-gray-200 shadow-sm">
           <div class="p-4 border-b border-gray-100">
             <h3 class="text-lg font-semibold text-gray-900 flex items-center">
@@ -373,8 +388,28 @@ export default {
     
     // Filter test rooms based on the selected test center
     const filteredTestRooms = computed(() => {
-      if (!selectedTestCenter.value) return []
-      return testRooms.value.filter(room => room.test_center === parseInt(selectedTestCenter.value, 10))
+      console.log('Filtering test rooms:', {
+        selectedTestCenter: selectedTestCenter.value,
+        testRooms: testRooms.value,
+        testRoomsLength: testRooms.value.length
+      })
+      
+      if (!selectedTestCenter.value || testRooms.value.length === 0) return []
+      
+      const centerIdAsNumber = parseInt(selectedTestCenter.value, 10)
+      
+      const filtered = testRooms.value.filter(room => {
+        // Check test_center both as direct property and as nested property
+        const roomCenterId = room.test_center?.id !== undefined ? 
+                             room.test_center.id : 
+                             room.test_center
+        
+        console.log('Room test_center:', room.test_center, 'Selected:', centerIdAsNumber)
+        return parseInt(roomCenterId, 10) === centerIdAsNumber
+      })
+      
+      console.log('Filtered rooms:', filtered)
+      return filtered
     })
     
     const fetchTestCenters = async () => {
@@ -399,6 +434,7 @@ export default {
       try {
         const response = await axiosInstance.get('/api/admin/test-rooms/')
         testRooms.value = response.data
+        console.log('Test rooms loaded:', testRooms.value)
       } catch (err) {
         console.error('Error fetching test rooms:', err)
         testRoomError.value = 'Failed to load test rooms. Please try again.'
@@ -419,18 +455,68 @@ export default {
       }
       
       submittingAssignment.value = true
+      console.log('Before assignment - Appointment ID:', appointmentId.value)
+      console.log('Before assignment - Appointment status:', appointment.value?.status)
       
       try {
+        // First, assign the test details
         const response = await axiosInstance.post('/api/admin/assign-test-details/', {
           appointment_id: appointmentId.value,
           test_center_id: selectedTestCenter.value,
           test_room_id: selectedTestRoom.value
         })
         
+        console.log('Assignment API response:', response.data)
+        
         if (response.data.success) {
-          showToast('Test details assigned successfully', 'success')
-          // Refresh the appointment data
+          // Find the selected test center and room objects for display
+          const selectedTestCenterObj = testCenters.value.find(
+            center => center.id === parseInt(selectedTestCenter.value, 10)
+          )
+          const selectedTestRoomObj = testRooms.value.find(
+            room => room.id === parseInt(selectedTestRoom.value, 10)
+          )
+          
+          // Explicitly set status to approved with a separate API call
+          try {
+            console.log('Setting appointment status to approved explicitly')
+            const statusResponse = await axiosInstance.post(`/api/appointments/${appointmentId.value}/update-status/`, {
+              status: 'approved'
+            })
+            
+            if (statusResponse.data.success) {
+              console.log('Status successfully updated to approved via API')
+            } else {
+              console.warn('Status update API call succeeded but returned success=false', statusResponse.data)
+            }
+          } catch (statusError) {
+            console.error('Error explicitly setting status to approved:', statusError)
+          }
+          
+          showToast('Test details assigned successfully. Application has been approved!', 'success')
+          
+          // Update local state immediately
+          if (appointment.value) {
+            // Always set status to approved when both center and room are assigned
+            appointment.value.status = 'approved'
+            console.log('Status updated to:', appointment.value.status)
+            
+            // Update with proper center and room details
+            if (selectedTestCenterObj) {
+              appointment.value.test_center = selectedTestCenterObj.name
+              appointment.value.test_center_address = selectedTestCenterObj.address
+            }
+            
+            if (selectedTestRoomObj) {
+              appointment.value.test_room = selectedTestRoomObj.id
+              appointment.value.room_number = selectedTestRoomObj.name
+              appointment.value.assigned_test_time_slot = selectedTestRoomObj.time_slot
+            }
+          }
+          
+          // Refresh the appointment data to ensure all changes are reflected
           fetchAppointmentDetails()
+          fetchTestDetails()
         } else {
           showToast(response.data.error || 'Failed to assign test details', 'error')
         }
@@ -445,17 +531,20 @@ export default {
     const fetchAppointmentDetails = async () => {
       loading.value = true
       error.value = null
+      console.log('Fetching appointment details for ID:', appointmentId.value)
       
       try {
         const response = await axiosInstance.get(`/api/appointments/${appointmentId.value}/`)
+        console.log('Appointment API response status:', response.data.status)
         appointment.value = response.data
         
         // Fetch test details if available
         if (appointment.value) {
+          console.log('After assignment and fetching - Appointment status:', appointment.value?.status)
           await fetchTestDetails()
           
-          // If status is waiting_for_test_details, fetch test centers and rooms
-          if (appointment.value.status === 'waiting_for_test_details') {
+          // If status is waiting_for_test_details or submitted, fetch test centers and rooms
+          if (appointment.value.status === 'waiting_for_test_details' || appointment.value.status === 'submitted') {
             fetchTestCenters()
             fetchTestRooms()
           }
@@ -486,13 +575,17 @@ export default {
     
     // Status actions
     const canApprove = () => {
-      return appointment.value?.status === 'waiting_for_test_details' || 
-             appointment.value?.status === 'pending'
+      return appointment.value?.status === 'pending'
+    }
+    
+    const canApproveSubmitted = () => {
+      return appointment.value?.status === 'submitted' && 
+             appointment.value?.test_center && 
+             appointment.value?.room_number
     }
     
     const canReject = () => {
-      return appointment.value?.status === 'waiting_for_test_details' || 
-             appointment.value?.status === 'pending'
+      return ['pending', 'waiting_for_test_details', 'waiting_for_submission'].includes(appointment.value?.status)
     }
     
     const canMarkAsSubmitted = () => {
@@ -500,14 +593,18 @@ export default {
     }
     
     const canMarkAsClaimed = () => {
-      return appointment.value?.status === 'submitted'
+      return appointment.value?.status === 'approved'
     }
     
     const canReschedule = () => {
-      return appointment.value?.status !== 'claimed' && 
-             appointment.value?.status !== 'pending'
+      return ['pending', 'waiting_for_test_details', 'waiting_for_submission'].includes(appointment.value?.status)
     }
-      const approveAppointment = async () => {
+    
+    const canSetWaitingForClaiming = () => {
+      return appointment.value?.status === 'submitted'
+    }
+
+    const approveAppointment = async () => {
       try {
         await axiosInstance.post('/api/admin/applications/batch-verify/', {
           application_ids: [appointmentId.value],
@@ -522,6 +619,21 @@ export default {
       }
     }
     
+    const approveSubmittedApplication = async () => {
+      try {
+        const response = await axiosInstance.post(`/api/appointments/${appointment.value.id}/update-status/`, {
+          status: 'approved'
+        })
+        
+        if (response.data.success) {
+          appointment.value.status = 'approved'
+          showToast('Application approved successfully', 'success')
+        }
+      } catch (error) {
+        showToast('Failed to approve application: ' + (error.response?.data?.error || error.message), 'error')
+      }
+    }
+
     const rejectAppointment = async () => {
       try {
         await axiosInstance.post('/api/admin/applications/batch-verify/', {
@@ -534,21 +646,6 @@ export default {
       } catch (err) {
         showToast('Failed to reject appointment', 'error')
         console.error('Error rejecting appointment:', err)
-      }
-    }
-    
-    const markAsClaimed = async () => {
-      try {
-        await axiosInstance.post('/api/admin/update-appointment-status/', {
-          appointment_ids: [appointmentId.value],
-          new_status: 'claimed'
-        })
-        
-        showToast('Appointment marked as claimed', 'success')
-        fetchAppointmentDetails()
-      } catch (err) {
-        showToast('Failed to update status', 'error')
-        console.error('Error updating status:', err)
       }
     }
     
@@ -567,6 +664,21 @@ export default {
       }
     }
     
+    const markAsClaimed = async () => {
+      try {
+        const response = await axiosInstance.post(`/api/appointments/${appointment.value.id}/update-status/`, {
+          status: 'claimed'
+        })
+        
+        if (response.data.success) {
+          appointment.value.status = 'claimed'
+          showToast('Appointment marked as claimed successfully', 'success')
+        }
+      } catch (error) {
+        showToast('Failed to mark as claimed: ' + (error.response?.data?.error || error.message), 'error')
+      }
+    }
+
     const rescheduleAppointment = async () => {
       try {
         await axiosInstance.post('/api/admin/update-appointment-status/', {
@@ -582,6 +694,21 @@ export default {
       }
     }
     
+    const setWaitingForClaiming = async () => {
+      try {
+        const response = await axiosInstance.post(`/api/appointments/${appointment.value.id}/update-status/`, {
+          status: 'waiting_for_claiming'
+        })
+        
+        if (response.data.success) {
+          appointment.value.status = 'waiting_for_claiming'
+          showToast('Status updated successfully', 'success')
+        }
+      } catch (error) {
+        showToast('Failed to update status: ' + (error.response?.data?.error || error.message), 'error')
+      }
+    }
+
     // Formatting functions
     const formatStatus = (status) => {
       if (!status) return '';
@@ -658,6 +785,7 @@ export default {
       if (appointmentId.value) {
         fetchAppointmentDetails()
         fetchTestCenters()
+        fetchTestRooms()
       } else {
         error.value = 'No appointment ID provided'
         loading.value = false
@@ -680,14 +808,18 @@ export default {
       formatGender,      
       canApprove,
       canReject,
+      canApproveSubmitted,
       canMarkAsSubmitted,
       canMarkAsClaimed,
       canReschedule,
+      canSetWaitingForClaiming,
       approveAppointment,
       rejectAppointment,
+      approveSubmittedApplication,
       markAsSubmitted,
       markAsClaimed,
       rescheduleAppointment,
+      setWaitingForClaiming,
       
       // Test center and room assignment
       testCenters,
@@ -756,5 +888,15 @@ export default {
 
 .button-warning:hover {
   background-color: #B45309;
+}
+
+.button-info {
+  color: white;
+  background-color: #3B82F6;
+  border: 1px solid transparent;
+}
+
+.button-info:hover {
+  background-color: #2563EB;
 }
 </style>
