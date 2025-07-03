@@ -92,12 +92,12 @@
         </div>
       </div>
 
-      <!-- Recent Appointments Table -->
+      <!-- Appointments Table with Tabs -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-6 border-b border-gray-100 flex justify-between items-center">
           <div>
-            <h2 class="text-xl font-bold text-gray-800">Recent Appointments</h2>
-            <p class="text-sm text-gray-500 mt-1">Manage and track your recent appointments</p>
+            <h2 class="text-xl font-bold text-gray-800">Appointments</h2>
+            <p class="text-sm text-gray-500 mt-1">Manage and track your appointments</p>
           </div>
           <div class="flex space-x-2">
             <button @click="showFilters = !showFilters" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200">
@@ -109,6 +109,32 @@
               New Appointment
             </button>
           </div>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-gray-200">
+          <button 
+            @click="activeTab = 'all'" 
+            :class="[
+              'px-4 py-2 font-medium text-sm focus:outline-none',
+              activeTab === 'all' 
+                ? 'border-b-2 border-crimson-600 text-crimson-600' 
+                : 'text-gray-500 hover:text-gray-700'
+            ]"
+          >
+            All Appointments
+          </button>
+          <button 
+            @click="activeTab = 'approved'" 
+            :class="[
+              'px-4 py-2 font-medium text-sm focus:outline-none',
+              activeTab === 'approved' 
+                ? 'border-b-2 border-crimson-600 text-crimson-600' 
+                : 'text-gray-500 hover:text-gray-700'
+            ]"
+          >
+            Approved Appointments
+          </button>
         </div>
         
         <!-- Filter Section -->
@@ -190,7 +216,8 @@
           </div>
         </div>
         
-        <div v-else class="overflow-x-auto">
+        <!-- All Appointments Tab Content -->
+        <div v-else-if="activeTab === 'all'" class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-gray-50">
               <tr>
@@ -266,13 +293,84 @@
           </table>
         </div>
         
+        <!-- Approved Appointments Tab Content -->
+        <div v-else-if="activeTab === 'approved'" class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Applicant</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">School</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Program</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Time</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Test Center</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Test Room</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="appointment in approvedAppointments" 
+                  :key="appointment.id" 
+                  class="hover:bg-gray-50 transition-colors duration-200">
+                <td class="px-3 py-2">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-r from-green-100 to-green-200 flex items-center justify-center mr-2">
+                      <i class="fas fa-user-check text-sm text-green-600"></i>
+                    </div>
+                    <div>
+                      <div class="text-xs font-medium text-gray-900">{{ appointment.full_name }}</div>
+                      <div class="text-xs text-gray-500">{{ appointment.email }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-900">{{ appointment.school_name }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs font-medium text-gray-900">{{ appointment.program_name }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-600">{{ formatDate(appointment.preferred_date) }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-600">
+                    {{ formatTimeSlot(appointment.assigned_test_time_slot || appointment.time_slot) }}
+                  </div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-900">{{ appointment.test_center || 'Not Assigned' }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-900">
+                    {{ appointment.room_number || 'Not Assigned' }}
+                    <span v-if="appointment.room_code && !String(appointment.room_number).includes(appointment.room_code)" 
+                          class="text-gray-500 text-xs ml-1">
+                      ({{ appointment.room_code }})
+                    </span>
+                  </div>
+                </td>
+                <td class="px-3 py-2">
+                  <button @click="viewDetails(appointment.id)" 
+                          class="text-crimson-600 hover:text-crimson-900 flex items-center text-xs transition-colors duration-200">
+                    <i class="fas fa-eye mr-1"></i>
+                    <span>View</span>
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="approvedAppointments.length === 0">
+                <td colspan="8" class="text-center py-4 text-gray-500">No approved appointments found.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <!-- Pagination -->
         <AdminPagination
           v-model="currentPage"
           :total-items="totalAppointments"
           :items-per-page="itemsPerPage"
           class="bg-white border-t border-gray-200 p-4"
-          @update:modelValue="fetchRecentAppointments"
+          @update:modelValue="fetchAppointments"
         />
       </div>
     </div>
@@ -280,7 +378,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AdminPagination from '../components/AdminPagination.vue'
 import axiosInstance from '../../../services/axios.interceptor'
@@ -302,10 +400,12 @@ export default {
     const loading = ref(true)
       // Appointments state
     const appointments = ref([])
+    const approvedAppointments = ref([])
     const currentPage = ref(1)
     const itemsPerPage = ref(10)
     const totalAppointments = ref(0)  // Initialize with 0 instead of undefined
     const loadingAppointments = ref(true)
+    const activeTab = ref('all')  // 'all' or 'approved'
     
     // Filter state
     const showFilters = ref(false)
@@ -319,7 +419,7 @@ export default {
     // Apply filters
     const applyFilters = () => {
       currentPage.value = 1 // Reset to first page when filters change
-      fetchRecentAppointments()
+      fetchAppointments()
     }
     
     // Reset filters
@@ -332,7 +432,8 @@ export default {
       }
       applyFilters()
     }
-        // Fetch dashboard statistics
+        
+    // Fetch dashboard statistics
     const fetchDashboardStats = async () => {
       loading.value = true
       try {
@@ -356,8 +457,18 @@ export default {
         loading.value = false
       }
     }
-      // Fetch recent appointments
-    const fetchRecentAppointments = async () => {
+    
+    // Main function to fetch appointments based on active tab
+    const fetchAppointments = async () => {
+      if (activeTab.value === 'all') {
+        fetchAllAppointments()
+      } else if (activeTab.value === 'approved') {
+        fetchApprovedAppointments()
+      }
+    }
+    
+    // Fetch all appointments
+    const fetchAllAppointments = async () => {
       loadingAppointments.value = true
       try {
         // Create params object with pagination
@@ -397,9 +508,56 @@ export default {
           totalAppointments.value = appointments.value.length
         }
       } catch (error) {
-        console.error('Error fetching recent appointments:', error)
+        console.error('Error fetching all appointments:', error)
         // Set default values on error
         appointments.value = []
+        totalAppointments.value = 0
+      } finally {
+        loadingAppointments.value = false
+      }
+    }
+    
+    // Fetch only approved appointments
+    const fetchApprovedAppointments = async () => {
+      loadingAppointments.value = true
+      try {
+        // Create params object with pagination
+        const params = {
+          page: currentPage.value,
+          page_size: itemsPerPage.value,
+          status: 'approved'  // Only fetch approved appointments
+        }
+        
+        // Add filters to params if they exist
+        if (filters.value.searchTerm) {
+          params.search = filters.value.searchTerm
+        }
+        
+        if (filters.value.fromDate) {
+          params.from_date = filters.value.fromDate
+        }
+        
+        if (filters.value.toDate) {
+          params.to_date = filters.value.toDate
+        }
+        
+        const response = await axiosInstance.get('/api/admin/dashboard/recent-appointments/', {
+          params: params
+        })
+        
+        // Handle the response structure
+        if (response.data.appointments) {
+          approvedAppointments.value = response.data.appointments || []
+          totalAppointments.value = response.data.total || 0
+        } else {
+          // Fallback if the API returns a different structure
+          approvedAppointments.value = Array.isArray(response.data) ? response.data : []
+          totalAppointments.value = approvedAppointments.value.length
+        }
+      } catch (error) {
+        console.error('Error fetching approved appointments:', error)
+        // Set default values on error
+        approvedAppointments.value = []
         totalAppointments.value = 0
       } finally {
         loadingAppointments.value = false
@@ -490,10 +648,16 @@ export default {
       router.push(`/admin/appointments/${appointmentId}`)
     }
     
+    // Watch for tab changes
+    watch(activeTab, (newTab) => {
+      currentPage.value = 1; // Reset to first page when changing tabs
+      fetchAppointments();
+    });
+    
     // Initial data fetch
     onMounted(() => {
-      fetchDashboardStats()
-      fetchRecentAppointments()
+      fetchDashboardStats();
+      fetchAppointments();
     })
 
     return {
@@ -503,11 +667,15 @@ export default {
       
       // Appointments
       appointments,
+      approvedAppointments,
       currentPage,
       itemsPerPage,
       totalAppointments,
       loadingAppointments,
-      fetchRecentAppointments,
+      fetchAppointments,
+      
+      // Tabs
+      activeTab,
       
       // Filters
       showFilters,
