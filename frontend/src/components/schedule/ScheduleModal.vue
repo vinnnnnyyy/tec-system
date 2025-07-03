@@ -9,7 +9,7 @@
     </transition>
 
     <!-- Modal Content with transition -->
-    <transition name="modal">
+    <transition name="modal"> 
       <div v-if="modelValue"
            class="fixed inset-0 items-center justify-center z-50 flex">
         <div :class="[
@@ -49,6 +49,21 @@
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10">
                 <!-- STEP 1: PERSONAL INFO (Column 1 on LG) -->
                 <div v-if="currentStep === 1">
+                  <!-- Duplicate Registration Warning -->
+                  <div v-if="!checkDuplicateRegistration()" class="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-md shadow-sm">
+                    <div class="flex">
+                      <div class="flex-shrink-0">
+                        <i class="fas fa-ban text-yellow-600 mr-3"></i>
+                      </div>
+                      <div>
+                        <h5 class="font-semibold text-yellow-800">Registration Not Allowed</h5>
+                        <p class="text-sm text-yellow-700 mt-1">
+                          You already have an existing appointment for <strong>{{ props.program?.name || 'this program' }}</strong>. Each student can only register once per exam program. If you need to make changes, please cancel your existing appointment first.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <!-- Personal Information Section Card -->
                   <div class="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                     <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
@@ -794,7 +809,13 @@
                   type="button" 
                   v-if="currentStep < 3"
                   @click="nextStep"
-                  class="flex-1 bg-crimson-500 text-white px-6 py-3 rounded-lg hover:bg-crimson-600 transition-all text-base font-medium flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto"
+                  :disabled="currentStep === 1 && !checkDuplicateRegistration()"
+                  :class="[
+                    'flex-1 text-white px-6 py-3 rounded-lg transition-all text-base font-medium flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto',
+                    (currentStep === 1 && !checkDuplicateRegistration()) 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-crimson-500 hover:bg-crimson-600'
+                  ]"
                 >
                   Next
                   <i class="fas fa-arrow-right"></i>
@@ -824,6 +845,7 @@ import CustomCalendar from './CustomCalendar.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import ApplicationFormStore from '../../services/ApplicationFormStore'
 import AuthService from '../../services/auth.service'
+import { useToast } from '../../composables/useToast'
 
 export default {
   name: 'ScheduleModal',
@@ -852,6 +874,7 @@ export default {
     const testSessions = ref([]);
     const showCalendar = ref(false);
     const dateError = ref('');
+    const userAppointments = ref([]);
     const currentStep = ref(1); // To manage the current step of the form
 
     const validationErrors = ref({
@@ -1150,7 +1173,7 @@ export default {
       };
     };
     
-    // Handle text input with auto-uppercase and real-time validation
+    // Handle text input with real-time validation and auto-uppercase for key fields
     const handleTextInput = (fieldName, modelPath = null) => {
       const actualPath = modelPath || fieldName;
       const keys = actualPath.split('.');
@@ -1164,18 +1187,19 @@ export default {
       const finalKey = keys[keys.length - 1];
       const currentValue = target[finalKey];
       
-      // Convert to uppercase for name and address fields
+      // Convert to uppercase for key fields used in CSV score import matching
+      // This ensures consistent data format for score import/matching
       const fieldsToUppercase = [
-        'lastName', 'firstName', 'middleName', 
-        'streetPurok', 'barangay', 'city', 'citizenship',
-        'seniorGraduatingSchoolName', 'seniorGraduatingSchoolAddress',
-        'seniorGraduateSchoolName', 'seniorGraduateSchoolAddress',
-        'collegeSchoolName', 'collegeSchoolAddress'
+        'lastName', 'firstName', 'middleName',  // Name fields for score matching
+        'streetPurok', 'barangay', 'city', 'citizenship',  // Address fields
+        'seniorGraduatingSchoolName', 'seniorGraduateSchoolName', 'collegeSchoolName',  // School name fields for score matching
+        'seniorGraduatingSchoolAddress', 'seniorGraduateSchoolAddress', 'collegeSchoolAddress'  // School address fields
       ];
       
       if (fieldsToUppercase.includes(fieldName)) {
         target[finalKey] = currentValue.toUpperCase();
       }
+      // For other fields, keep the original case
       
       // Mark field as touched for real-time validation
       markAsTouched(fieldName);
@@ -1191,6 +1215,12 @@ export default {
         case 'middleName':
           validateMiddleName();
           break;
+        case 'contactNumber':
+          validateContactNumber();
+          break;
+        case 'email':
+          validateEmail();
+          break;
         case 'streetPurok':
           validateStreetPurok();
           break;
@@ -1204,8 +1234,8 @@ export default {
           validateCitizenship();
           break;
         default:
-          // For nested fields like school names/addresses
-          if (fieldName.includes('School')) {
+          // For nested fields, trigger parent validation
+          if (fieldName.includes('seniorGraduating') || fieldName.includes('seniorGraduate') || fieldName.includes('college')) {
             validateApplicantType();
           }
           break;
@@ -1645,6 +1675,7 @@ export default {
     watch(() => props.modelValue, (newVal) => {
       if (newVal && props.program?.id) {
         fetchData();
+        fetchUserAppointments(); // Fetch user appointments to check for duplicates
       }
       
       // Reset the form data when modal is opened
@@ -1931,6 +1962,9 @@ export default {
         // Also fetch test sessions for highlighting exam dates
         await fetchTestSessions();
         
+        // Fetch user's existing appointments
+        await fetchUserAppointments();
+        
       } catch (err) {
         // Check if modal was closed during API call
         if (!props.modelValue) return;
@@ -1947,6 +1981,18 @@ export default {
         }
       } finally {
         loading.value = false;
+      }
+    };
+    
+    // Fetch user's existing appointments
+    const fetchUserAppointments = async () => {
+      try {
+        const response = await axios.get('/api/appointments/');
+        userAppointments.value = response.data;
+        console.log('User appointments loaded:', userAppointments.value);
+      } catch (err) {
+        console.error('Error fetching user appointments:', err);
+        // Don't set error.value here to avoid blocking the main flow
       }
     };
 
@@ -2277,10 +2323,43 @@ export default {
       }
     };
 
+    // Check if user already has an appointment for this program
+    const checkDuplicateRegistration = () => {
+      if (!props.program?.id) return true; // No program selected, no need to validate
+      
+      // Check if the user already has an appointment for this program
+      const programId = props.program.id;
+      const hasExistingAppointment = userAppointments.value.some(appointment => {
+        // Check if appointment is for the current program and not cancelled or claimed
+        return (
+          appointment.program === programId && 
+          appointment.status !== 'cancelled' &&
+          appointment.status !== 'claimed'
+        );
+      });
+      
+      if (hasExistingAppointment) {
+        error.value = `duplicate_registration`;
+        return false;
+      }
+      
+      // Clear any duplicate registration error if there's no conflict
+      if (error.value === 'duplicate_registration') {
+        error.value = null;
+      }
+      
+      return true;
+    };
+
     const validateCurrentStep = () => {
       let isValid = true;
       // Mark relevant fields as touched for current step
       if (currentStep.value === 1) {
+        // First check if the user already has an appointment for this program
+        if (!checkDuplicateRegistration()) {
+          return false;
+        }
+        
         touchedFields.value.lastName = true;
         touchedFields.value.firstName = true;
         touchedFields.value.middleName = true; // Mark as touched even if optional
@@ -2323,27 +2402,22 @@ export default {
         if (firstErrorElement) {
           firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-         // Show a notification about missing fields for the current step
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md z-[100] animate-fade-in'; // Increased z-index
-        notification.innerHTML = `
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <i class="fas fa-exclamation-circle text-red-500 mr-2"></i>
-            </div>
-            <div>Please complete all required fields for this step.</div>
-            <button class="ml-4 text-red-500 hover:text-red-700" onclick="this.parentElement.parentElement.remove()">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-        `;
-        document.body.appendChild(notification);
         
-        setTimeout(() => {
-          if (document.body.contains(notification)) {
-            notification.remove();
-          }
-        }, 5000);
+        // Use the toast composable for notifications
+        const { showToast } = useToast();
+        
+        // Customize message based on the error type
+        let notificationMessage = 'Please complete all required fields for this step.';
+        let notificationType = 'error';
+        
+        // Check if it's a duplicate registration error
+        if (error.value === 'duplicate_registration') {
+          notificationMessage = `Registration Not Allowed: You already have an existing appointment for ${props.program?.name || 'this program'}. Each student can only register once per exam program.`;
+          // Use 'warning' type for the duplicate registration to make it stand out differently
+          notificationType = 'warning';
+        }
+        
+        showToast(notificationMessage, notificationType, 6000);
       }
       return isValid;
     };
@@ -2364,6 +2438,7 @@ export default {
       philippineCities,
       citizenshipOptions,
       testSessions,
+      userAppointments,
       filteredBarangays,
       filteredCities,
       fetchData,
@@ -2374,6 +2449,7 @@ export default {
       close,
       closeCalendarWithDelay,
       markAsTouched,
+      checkDuplicateRegistration,
       touchedFields,
       isFieldValid,
       isFieldInvalid,

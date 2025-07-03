@@ -73,21 +73,9 @@
                 </span>
               </div>
             </div>
-            <!-- Debug info when no test session matches -->
-            <div v-else-if="testSessions && testSessions.length > 0" class="mt-2 text-xs">
-              <div class="bg-yellow-50 border border-yellow-200 p-2 rounded text-gray-700">
-                <p><strong>Debug:</strong> Available exam types: {{ testSessions.map(s => s.exam_type).join(', ') }}</p>
-                <p><strong>Program:</strong> {{ program.name }} ({{ program.code }})</p>
-                <p><strong>Test sessions count:</strong> {{ testSessions.length }}</p>
-                <div v-if="testSessions[0]" class="mt-2 text-xs">
-                  <p><strong>First session:</strong> {{ testSessions[0].exam_type }} - {{ testSessions[0].exam_date }}</p>
-                  <p><strong>Registration:</strong> {{ testSessions[0].registration_start_date }} to {{ testSessions[0].registration_end_date }}</p>
-                </div>
-              </div>
-            </div>
-            <!-- When no test sessions at all -->
-            <div v-else class="mt-2 text-xs text-gray-400">
-              <p>No test sessions available ({{ testSessions ? testSessions.length : 'undefined' }})</p>
+            <!-- When no test sessions are found -->
+            <div v-else class="mt-2 text-xs text-gray-500">
+              <p>No test sessions available for this program</p>
             </div>
             </div>
         </div>
@@ -230,12 +218,19 @@ export default {
   computed: {
     // Find relevant test session based on program exam type
     programTestSession() {
-      console.log('ProgramCard: Computing programTestSession for program:', this.program.name);
-      console.log('ProgramCard: Available test sessions:', this.testSessions);
-      
       if (!this.testSessions || !this.testSessions.length) {
-        console.log('ProgramCard: No test sessions available');
         return null;
+      }
+      
+      // Debug logging to understand the issue
+      if (this.program.name.includes('Nursing')) {
+        console.log('NAT Program Debug:', {
+          programName: this.program.name,
+          programCode: this.program.code,
+          testSessionsCount: this.testSessions.length,
+          availableExamTypes: [...new Set(this.testSessions.map(s => s.exam_type))],
+          testSessions: this.testSessions
+        });
       }
       
       // Map program names to potential exam types - expanded and more flexible
@@ -244,7 +239,8 @@ export default {
         'NAT': ['NAT', 'NURSING APTITUDE', 'NURSING'],
         'EAT': ['EAT', 'ENGINEERING APTITUDE', 'ENGINEERING'],
         'UPCAT': ['UPCAT', 'UNIVERSITY OF THE PHILIPPINES'],
-        'DCAT': ['DCAT', 'DE LA SALLE']
+        'DCAT': ['DCAT', 'DE LA SALLE'],
+        'SPECIAL-CET': ['CET', 'SPECIAL', 'COLLEGE ENTRANCE']
       };
       
       // Get the program text to match against
@@ -252,39 +248,56 @@ export default {
       const descText = (this.program.description || '').toUpperCase();
       const fullText = programText + ' ' + descText;
       
-      console.log('ProgramCard: Full text to match:', fullText);
-      
       // Determine the likely exam type for this program
       let examType = null;
       
-      // Method 1: Check exact matches with test session exam types first
+      // Method 1: Direct match with program code first (most reliable)
       const availableExamTypes = [...new Set(this.testSessions.map(s => s.exam_type))];
-      console.log('ProgramCard: Available exam types in sessions:', availableExamTypes);
       
-      // Direct match with available exam types
-      for (const sessionExamType of availableExamTypes) {
-        if (fullText.includes(sessionExamType.toUpperCase())) {
-          examType = sessionExamType;
-          console.log('ProgramCard: Found direct match with session exam type:', examType);
-          break;
+      if (this.program.code) {
+        const codeUpper = this.program.code.toUpperCase();
+        // Try exact match first
+        if (availableExamTypes.includes(codeUpper)) {
+          examType = codeUpper;
+        }
+        // Try partial match
+        else if (availableExamTypes.some(type => type.includes(codeUpper))) {
+          examType = availableExamTypes.find(type => type.includes(codeUpper));
+        }
+        // Try reverse match (code includes exam type)
+        else if (availableExamTypes.some(type => codeUpper.includes(type))) {
+          examType = availableExamTypes.find(type => codeUpper.includes(type));
         }
       }
       
-      // Method 2: Use mapping if no direct match
+      // Method 2: Check exact matches with test session exam types
+      
+      // Method 2: Check exact matches with test session exam types
+      if (!examType) {
+        for (const sessionExamType of availableExamTypes) {
+          if (fullText.includes(sessionExamType.toUpperCase())) {
+            examType = sessionExamType;
+            break;
+          }
+        }
+      }
+      
+      // Method 3: Use mapping if no direct match
+      // Method 3: Use mapping if no direct match
       if (!examType) {
         for (const [type, keywords] of Object.entries(examTypeMap)) {
           if (keywords.some(keyword => fullText.includes(keyword))) {
             // Check if this exam type exists in our test sessions
             if (availableExamTypes.includes(type)) {
               examType = type;
-              console.log('ProgramCard: Found mapped exam type:', type, 'via keywords:', keywords);
               break;
             }
           }
         }
       }
       
-      // Method 3: Fallback - try to match program name parts with exam types
+      // Method 4: Fallback - try to match program name parts with exam types
+      // Method 4: Fallback - try to match program name parts with exam types
       if (!examType) {
         const programWords = this.program.name.toUpperCase().split(' ');
         for (const word of programWords) {
@@ -293,13 +306,13 @@ export default {
           );
           if (matchingSession) {
             examType = matchingSession.exam_type;
-            console.log('ProgramCard: Found word-based match:', examType, 'for word:', word);
             break;
           }
         }
       }
       
-      // Method 4: Special case handling based on program names
+      // Method 5: Special case handling based on program names
+      // Method 5: Special case handling based on program names
       if (!examType) {
         if (fullText.includes('ENGINEERING') || fullText.includes('EAT')) {
           examType = 'EAT';
@@ -311,24 +324,27 @@ export default {
         
         // Verify this exam type exists in sessions
         if (examType && !availableExamTypes.includes(examType)) {
-          console.log('ProgramCard: Special case exam type not found in sessions:', examType);
           examType = null;
-        } else if (examType) {
-          console.log('ProgramCard: Using special case exam type:', examType);
         }
       }
       
+      // Debug logging for NAT program
+      if (this.program.name.includes('Nursing')) {
+        console.log('NAT Exam Type Detection:', {
+          finalExamType: examType,
+          programCode: this.program.code,
+          availableExamTypes,
+          fullText
+        });
+      }
+      
       if (!examType) {
-        console.log('ProgramCard: No exam type could be determined for program:', this.program.name);
         // Fallback: Use the first available test session if any
         if (this.testSessions.length > 0) {
-          console.log('ProgramCard: Using first available test session as fallback');
           return this.testSessions[0];
         }
         return null;
       }
-      
-      console.log('ProgramCard: Final exam type determined:', examType);
       
       // Find the most relevant test session for this exam type
       const today = new Date();
@@ -347,15 +363,7 @@ export default {
           examDate.setHours(0, 0, 0, 0);
           const isUpcoming = examDate >= today;
           
-          const isValid = matchesType && isValidStatus && isUpcoming;
-          console.log(`ProgramCard: Session ${session.id} (${session.exam_type}):`, {
-            matchesType,
-            isValidStatus,
-            isUpcoming,
-            isValid
-          });
-          
-          return isValid;
+          return matchesType && isValidStatus && isUpcoming;
         })
         .sort((a, b) => {
           // Sort by exam date - closest upcoming first
@@ -364,12 +372,7 @@ export default {
           return dateA - dateB;
         });
       
-      console.log('ProgramCard: Relevant sessions found:', relevantSessions.length);
-      
-      const result = relevantSessions.length ? relevantSessions[0] : null;
-      console.log('ProgramCard: Final result session:', result);
-      
-      return result;
+      return relevantSessions.length ? relevantSessions[0] : null;
     },
     
     // Format the exam date nicely with status checking
@@ -441,9 +444,7 @@ export default {
   },
   watch: {
     testSessions: {
-      handler(newSessions) {
-        console.log('ProgramCard: testSessions changed for program', this.program.name, ':', newSessions);
-      },
+      handler() {},
       immediate: true,
       deep: true
     }
@@ -512,7 +513,6 @@ export default {
           month: 'short', day: 'numeric', year: 'numeric'
         }).format(date);
       } catch (e) {
-        console.error("Error formatting date:", e);
         return dateString; // Fallback to original string
       }
     },

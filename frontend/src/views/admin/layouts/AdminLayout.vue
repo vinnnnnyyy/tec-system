@@ -94,6 +94,21 @@
               <div v-if="$route.path === '/admin/results/import-score'" 
                    class="ml-auto w-1.5 h-1.5 rounded-full bg-white"></div>
             </router-link>
+            
+            <router-link to="/admin/reports"
+              class="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group"
+              :class="[
+                $route.path === '/admin/reports' 
+                  ? 'bg-white/10 text-white shadow-lg' 
+                  : 'text-crimson-100 hover:bg-white/5'
+              ]">
+              <div class="w-5 h-5 flex items-center justify-center">
+                <i class="fas fa-chart-bar"></i>
+              </div>
+              <span class="font-medium">Reports & Statistics</span>
+              <div v-if="$route.path === '/admin/reports'" 
+                   class="ml-auto w-1.5 h-1.5 rounded-full bg-white"></div>
+            </router-link>
           </nav>
         </div>
         

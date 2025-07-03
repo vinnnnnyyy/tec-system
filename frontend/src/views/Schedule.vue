@@ -617,6 +617,11 @@ export default {
             errorMessage = 'You cannot reschedule to the same date and time slot as your current appointment. ' +
                            'Please select a different date or time slot.';
           }
+        } else if (error.response?.data?.error && 
+            error.response.data.error.includes('A person with this name has already registered for this program')) {
+          // Handle the duplicate name error
+          errorMessage = 'Registration not allowed: A person with your name has already registered for this program. ' + 
+                         'Each person can only register once per program, even with different accounts.';
         } else if (error.response?.data) {
           if (typeof error.response.data === 'string') {
             errorMessage = error.response.data;

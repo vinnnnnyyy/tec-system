@@ -54,6 +54,11 @@ export const adminRoutes = [
         name: 'AdminTestSessions',
         component: () => import('../views/admin/pages/TestSessionManagement.vue')
       },
+      {
+        path: 'reports',
+        name: 'AdminReports',
+        component: () => import('../views/admin/pages/Reports.vue')
+      },
     ]
   }
 ]

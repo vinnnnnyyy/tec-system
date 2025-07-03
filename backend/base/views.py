@@ -71,6 +71,95 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
+            # Get validated data
+            data = serializer.validated_data
+            
+            # Get the program instance
+            program = data.get('program')
+            
+            # Extract name components for duplicate checking
+            full_name = data.get('full_name', '').strip()
+            
+            # Debug: Print the incoming full_name
+            print(f"DEBUG: Incoming full_name: '{full_name}'")
+            
+            # Parse name based on format
+            if ',' in full_name:
+                # Format: "Last, First Middle"
+                name_parts = full_name.split(',', 1)  # Split only on first comma
+                last_name = name_parts[0].strip()
+                first_middle = name_parts[1].strip().split() if len(name_parts) > 1 else []
+                first_name = first_middle[0] if first_middle else ''
+                middle_name = ' '.join(first_middle[1:]) if len(first_middle) > 1 else ''
+            else:
+                # Format: "First Middle Last" or just names separated by spaces
+                name_parts = full_name.split()
+                if len(name_parts) >= 3:
+                    first_name = name_parts[0]
+                    middle_name = ' '.join(name_parts[1:-1])
+                    last_name = name_parts[-1]
+                elif len(name_parts) == 2:
+                    first_name = name_parts[0]
+                    middle_name = ''
+                    last_name = name_parts[1]
+                elif len(name_parts) == 1:
+                    first_name = name_parts[0]
+                    middle_name = ''
+                    last_name = ''
+                else:
+                    first_name = last_name = middle_name = ''
+            
+            # Normalize names for comparison (remove extra spaces, convert to lowercase)
+            first_name = first_name.strip().lower()
+            middle_name = middle_name.strip().lower()
+            last_name = last_name.strip().lower()
+            
+            print(f"DEBUG: Parsed names - First: '{first_name}', Middle: '{middle_name}', Last: '{last_name}'")
+
+            # Check for duplicate name in the same program (exclude cancelled status)
+            existing_appointments = Appointment.objects.filter(
+                program=program
+            ).exclude(status='cancelled')  # Exclude cancelled appointments
+            
+            for appointment in existing_appointments:
+                existing_full_name = appointment.full_name.strip()
+                print(f"DEBUG: Checking against existing appointment: '{existing_full_name}'")
+                
+                # Parse existing appointment name
+                if ',' in existing_full_name:
+                    existing_parts = existing_full_name.split(',', 1)
+                    existing_last = existing_parts[0].strip().lower()
+                    existing_first_middle = existing_parts[1].strip().split() if len(existing_parts) > 1 else []
+                    existing_first = existing_first_middle[0].lower() if existing_first_middle else ''
+                    existing_middle = ' '.join(existing_first_middle[1:]).lower() if len(existing_first_middle) > 1 else ''
+                else:
+                    existing_name_parts = existing_full_name.split()
+                    if len(existing_name_parts) >= 3:
+                        existing_first = existing_name_parts[0].lower()
+                        existing_middle = ' '.join(existing_name_parts[1:-1]).lower()
+                        existing_last = existing_name_parts[-1].lower()
+                    elif len(existing_name_parts) == 2:
+                        existing_first = existing_name_parts[0].lower()
+                        existing_middle = ''
+                        existing_last = existing_name_parts[1].lower()
+                    elif len(existing_name_parts) == 1:
+                        existing_first = existing_name_parts[0].lower()
+                        existing_middle = ''
+                        existing_last = ''
+                    else:
+                        existing_first = existing_middle = existing_last = ''
+                
+                print(f"DEBUG: Existing parsed - First: '{existing_first}', Middle: '{existing_middle}', Last: '{existing_last}'")
+                
+                # Compare names (all three components must match)
+                if (existing_last == last_name and 
+                    existing_first == first_name and 
+                    existing_middle == middle_name):
+                    print(f"DEBUG: DUPLICATE FOUND! Rejecting registration.")
+                    return Response({
+                        "error": "A person with this name has already registered for this program. Each person can only register once per program."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
             # Set initial status to waiting_for_submission
             serializer.validated_data['status'] = 'waiting_for_submission'
             self.perform_create(serializer)
@@ -444,8 +533,162 @@ def create_appointment(request):
     """
     if request.method == 'POST':
         try:
-            # Implementation details...
-            return Response({"success": True}, status=201)
+            data = request.data
+            
+            # Get the program instance
+            program_id = data.get('program')
+            try:
+                program = Program.objects.get(id=program_id)
+            except Program.DoesNotExist:
+                return Response({'error': 'Program not found'}, status=404)
+                
+            # Extract name components - improved parsing
+            full_name = data.get('full_name', '').strip()
+            
+            # Debug: Print the incoming full_name
+            print(f"DEBUG: Incoming full_name: '{full_name}'")
+            
+            # Parse name based on format
+            if ',' in full_name:
+                # Format: "Last, First Middle"
+                name_parts = full_name.split(',', 1)  # Split only on first comma
+                last_name = name_parts[0].strip()
+                first_middle = name_parts[1].strip().split() if len(name_parts) > 1 else []
+                first_name = first_middle[0] if first_middle else ''
+                middle_name = ' '.join(first_middle[1:]) if len(first_middle) > 1 else ''
+            else:
+                # Format: "First Middle Last" or just names separated by spaces
+                name_parts = full_name.split()
+                if len(name_parts) >= 3:
+                    first_name = name_parts[0]
+                    middle_name = ' '.join(name_parts[1:-1])
+                    last_name = name_parts[-1]
+                elif len(name_parts) == 2:
+                    first_name = name_parts[0]
+                    middle_name = ''
+                    last_name = name_parts[1]
+                elif len(name_parts) == 1:
+                    first_name = name_parts[0]
+                    middle_name = ''
+                    last_name = ''
+                else:
+                    first_name = last_name = middle_name = ''
+            
+            # Normalize names for comparison (remove extra spaces, convert to lowercase)
+            first_name = first_name.strip().lower()
+            middle_name = middle_name.strip().lower()
+            last_name = last_name.strip().lower()
+            
+            print(f"DEBUG: Parsed names - First: '{first_name}', Middle: '{middle_name}', Last: '{last_name}'")
+
+            # Check for duplicate name in the same program (exclude cancelled status)
+            existing_appointments = Appointment.objects.filter(
+                program_id=program_id
+            ).exclude(status='cancelled')  # Exclude cancelled appointments
+            
+            for appointment in existing_appointments:
+                existing_full_name = appointment.full_name.strip()
+                print(f"DEBUG: Checking against existing appointment: '{existing_full_name}'")
+                
+                # Parse existing appointment name
+                if ',' in existing_full_name:
+                    existing_parts = existing_full_name.split(',', 1)
+                    existing_last = existing_parts[0].strip().lower()
+                    existing_first_middle = existing_parts[1].strip().split() if len(existing_parts) > 1 else []
+                    existing_first = existing_first_middle[0].lower() if existing_first_middle else ''
+                    existing_middle = ' '.join(existing_first_middle[1:]).lower() if len(existing_first_middle) > 1 else ''
+                else:
+                    existing_name_parts = existing_full_name.split()
+                    if len(existing_name_parts) >= 3:
+                        existing_first = existing_name_parts[0].lower()
+                        existing_middle = ' '.join(existing_name_parts[1:-1]).lower()
+                        existing_last = existing_name_parts[-1].lower()
+                    elif len(existing_name_parts) == 2:
+                        existing_first = existing_name_parts[0].lower()
+                        existing_middle = ''
+                        existing_last = existing_name_parts[1].lower()
+                    elif len(existing_name_parts) == 1:
+                        existing_first = existing_name_parts[0].lower()
+                        existing_middle = ''
+                        existing_last = ''
+                    else:
+                        existing_first = existing_middle = existing_last = ''
+                
+                print(f"DEBUG: Existing parsed - First: '{existing_first}', Middle: '{existing_middle}', Last: '{existing_last}'")
+                
+                # Compare names (all three components must match)
+                if (existing_last == last_name and 
+                    existing_first == first_name and 
+                    existing_middle == middle_name):
+                    print(f"DEBUG: DUPLICATE FOUND! Rejecting registration.")
+                    return Response({
+                        "error": "A person with this name has already registered for this program. Each person can only register once per program."
+                    }, status=400)
+            
+            # Check capacity
+            capacity_limit = program.capacity_limit
+            existing_appointments = Appointment.objects.filter(
+                program_id=program_id,
+                preferred_date=data.get('preferred_date'),
+                time_slot=data.get('time_slot'),
+                status__in=['pending', 'approved', 'rescheduled', 'waiting_for_test_details', 'waiting_for_submission', 'submitted']
+            ).count()
+            
+            if existing_appointments >= capacity_limit:
+                return Response({
+                    "error": f"This date and time slot has reached its capacity limit of {capacity_limit}."
+                }, status=400)
+            
+            # Create the appointment
+            appointment = Appointment(
+                program=program,
+                full_name=full_name,
+                email=data.get('email'),
+                contact_number=data.get('contact_number'),
+                school_name=data.get('school_name'),
+                college_level=data.get('college_level', ''),
+                preferred_date=data.get('preferred_date'),
+                time_slot=data.get('time_slot'),
+                status='waiting_for_test_details',
+                
+                # Personal Info
+                birth_month=data.get('birth_month'),
+                birth_day=data.get('birth_day'),
+                birth_year=data.get('birth_year'),
+                gender=data.get('gender'),
+                age=data.get('age'),
+                home_address=data.get('home_address'),
+                citizenship=data.get('citizenship'),
+                
+                # WMSUCET Experience
+                is_first_time=data.get('is_first_time', True),
+                times_taken=data.get('times_taken'),
+                
+                # Applicant Type
+                applicant_type=data.get('applicant_type'),
+                high_school_code=data.get('high_school_code'),
+                
+                # School Info
+                school_graduation_date=data.get('school_graduation_date'),
+                school_address=data.get('school_address'),
+                college_course=data.get('college_course'),
+                college_type=data.get('college_type'),
+                
+                # Link to user if authenticated
+                user=request.user if request.user.is_authenticated else None
+            )
+            
+            # Auto-approve if program has auto_approve_appointments enabled
+            if program.auto_approve_appointments:
+                appointment.status = 'waiting_for_submission'
+                
+            appointment.save()
+            
+            return Response({
+                'id': appointment.id,
+                'status': appointment.status,
+                'message': 'Appointment created successfully'
+            }, status=201)
         except Exception as e:
             return Response({"error": str(e)}, status=400)
             
