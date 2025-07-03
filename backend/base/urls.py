@@ -5,7 +5,7 @@ from .views import (
     ProgramViewSet, AppointmentViewSet, FAQViewSet, 
     TestCenterViewSet, TestRoomViewSet, TestSessionViewSet,
     import_exam_results, get_exam_results, generate_pdf, create_appointment,
-    auto_assign_test_details, get_test_details, mark_application_submitted,
+    auto_assign_test_details, assign_test_details, get_test_details, mark_application_submitted,
     batch_verify_applications, count_pending_applications, debug_test_assignments,
     get_room_assignment_counts, update_appointment_status,
     create_individual_test_detail, create_bulk_test_details, AnnouncementViewSet,
@@ -76,6 +76,7 @@ urlpatterns = [
     path('admin/applications/count-pending/', count_pending_applications, name='count_pending_applications'),
     path('admin/test-rooms/assignments/count/', get_room_assignment_counts, name='get_room_assignment_counts'),
     path('admin/auto-assign/', auto_assign_test_details, name='auto_assign_test_details'),
+    path('admin/assign-test-details/', assign_test_details, name='assign_test_details'),
     path('admin/test-details/', create_individual_test_detail, name='create_individual_test_detail'),
     path('admin/test-details/create-bulk/', create_bulk_test_details, name='create_bulk_test_details'),
     path('admin/test-session/reset-rooms/', reset_test_session_rooms, name='reset_test_session_rooms'),
@@ -83,6 +84,7 @@ urlpatterns = [
     path('appointments/create/', create_appointment, name='create_appointment'),
     path('appointments/<int:appointment_id>/mark-submitted/', mark_application_submitted, name='mark_application_submitted'),
     path('appointments/<int:appointment_id>/test-details/', get_test_details, name='get_test_details'),
+    path('appointments/<int:appointment_id>/update-status/', update_appointment_status, name='update_appointment_status_detail'),
     
     # Results import/export
     path('admin/results/import/', import_exam_results, name='import_exam_results'),
