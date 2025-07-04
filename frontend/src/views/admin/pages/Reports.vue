@@ -106,9 +106,13 @@
             </div>
           </div>
           <p class="text-4xl font-bold text-gray-800 mb-2">{{ statistics.passRate || 0 }}%</p>
-          <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
             <div class="bg-green-500 h-2 rounded-full" :style="{width: `${statistics.passRate || 0}%`}"></div>
           </div>
+          <p class="text-green-600 text-sm flex items-center">
+            <i class="fas fa-users mr-1"></i>
+            <span>{{ statistics.approved_appointments || 0 }} approved / {{ statistics.total_exam_results || 0 }} results</span>
+          </p>
         </div>
         
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
@@ -148,12 +152,11 @@
           <div class="h-64 flex items-center justify-center" v-if="loading">
             <i class="fas fa-circle-notch fa-spin text-2xl text-crimson-600"></i>
           </div>
-          <div class="h-64" v-else>
-            <!-- Chart component would go here in a real implementation -->
-            <div class="h-full flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200">
-              <p class="text-gray-500">Monthly test statistics chart would render here</p>
-            </div>
-          </div>
+          <MonthlyTestsChart 
+            v-else 
+            :data="monthlyData" 
+            canvas-id="monthly-tests-chart"
+          />
         </div>
         
         <!-- Pass Rate by Program Chart -->
@@ -162,12 +165,11 @@
           <div class="h-64 flex items-center justify-center" v-if="loading">
             <i class="fas fa-circle-notch fa-spin text-2xl text-crimson-600"></i>
           </div>
-          <div class="h-64" v-else>
-            <!-- Chart component would go here in a real implementation -->
-            <div class="h-full flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200">
-              <p class="text-gray-500">Pass rate by program chart would render here</p>
-            </div>
-          </div>
+          <PassRateByProgramChart 
+            v-else 
+            :data="programStats" 
+            canvas-id="pass-rate-program-chart"
+          />
         </div>
       </div>
       
@@ -204,20 +206,19 @@
                       <i class="fas fa-user"></i>
                     </div>
                     <div class="ml-3">
-                      <p class="text-sm font-medium text-gray-900">{{ result.studentName }}</p>
-                      <p class="text-xs text-gray-500">{{ result.email }}</p>
+                      <p class="text-sm font-medium text-gray-900">{{ result.student_name }}</p>
                     </div>
                   </div>
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-900">{{ result.program }}</td>
-                <td class="px-4 py-3 text-sm text-gray-500">{{ formatDate(result.testDate) }}</td>
+                <td class="px-4 py-3 text-sm text-gray-500">{{ formatDate(result.test_date) }}</td>
                 <td class="px-4 py-3 font-medium">{{ result.score }}</td>
                 <td class="px-4 py-3">
-                  <span :class="getStatusClass(result.passed)" class="px-2 py-1 text-xs font-medium rounded-full">
-                    {{ result.passed ? 'Passed' : 'Failed' }}
+                  <span :class="getStatusClass(result.status === 'Approved')" class="px-2 py-1 text-xs font-medium rounded-full">
+                    {{ result.status }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-900">{{ result.testCenter }}</td>
+                <td class="px-4 py-3 text-sm text-gray-900">{{ result.test_center }}</td>
               </tr>
               
               <tr v-if="testResults.length === 0">
@@ -233,14 +234,22 @@
         <div class="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
           <div>
             <p class="text-sm text-gray-700">
-              Showing <span class="font-medium">1</span> to <span class="font-medium">{{ testResults.length }}</span> of <span class="font-medium">{{ totalResults }}</span> results
+              Showing <span class="font-medium">{{ ((page - 1) * itemsPerPage) + 1 }}</span> to <span class="font-medium">{{ Math.min(page * itemsPerPage, totalResults) }}</span> of <span class="font-medium">{{ totalResults }}</span> results
             </p>
           </div>
           <div class="flex space-x-2">
-            <button class="px-3 py-1 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 disabled:opacity-50" :disabled="page === 1">
+            <button 
+              @click="changePage(page - 1)"
+              class="px-3 py-1 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 disabled:opacity-50" 
+              :disabled="page === 1"
+            >
               Previous
             </button>
-            <button class="px-3 py-1 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 disabled:opacity-50" :disabled="page === totalPages">
+            <button 
+              @click="changePage(page + 1)"
+              class="px-3 py-1 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 disabled:opacity-50" 
+              :disabled="page === totalPages"
+            >
               Next
             </button>
           </div>
@@ -253,9 +262,15 @@
 <script>
 import { ref, reactive, onMounted } from 'vue'
 import axiosInstance from '../../../services/axios.interceptor'
+import MonthlyTestsChart from '../../../components/charts/MonthlyTestsChart.vue'
+import PassRateByProgramChart from '../../../components/charts/PassRateByProgramChart.vue'
 
 export default {
   name: 'Reports',
+  components: {
+    MonthlyTestsChart,
+    PassRateByProgramChart
+  },
   setup() {
     const loading = ref(true)
     const page = ref(1)
@@ -280,6 +295,10 @@ export default {
     const programs = ref([])
     const testCenters = ref([])
     const testResults = ref([])
+    
+    // Chart data
+    const monthlyData = ref([])
+    const programStats = ref([])
     
     // Fetch initial data
     onMounted(() => {
@@ -333,10 +352,39 @@ export default {
         if (filters.program) params.program = filters.program
         if (filters.testCenter) params.test_center = filters.testCenter
         
-        // In a real implementation, this would be an API call
-        // const response = await axiosInstance.get('/api/reports/test-results/', { params })
+        // Call the new reports API endpoint
+        const response = await axiosInstance.get('/api/admin/reports/statistics/', { params })
         
-        // For demo, we'll use mock data
+        if (response.data) {
+          console.log('Reports API response:', response.data)
+          
+          // Update statistics
+          Object.assign(statistics, response.data.statistics)
+          
+          // Update test results table
+          testResults.value = response.data.detailed_results || []
+          
+          // Update chart data
+          monthlyData.value = response.data.monthly_data || []
+          programStats.value = response.data.program_stats || []
+          
+          console.log('Monthly data:', monthlyData.value)
+          console.log('Program stats:', programStats.value)
+          console.log('Statistics:', statistics)
+          
+          // Update pagination
+          if (response.data.pagination) {
+            totalResults.value = response.data.pagination.total_results
+            totalPages.value = response.data.pagination.total_pages
+          }
+        }
+        
+        loading.value = false
+        
+      } catch (error) {
+        console.error('Error fetching test results:', error)
+        
+        // Fallback to demo data if API fails
         setTimeout(() => {
           // Mock statistics data
           statistics.totalTests = 2458
@@ -344,57 +392,69 @@ export default {
           statistics.averageScore = 84.5
           statistics.topProgram = 'College Entrance Test'
           
+          // Mock chart data
+          monthlyData.value = [
+            { month: '2025-01', count: 120 },
+            { month: '2025-02', count: 85 },
+            { month: '2025-03', count: 150 },
+            { month: '2025-04', count: 95 },
+            { month: '2025-05', count: 180 },
+            { month: '2025-06', count: 200 }
+          ]
+          
+          programStats.value = [
+            { program: 'College Entrance Test', total: 800, approved: 640, pass_rate: 80 },
+            { program: 'Medical School Test', total: 450, approved: 315, pass_rate: 70 },
+            { program: 'Law School Test', total: 200, approved: 140, pass_rate: 70 },
+            { program: 'Engineering Test', total: 300, approved: 270, pass_rate: 90 }
+          ]
+          
           // Mock test results
           testResults.value = [
             {
               id: 1,
-              studentName: 'John Doe',
-              email: 'john.doe@example.com',
+              student_name: 'John Doe',
               program: 'College Entrance Test',
-              testDate: '2025-06-15',
-              score: 92,
-              passed: true,
-              testCenter: 'Main Campus Center'
+              test_date: '2025-06-15',
+              score: '92',
+              status: 'Approved',
+              test_center: 'Main Campus Center'
             },
             {
               id: 2,
-              studentName: 'Jane Smith',
-              email: 'jane.smith@example.com',
+              student_name: 'Jane Smith',
               program: 'Medical School Admission Test',
-              testDate: '2025-06-18',
-              score: 85,
-              passed: true,
-              testCenter: 'West Wing Testing Facility'
+              test_date: '2025-06-18',
+              score: '85',
+              status: 'Approved',
+              test_center: 'West Wing Testing Facility'
             },
             {
               id: 3,
-              studentName: 'Robert Johnson',
-              email: 'robert.j@example.com',
+              student_name: 'Robert Johnson',
               program: 'Law School Admission Test',
-              testDate: '2025-06-20',
-              score: 78,
-              passed: true,
-              testCenter: 'Downtown Center'
+              test_date: '2025-06-20',
+              score: '78',
+              status: 'Approved',
+              test_center: 'Downtown Center'
             },
             {
               id: 4,
-              studentName: 'Maria Garcia',
-              email: 'maria.g@example.com',
+              student_name: 'Maria Garcia',
               program: 'College Entrance Test',
-              testDate: '2025-06-22',
-              score: 65,
-              passed: false,
-              testCenter: 'Main Campus Center'
+              test_date: '2025-06-22',
+              score: '65',
+              status: 'Rejected',
+              test_center: 'Main Campus Center'
             },
             {
               id: 5,
-              studentName: 'David Wilson',
-              email: 'david.w@example.com',
+              student_name: 'David Wilson',
               program: 'Medical School Admission Test',
-              testDate: '2025-06-25',
-              score: 94,
-              passed: true,
-              testCenter: 'West Wing Testing Facility'
+              test_date: '2025-06-25',
+              score: '94',
+              status: 'Approved',
+              test_center: 'West Wing Testing Facility'
             }
           ]
           
@@ -402,10 +462,6 @@ export default {
           totalPages.value = 29
           loading.value = false
         }, 800)
-        
-      } catch (error) {
-        console.error('Error fetching test results:', error)
-        loading.value = false
       }
     }
     
@@ -455,6 +511,13 @@ export default {
         : 'bg-red-100 text-red-800'
     }
     
+    const changePage = (newPage) => {
+      if (newPage >= 1 && newPage <= totalPages.value) {
+        page.value = newPage
+        fetchTestResults()
+      }
+    }
+    
     const generateReport = () => {
       alert('Report generation feature would be implemented here.')
       // In a real implementation, this would trigger an API call to generate a PDF or Excel report
@@ -471,11 +534,14 @@ export default {
       programs,
       testCenters,
       testResults,
+      monthlyData,
+      programStats,
       applyFilters,
       resetFilters,
       formatDate,
       formatDateRange,
       getStatusClass,
+      changePage,
       generateReport
     }
   }

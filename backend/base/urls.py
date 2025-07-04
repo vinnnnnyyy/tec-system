@@ -11,7 +11,8 @@ from .views import (
     create_individual_test_detail, create_bulk_test_details, AnnouncementViewSet,
     get_student_exam_score, import_scores_api, get_exam_years,
     get_dashboard_stats, get_recent_appointments, reset_test_session_rooms,
-    search_public_exam_scores, get_public_test_sessions
+    search_public_exam_scores, get_public_test_sessions, get_reports_statistics,
+    test_reports_api
 )
 from .date_availability_view import program_availability
 from .auth_views import (
@@ -25,6 +26,7 @@ router.register(r'programs', ProgramViewSet)
 router.register(r'appointments', AppointmentViewSet)
 router.register(r'admin/faqs', FAQViewSet)
 router.register(r'admin/test-centers', TestCenterViewSet)
+router.register(r'test-centers', TestCenterViewSet, basename='testcenter-public')  # Public endpoint
 router.register(r'admin/test-rooms', TestRoomViewSet)
 router.register(r'admin/test-sessions', TestSessionViewSet)
 router.register(r'announcements', AnnouncementViewSet)
@@ -49,6 +51,10 @@ urlpatterns = [
     # Dashboard statistics endpoints
     path('admin/dashboard/stats/', get_dashboard_stats, name='get_dashboard_stats'),
     path('admin/dashboard/recent-appointments/', get_recent_appointments, name='get_recent_appointments'),
+    
+    # Reports endpoint
+    path('admin/reports/statistics/', get_reports_statistics, name='get_reports_statistics'),
+    path('test/reports/', test_reports_api, name='test_reports_api'),
     
     # Then include the router URLs
     path('', include(router.urls)),
