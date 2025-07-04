@@ -125,7 +125,13 @@
           
           <!-- Users Table -->
           <div class="overflow-x-auto">
-            <table class="w-full">
+            <!-- Loading state -->
+            <div v-if="isLoadingUsers" class="flex justify-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-crimson-600"></div>
+            </div>
+            
+            <!-- Users table -->
+            <table v-else-if="users.length > 0" class="w-full">
               <thead class="bg-gray-50">
                 <tr>
                   <th v-for="header in userTableHeaders" 
@@ -169,6 +175,15 @@
                 </tr>
               </tbody>
             </table>
+            
+            <!-- Empty state -->
+            <div v-else class="text-center py-8">
+              <div class="text-gray-500">
+                <i class="fas fa-users text-4xl mb-2"></i>
+                <p class="text-lg">No users found</p>
+                <p class="text-sm">Click "Add User" to create the first user</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -942,9 +957,8 @@ import axiosInstance from '../../../services/axios.interceptor'
 import { useAnnouncementStore } from '../../../stores/announcement'
 import AdminPagination from '../components/AdminPagination.vue'
 
-// Define the API endpoint without duplicating 'api'
-const API_URL = import.meta.env.VITE_API_URL;
-const API_ENDPOINT = `${API_URL}/`; 
+// Define the API endpoint without duplicating base URL since axios interceptor handles it
+const API_ENDPOINT = '/api/';  
 
 export default {
   name: 'Settings',
@@ -990,21 +1004,29 @@ export default {
     const userTableHeaders = ['User', 'Role', 'Status', 'Last Login', 'Actions']
 
     const users = ref([])
+    const isLoadingUsers = ref(false)
 
     // Fetch users from the API
     const fetchUsers = async () => {
+      isLoadingUsers.value = true
       try {
+        console.log('Fetching users from:', API_ENDPOINT + 'admin/users/')
         const response = await axiosInstance.get(API_ENDPOINT + 'admin/users/');
+        console.log('Users response:', response.data)
         users.value = response.data;
       } catch (error) {
         console.error('Failed to fetch users:', error);
+        console.error('Error details:', error.response?.data);
+        if (error.response?.status === 403) {
+          console.error('Access denied - user may not have admin privileges');
+        }
+      } finally {
+        isLoadingUsers.value = false
       }
     }
 
     // Call fetchUsers when the component is mounted
-    onMounted(() => {
-      fetchUsers();
-    });
+    // (Consolidated onMounted hook - see bottom of setup function)
 
     const getStatusClass = (status) => {
       return 'px-2 py-1 text-xs font-semibold rounded-full ' + 
@@ -1267,10 +1289,7 @@ export default {
     }
 
     // Call fetchFaqs when the component is mounted
-    onMounted(() => {
-      fetchUsers()
-      fetchFaqs()
-    })
+    // (Consolidated onMounted hook - see bottom of setup function)
 
     const announcements = computed(() => {
       return announcementStore.announcements.map(announcement => ({
@@ -1495,6 +1514,11 @@ export default {
       console.log('Switching to section:', sectionId)
       activeSection.value = sectionId
       
+      // Fetch data when switching to users section
+      if (sectionId === 'users') {
+        fetchUsers()
+      }
+      
       // Fetch data when switching to content section
       if (sectionId === 'content') {
         // Initialize the content tab based on which tab was previously selected,
@@ -1701,7 +1725,9 @@ export default {
       return answer && answer.length >= 1000
     }
 
+    // Consolidated onMounted hook - fetch all initial data
     onMounted(() => {
+      console.log('Settings component mounted, fetching initial data...')
       fetchUsers()
       fetchFaqs()
       fetchAnnouncements()
@@ -1715,6 +1741,7 @@ export default {
       dateFormats,
       userTableHeaders,
       users,
+      isLoadingUsers,
       getStatusClass,
       saveChanges,
       showUserModal,
