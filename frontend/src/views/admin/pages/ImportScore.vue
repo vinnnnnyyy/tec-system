@@ -155,12 +155,12 @@
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <i class="fas fa-table text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">CSV columns: app_no, lastname, firstname, middleinitial, school, date, part1, part2, part3, part4, part5, oapr</p>
+                <p class="text-sm text-gray-600">CSV columns: app_no, lastname, firstname, middlename, school, date, part1, part2, part3, part4, part5, oapr</p>
               </div>
               
               <!-- Sample CSV Format -->
               <div class="rounded-md bg-gray-50 p-3 border border-gray-200 text-xs font-mono overflow-x-auto whitespace-nowrap">
-                app_no,lastname,firstname,middleinitial,school,date,part1,part2,part3,part4,part5,oapr<br>
+                app_no,lastname,firstname,middlename,school,date,part1,part2,part3,part4,part5,oapr<br>
                 123-456,Doe,John,A,Sample School,2023-10-15,85,92,88,95,90,90<br>
                 789-012,Smith,Jane,B,Test Academy,2023-10-15,92,88,90,87,94,92
               </div>
@@ -460,7 +460,7 @@ export default {
       formData.append('examYear', this.selectedExamYear);
       
       // Add file structure information for the backend
-      const fileStructure = 'app_no,lastname,firstname,middleinitial,school,date,part1,part2,part3,part4,part5,oapr';
+      const fileStructure = 'app_no,lastname,firstname,middlename,school,date,part1,part2,part3,part4,part5,oapr';
       formData.append('file_structure', fileStructure); 
       formData.append('has_headers', 'true');
       

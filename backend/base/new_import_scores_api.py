@@ -3,7 +3,7 @@
 def import_scores_api(request):
     """
     Import exam scores from a CSV file
-    Expected columns: app_no, lastname, firstname, middleinitial, school, date, part1, part2, part3, part4, part5, oapr
+    Expected columns: app_no, lastname, firstname, middlename, school, date, part1, part2, part3, part4, part5, oapr
     """
     print("import_scores_api called with request:", request.method)
     print("Request DATA:", request.data)
@@ -34,7 +34,7 @@ def import_scores_api(request):
             'app_no': headers.index('app_no') if 'app_no' in headers else None,
             'lastname': headers.index('lastname') if 'lastname' in headers else None,
             'firstname': headers.index('firstname') if 'firstname' in headers else None,
-            'middleinitial': headers.index('middleinitial') if 'middleinitial' in headers else None,
+            'middlename': headers.index('middlename') if 'middlename' in headers else None,
             'school': headers.index('school') if 'school' in headers else None,
             'date': headers.index('date') if 'date' in headers else None,
             'part1': headers.index('part1') if 'part1' in headers else None,
@@ -65,10 +65,10 @@ def import_scores_api(request):
             # Extract name components
             lastname = row[col_indices['lastname']].strip() if col_indices['lastname'] is not None and col_indices['lastname'] < len(row) else ''
             firstname = row[col_indices['firstname']].strip() if col_indices['firstname'] is not None and col_indices['firstname'] < len(row) else ''
-            middleinitial = row[col_indices['middleinitial']].strip() if col_indices['middleinitial'] is not None and col_indices['middleinitial'] < len(row) else ''
+            middlename = row[col_indices['middlename']].strip() if col_indices['middlename'] is not None and col_indices['middlename'] < len(row) else ''
             
             # Construct full name
-            full_name = f"{firstname} {middleinitial} {lastname}".strip().replace("  ", " ")
+            full_name = f"{firstname} {middlename} {lastname}".strip().replace("  ", " ")
             
             school = row[col_indices['school']].strip() if col_indices['school'] is not None and col_indices['school'] < len(row) else ''
             app_no = row[col_indices['app_no']].strip() if col_indices['app_no'] is not None and col_indices['app_no'] < len(row) else ''

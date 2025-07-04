@@ -141,21 +141,21 @@
             <div class="space-y-3">
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <i class="fas fa-info text-crimson-600 text-sm"></i>
+                  <i class="fas fa-list text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">Your file should include Serial Number, Application Number, Full Name, and School in that order</p>
+                <p class="text-sm text-gray-600">CSV columns must be in this exact order: app_no, lastname, firstname, middlename, school, date, part1, part2, part3, part4, part5, oapr</p>
               </div>
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <i class="fas fa-table text-crimson-600 text-sm"></i>
+                  <i class="fas fa-user text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">The CSV should have the format: NO, APP_NO, NAME, SCHOOL</p>
+                <p class="text-sm text-gray-600">Use <strong>middlename</strong> (full middle name) instead of middle initial for better matching</p>
               </div>
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <i class="fas fa-file-alt text-crimson-600 text-sm"></i>
+                  <i class="fas fa-calendar text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">File should be in CSV or Excel format (.xlsx, .xls)</p>
+                <p class="text-sm text-gray-600">Date format should be YYYY-MM-DD or MM/DD/YYYY</p>
               </div>
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -450,101 +450,61 @@ export default {
         return;
       }
       
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const text = e.target.result;
-          const lines = text.split('\n');
-          
-          // Skip header row and empty lines
-          const dataRows = lines.filter(line => line.trim() !== '').slice(1);
-          
-          if (dataRows.length === 0) {
-            this.error = 'No data found in the CSV file';
-            this.loading = false;
-            return;
-          }
-          
-          const parsedData = [];
-          
-          for (let i = 0; i < dataRows.length; i++) {
-            const columns = dataRows[i].split(',');
-            
-            // Ensure we have at least 4 columns (No, app no, name, school)
-            if (columns.length >= 4) {              parsedData.push({                no: parseInt(columns[0].trim()) || null,
-                appNo: columns[1].trim(),
-                name: columns[2].trim(),
-                school: columns[3].trim(),
-                examType: this.selectedExamType,
-                year: this.selectedExamYear
-              });
+      try {
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('file', this.selectedFile);
+        formData.append('examType', this.selectedExamType);
+        formData.append('year', this.selectedExamYear);
+        
+        // Send to the score import API endpoint
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const token = localStorage.getItem('token') || 
+                     localStorage.getItem('access_token') || 
+                     localStorage.getItem('authToken');
+        
+        const response = await axios.post(
+          `${apiUrl}/api/score-import/`,
+          formData,
+          {
+            headers: {
+              'Authorization': token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '',
+              'Content-Type': 'multipart/form-data'
             }
           }
+        );
+        
+        console.log('Import response:', response.data);
+        
+        if (response.data.success) {
+          // Add to recent imports
+          const newImport = {
+            examType: `${this.selectedExamType} (${this.selectedExamYear})`,
+            date: new Date().toLocaleString(),
+            successful: response.data.matched + response.data.created_count,
+            failed: response.data.unmatched || 0
+          };
           
-          if (parsedData.length === 0) {
-            this.error = 'Could not parse data from CSV file';
-            this.loading = false;
-            return;
-          }
+          this.recentImports.unshift(newImport);
           
-          console.log('Parsed data from CSV:', parsedData);
+          this.showToast(`Successfully imported ${response.data.matched + response.data.created_count} records. ${response.data.unmatched || 0} unmatched.`, 'success');
           
-          // Send data to backend API only
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-          const token = localStorage.getItem('token') || 
-                       localStorage.getItem('access_token') || 
-                       localStorage.getItem('authToken');
-            try {
-            const response = await axios.post(
-              `${apiUrl}/api/admin/results/import/`,{
-                examType: this.selectedExamType,
-                year: this.selectedExamYear,
-                results: parsedData,
-                overwrite: true
-              },
-              {
-                headers: {
-                  'Authorization': token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '',
-                  'Content-Type': 'application/json'
-                }
-              }
-            );
-            console.log('Data successfully sent to API:', response.data);
-              // Add to recent imports
-            const newImport = {
-              examType: `${this.selectedExamType} (${this.selectedExamYear})`,
-              date: new Date().toLocaleString(),
-              successful: parsedData.length,
-              failed: 0
-            };
-            
-            this.recentImports.unshift(newImport);
-            
-            this.showToast(`Successfully imported ${parsedData.length} records.`, 'success');
-            
-            // Optional: Navigate to the results page
-            // this.$router.push('/exam-results');
-            
-          } catch (apiError) {
-            console.error('API storage failed:', apiError);
-            this.showToast('Failed to save data to the server.', 'error');
-          }
-        } catch (error) {
-          console.error('Error during import:', error);
-          this.error = error.response?.data?.error || 'Error processing or sending data';
+          // Reset form
+          this.selectedFile = null;
+          this.selectedExamType = '';
+          this.selectedExamYear = '';
+        } else {
+          this.error = response.data.error || 'Import failed';
           this.showToast(this.error, 'error');
-        } finally {
-          this.loading = false;
         }
-      };
-      
-      reader.onerror = () => {
-        this.error = 'Error reading file';
+        
+      } catch (error) {
+        console.error('Error during import:', error);
+        this.error = error.response?.data?.error || 'Error processing file';
+        this.showToast(this.error, 'error');
+      } finally {
         this.loading = false;
-        this.showToast('Error reading file', 'error');
-      };
-      
-      reader.readAsText(this.selectedFile);
+      }
     }
   },  created() {
     this.fetchProgramCodes();
