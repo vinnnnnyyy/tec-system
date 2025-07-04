@@ -86,7 +86,7 @@
               </div>
 
               <!-- Score Section -->
-              <div v-if="appointment.status === 'submitted' && appointment.exam_score" 
+              <div v-if="(appointment.status === 'submitted' || appointment.status === 'approved') && appointment.exam_score" 
                    class="bg-gray-50 rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4">
                 <div class="flex justify-between items-center mb-1 sm:mb-2">
                   <h4 class="text-base sm:text-lg font-semibold text-gray-700">Overall Ability Percentile Rank</h4>
@@ -132,11 +132,11 @@
 
               <!-- Other States -->
               <div v-else class="bg-gray-50 rounded-lg p-4 sm:p-6 text-center">
-                <div v-if="appointment.status !== 'submitted' && appointment.exam_score">
+                <div v-if="appointment.status !== 'submitted' && appointment.status !== 'approved' && appointment.exam_score">
                   <i class="fas fa-lock text-gray-400 text-xl sm:text-2xl mb-2"></i>
                   <p class="text-xs sm:text-sm text-gray-600">Score will be available once application is submitted</p>
                 </div>
-                <div v-else-if="appointment.status === 'submitted' && !appointment.exam_score">
+                <div v-else-if="(appointment.status === 'submitted' || appointment.status === 'approved') && !appointment.exam_score">
                   <i class="fas fa-hourglass-half text-gray-400 text-xl sm:text-2xl mb-2"></i>
                   <p class="text-xs sm:text-sm text-gray-600">Score is being processed</p>
                 </div>
@@ -256,7 +256,7 @@ export default {
       try {
         // Instead of making a separate API call, use the appointment data we already have
         const appointmentsWithScores = this.appointments.filter(
-          appointment => appointment.status === 'submitted' && appointment.exam_score
+          appointment => (appointment.status === 'submitted' || appointment.status === 'approved') && appointment.exam_score
         );
         
         if (appointmentsWithScores.length === 0) {

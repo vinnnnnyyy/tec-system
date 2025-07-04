@@ -953,39 +953,169 @@ def import_scores_api(request):
                     except ValueError:
                         pass
             
-            # Try to find a matching appointment
-            matching_appointments = Appointment.objects.filter(
-                full_name__iexact=full_name,
-                school_name__iexact=school,
-                status='submitted'  # Only match submitted appointments
+            # Try to find a matching appointment with EXACT matching logic
+            print(f"\n=== Processing CSV row ===")
+            print(f"lastname='{lastname}', firstname='{firstname}', middlename='{middlename}'")
+            print(f"school='{school}', app_no='{app_no}'")
+            
+            # Step 1: First, let's check what schools exist for debugging
+            all_approved = Appointment.objects.filter(status='approved')
+            print(f"Total approved appointments: {all_approved.count()}")
+            
+            if all_approved.exists():
+                unique_schools = set(all_approved.values_list('school_name', flat=True))
+                print(f"Available schools in database: {list(unique_schools)}")
+            
+            # Step 2: Find all approved appointments with exact school match
+            base_query = Appointment.objects.filter(
+                status='approved',
+                school_name__iexact=school
+            )
+            print(f"Base query count (approved + school '{school}'): {base_query.count()}")
+            
+            # If no school match, try more flexible school matching
+            if not base_query.exists():
+                print("No exact school match, trying flexible school matching...")
+                # Try partial school name matching
+                flexible_school_query = all_approved.filter(
+                    school_name__icontains=school.split()[-1] if school else ""
+                )
+                print(f"Flexible school query count: {flexible_school_query.count()}")
+                if flexible_school_query.exists():
+                    print(f"Found schools: {[apt.school_name for apt in flexible_school_query]}")
+                    base_query = flexible_school_query
+            
+            # Step 3: Try EXACT component matching first (most strict)
+            exact_matches = base_query.filter(
+                last_name__iexact=lastname,
+                first_name__iexact=firstname,
+                middle_name__iexact=middlename
             )
             
-            if matching_appointments.exists():
-                # Update or create exam score for each match
-                for appointment in matching_appointments:
-                    score_obj, created = ExamScore.objects.update_or_create(
-                        appointment=appointment,
-                        defaults={
-                            'app_no': app_no,
-                            'name': full_name,  # Use constructed full name
-                            'school': school,
-                            'score': oapr,  # Use OAPR as main score
-                            'part1': part1,
-                            'part2': part2,
-                            'part3': part3,
-                            'part4': part4,
-                            'part5': part5,
-                            'oapr': oapr,
-                            'exam_date': exam_date,
-                            'exam_type': exam_type,
-                            'imported_by': request.user
-                        }
-                    )
+            print(f"Exact matches count: {exact_matches.count()}")
+            if exact_matches.exists():
+                print(f"Found exact matches:")
+                for apt in exact_matches:
+                    print(f"  - ID {apt.id}: {apt.full_name} (first:'{apt.first_name}' middle:'{apt.middle_name}' last:'{apt.last_name}' exam_date:{apt.exam_date})")
+                matching_appointments = exact_matches
+            else:
+                # Step 4: If no exact matches, try lastname + firstname exact matching ONLY if names are EXACT
+                # This prevents "CHRISTIAN" from matching "CHRISTIAN JUDE"
+                partial_matches = base_query.filter(
+                    last_name__iexact=lastname,
+                    first_name__iexact=firstname
+                )
+                
+                print(f"Partial matches (lastname+firstname exact): {partial_matches.count()}")
+                if partial_matches.exists():
+                    print(f"Found partial matches:")
+                    for apt in partial_matches:
+                        print(f"  - ID {apt.id}: {apt.full_name} (first:'{apt.first_name}' middle:'{apt.middle_name}' last:'{apt.last_name}' exam_date:{apt.exam_date})")
                     
-                    if created:
-                        matched_count += 1
+                    # If we have middle name in CSV, REQUIRE exact middle name match
+                    if middlename:
+                        middle_filtered = partial_matches.filter(middle_name__iexact=middlename)
+                        if middle_filtered.exists():
+                            matching_appointments = middle_filtered
+                            print(f"Narrowed down by exact middle name: {middle_filtered.count()}")
+                        else:
+                            # No exact middle name match - this should not match
+                            print(f"No exact middle name match for '{middlename}' - rejecting match")
+                            matching_appointments = Appointment.objects.none()
                     else:
-                        updated_count += 1
+                        # CSV has no middle name, only match if appointment also has no middle name
+                        no_middle_matches = partial_matches.filter(
+                            Q(middle_name__isnull=True) | Q(middle_name__exact='')
+                        )
+                        if no_middle_matches.exists():
+                            matching_appointments = no_middle_matches
+                            print(f"Matched appointments with no middle name: {no_middle_matches.count()}")
+                        else:
+                            # All appointments have middle names but CSV doesn't - be strict
+                            print(f"CSV has no middle name but appointments do - rejecting match")
+                            matching_appointments = Appointment.objects.none()
+                else:
+                    # Step 5: Last resort - no matches found
+                    matching_appointments = Appointment.objects.none()
+                    print("No matches found")
+            
+            # Step 6: Additional filter by exam date if available (MANDATORY for exact matching)
+            if exam_date and matching_appointments.exists():
+                print(f"Applying exam date filter: {exam_date}")
+                date_filtered = matching_appointments.filter(
+                    Q(exam_date=exam_date) | Q(preferred_date=exam_date)
+                )
+                print(f"Date filtered appointments: {date_filtered.count()}")
+                if date_filtered.exists():
+                    matching_appointments = date_filtered
+                    print(f"Date filter applied, final matches: {date_filtered.count()}")
+                else:
+                    # If date doesn't match, no appointment should be matched
+                    print(f"No appointments found with exam date {exam_date}")
+                    matching_appointments = Appointment.objects.none()
+            elif exam_date and not matching_appointments.exists():
+                print(f"No appointments to date filter (exam_date: {exam_date})")
+            
+            print(f"Final matching appointments after date filter: {matching_appointments.count()}")
+            if matching_appointments.exists():
+                for appt in matching_appointments:
+                    print(f"  -> FINAL MATCH ID {appt.id}: {appt.full_name} - {appt.school_name} (exam_date: {appt.exam_date})")
+            else:
+                print("  -> NO FINAL MATCHES FOUND")
+            
+            if matching_appointments.exists():
+                # Take only the first match to avoid duplicates
+                appointment = matching_appointments.first()
+                
+                print(f"\n=== Processing Single Match ===")
+                print(f"Selected appointment: ID {appointment.id}: {appointment.full_name}")
+                print(f"CSV data: app_no={app_no}, oapr={oapr}, parts=[{part1},{part2},{part3},{part4},{part5}]")
+                
+                # Check if score already exists to avoid duplicates
+                existing_score = ExamScore.objects.filter(appointment=appointment).first()
+                if existing_score:
+                    print(f"Updating existing score for appointment {appointment.id}")
+                    # Update the existing score
+                    existing_score.app_no = app_no
+                    existing_score.name = full_name
+                    existing_score.school = school
+                    existing_score.score = oapr
+                    existing_score.part1 = part1
+                    existing_score.part2 = part2
+                    existing_score.part3 = part3
+                    existing_score.part4 = part4
+                    existing_score.part5 = part5
+                    existing_score.oapr = oapr
+                    existing_score.exam_date = exam_date
+                    existing_score.exam_type = exam_type
+                    existing_score.imported_by = request.user
+                    existing_score.save()
+                    updated_count += 1
+                    print(f"Updated score for {appointment.full_name} with OAPR: {oapr}")
+                else:
+                    print(f"Creating new score for appointment {appointment.id}")
+                    # Create new score
+                    new_score = ExamScore.objects.create(
+                        appointment=appointment,
+                        app_no=app_no,
+                        name=full_name,
+                        school=school,
+                        score=oapr,
+                        part1=part1,
+                        part2=part2,
+                        part3=part3,
+                        part4=part4,
+                        part5=part5,
+                        oapr=oapr,
+                        exam_date=exam_date,
+                        exam_type=exam_type,
+                        imported_by=request.user
+                    )
+                    matched_count += 1
+                    print(f"Created new score for {appointment.full_name} with OAPR: {oapr}")
+                
+                print(f"Score processed for appointment {appointment.id}")
+                print("---")
             else:
                 # Create unmatched score
                 ExamScore.objects.create(
@@ -1012,7 +1142,8 @@ def import_scores_api(request):
             'matched': matched_count,
             'updated': updated_count,
             'unmatched': unmatched_count,
-            'created_count': created_count
+            'created_count': created_count,
+            'message': f'Successfully processed CSV. Matched: {matched_count}, Updated: {updated_count}, Unmatched: {unmatched_count}'
         })
         
     except Exception as e:

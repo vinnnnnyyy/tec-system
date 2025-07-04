@@ -153,6 +153,12 @@
               </div>
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <i class="fas fa-check-circle text-crimson-600 text-sm"></i>
+                </div>
+                <p class="text-sm text-gray-600">Scores will only match with <strong>approved</strong> appointments that have matching name, school, and date</p>
+              </div>
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <i class="fas fa-calendar text-crimson-600 text-sm"></i>
                 </div>
                 <p class="text-sm text-gray-600">Date format should be YYYY-MM-DD or MM/DD/YYYY</p>
