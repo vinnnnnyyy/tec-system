@@ -201,6 +201,13 @@
               </p>
             </div>
             
+            <div v-if="appointment.exam_date">
+              <label class="text-xs font-medium text-gray-500">Exam Date</label>
+              <p class="mt-1 text-sm font-medium text-gray-900">
+                {{ formatDate(appointment.exam_date) }}
+              </p>
+            </div>
+            
             <div v-if="testDetails.test_center">
               <label class="text-xs font-medium text-gray-500">Test Center</label>
               <p class="mt-1 text-sm font-medium text-gray-900">
@@ -229,11 +236,30 @@
           
           <div class="p-6">
             <p class="mb-4 text-gray-600">
-              Select a test center and test room to assign to this applicant. 
-              Once assigned, the status will automatically update to "Waiting for Submission".
+              Select a test session, test center, and test room to assign to this applicant. 
+              The test session determines the exam date. Once assigned, the status will automatically update to "Waiting for Submission".
             </p>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <!-- Test Session Selection -->
+              <div class="space-y-3">
+                <label class="block text-sm font-medium text-gray-700">Test Session</label>
+                <div class="relative">
+                  <select 
+                    v-model="selectedTestSession" 
+                    class="form-select block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    <option value="" disabled selected>Select a test session</option>
+                    <option v-for="session in testSessions" :key="session.id" :value="session.id">
+                      {{ session.exam_type }} - {{ formatDate(session.exam_date) }}
+                    </option>
+                  </select>
+                  <div v-if="loadingTestSessions" class="absolute right-10 top-3">
+                    <i class="fas fa-circle-notch fa-spin text-gray-400"></i>
+                  </div>
+                </div>
+                <p v-if="testSessionError" class="text-sm text-red-500">{{ testSessionError }}</p>
+              </div>
+              
               <!-- Test Center Selection -->
               <div class="space-y-3">
                 <label class="block text-sm font-medium text-gray-700">Test Center</label>
@@ -279,8 +305,8 @@
             <div class="flex justify-end mt-6">
               <button 
                 @click="assignTestDetails"
-                :disabled="!selectedTestCenter || !selectedTestRoom || submittingAssignment"
-                :class="['button', (!selectedTestCenter || !selectedTestRoom || submittingAssignment) ? 'bg-gray-300 cursor-not-allowed' : 'button-primary']">
+                :disabled="!selectedTestSession || !selectedTestCenter || !selectedTestRoom || submittingAssignment"
+                :class="['button', (!selectedTestSession || !selectedTestCenter || !selectedTestRoom || submittingAssignment) ? 'bg-gray-300 cursor-not-allowed' : 'button-primary']">
                 <i class="fas fa-save mr-2"></i>
                 <span v-if="submittingAssignment">Assigning...</span>
                 <span v-else>Assign Test Details</span>
@@ -371,12 +397,16 @@ export default {
     // Test center and room assignment data
     const testCenters = ref([])
     const testRooms = ref([])
+    const testSessions = ref([])
     const selectedTestCenter = ref('')
     const selectedTestRoom = ref('')
+    const selectedTestSession = ref('')
     const loadingTestCenters = ref(false)
     const loadingTestRooms = ref(false)
+    const loadingTestSessions = ref(false)
     const testCenterError = ref(null)
     const testRoomError = ref(null)
+    const testSessionError = ref(null)
     const submittingAssignment = ref(false)
     
     // Check if the assigned time slot matches the preferred time slot
@@ -443,14 +473,30 @@ export default {
       }
     }
     
+    const fetchTestSessions = async () => {
+      loadingTestSessions.value = true
+      testSessionError.value = null
+      
+      try {
+        const response = await axiosInstance.get('/api/admin/test-sessions/')
+        testSessions.value = response.data
+        console.log('Test sessions loaded:', testSessions.value)
+      } catch (err) {
+        console.error('Error fetching test sessions:', err)
+        testSessionError.value = 'Failed to load test sessions. Please try again.'
+      } finally {
+        loadingTestSessions.value = false
+      }
+    }
+    
     const onTestCenterChange = () => {
       // Reset room selection when center changes
       selectedTestRoom.value = ''
     }
     
     const assignTestDetails = async () => {
-      if (!selectedTestCenter.value || !selectedTestRoom.value) {
-        showToast('Please select both a test center and test room', 'error')
+      if (!selectedTestSession.value || !selectedTestCenter.value || !selectedTestRoom.value) {
+        showToast('Please select a test session, test center, and test room', 'error')
         return
       }
       
@@ -462,6 +508,7 @@ export default {
         // First, assign the test details
         const response = await axiosInstance.post('/api/admin/assign-test-details/', {
           appointment_id: appointmentId.value,
+          test_session_id: selectedTestSession.value,
           test_center_id: selectedTestCenter.value,
           test_room_id: selectedTestRoom.value
         })
@@ -786,6 +833,7 @@ export default {
         fetchAppointmentDetails()
         fetchTestCenters()
         fetchTestRooms()
+        fetchTestSessions()
       } else {
         error.value = 'No appointment ID provided'
         loading.value = false
@@ -824,12 +872,16 @@ export default {
       // Test center and room assignment
       testCenters,
       testRooms,
+      testSessions,
       selectedTestCenter,
       selectedTestRoom,
+      selectedTestSession,
       loadingTestCenters,
       loadingTestRooms,
+      loadingTestSessions,
       testCenterError,
       testRoomError,
+      testSessionError,
       submittingAssignment,
       filteredTestRooms,
       onTestCenterChange,

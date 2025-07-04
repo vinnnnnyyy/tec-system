@@ -25,7 +25,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
             'school_address', 'college_course', 'college_type', 'is_submitted',
             'test_session', 'test_center', 'test_room', 'test_center_name',
             'test_room_name', 'test_session_date', 'assigned_test_time_slot', 'is_time_slot_modified',
-            'exam_score',
+            'exam_date', 'exam_score',
             # Personal Information fields
             'birth_month', 'birth_day', 'birth_year', 'gender', 'age',
             'home_address', 'citizenship',

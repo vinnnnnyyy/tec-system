@@ -743,10 +743,11 @@ def create_appointment(request):
 @permission_classes([IsAuthenticated])
 def assign_test_details(request):
     """
-    Assign a test center and test room to an appointment.
+    Assign a test session, test center and test room to an appointment.
     """
     try:
         appointment_id = request.data.get('appointment_id')
+        test_session_id = request.data.get('test_session_id')
         test_center_id = request.data.get('test_center_id')
         test_room_id = request.data.get('test_room_id')
         
@@ -760,6 +761,16 @@ def assign_test_details(request):
         
         # Original test room (for updating room capacity counts)
         original_test_room = appointment.test_room
+        
+        # Update the test session
+        if test_session_id:
+            try:
+                test_session = TestSession.objects.get(id=test_session_id)
+                appointment.test_session = test_session
+                # Save the exam date directly to the appointment
+                appointment.exam_date = test_session.exam_date
+            except TestSession.DoesNotExist:
+                return Response({'error': 'Test session not found'}, status=status.HTTP_404_NOT_FOUND)
         
         # Update the test center and room
         if test_center_id:
@@ -792,12 +803,12 @@ def assign_test_details(request):
             except TestRoom.DoesNotExist:
                 return Response({'error': 'Test room not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        # If both test center and test room were assigned, update the status to approved directly
-        if appointment.test_center and appointment.test_room:
+        # If test session, test center and test room were assigned, update the status to approved directly
+        if appointment.test_session and appointment.test_center and appointment.test_room:
             appointment.status = 'approved'
             print(f"Setting appointment {appointment.id} status to 'approved'")
         else:
-            print(f"Not setting to approved - test_center: {bool(appointment.test_center)}, test_room: {bool(appointment.test_room)}")
+            print(f"Not setting to approved - test_session: {bool(appointment.test_session)}, test_center: {bool(appointment.test_center)}, test_room: {bool(appointment.test_room)}")
         
         appointment.save()
         
@@ -808,9 +819,11 @@ def assign_test_details(request):
             'appointment': {
                 'id': appointment.id,
                 'status': appointment.status,
+                'test_session': appointment.test_session.id if appointment.test_session else None,
                 'test_center': appointment.test_center.id if appointment.test_center else None,
                 'test_room': appointment.test_room.id if appointment.test_room else None,
-                'assigned_test_time_slot': appointment.assigned_test_time_slot
+                'assigned_test_time_slot': appointment.assigned_test_time_slot,
+                'exam_date': appointment.exam_date.isoformat() if appointment.exam_date else None
             }
         })
         

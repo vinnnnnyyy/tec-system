@@ -133,6 +133,9 @@ class Appointment(models.Model):
     test_center = models.ForeignKey('TestCenter', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
     test_room = models.ForeignKey('TestRoom', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
     
+    # Store the exam date directly on the appointment for easy access
+    exam_date = models.DateField(null=True, blank=True, help_text="The actual exam date assigned to this appointment")
+    
     # Add a field to track if this is an officially submitted application
     is_submitted = models.BooleanField(default=False)
     
