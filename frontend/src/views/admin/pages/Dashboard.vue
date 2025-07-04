@@ -125,6 +125,17 @@
             All Appointments
           </button>
           <button 
+            @click="activeTab = 'waiting_for_submission'" 
+            :class="[
+              'px-4 py-2 font-medium text-sm focus:outline-none',
+              activeTab === 'waiting_for_submission' 
+                ? 'border-b-2 border-crimson-600 text-crimson-600' 
+                : 'text-gray-500 hover:text-gray-700'
+            ]"
+          >
+            Waiting for Submission
+          </button>
+          <button 
             @click="activeTab = 'approved'" 
             :class="[
               'px-4 py-2 font-medium text-sm focus:outline-none',
@@ -134,6 +145,17 @@
             ]"
           >
             Approved Appointments
+          </button>
+          <button 
+            @click="activeTab = 'claimed'" 
+            :class="[
+              'px-4 py-2 font-medium text-sm focus:outline-none',
+              activeTab === 'claimed' 
+                ? 'border-b-2 border-crimson-600 text-crimson-600' 
+                : 'text-gray-500 hover:text-gray-700'
+            ]"
+          >
+            Claimed
           </button>
         </div>
         
@@ -293,6 +315,75 @@
           </table>
         </div>
         
+        <!-- Waiting for Submission Tab Content -->
+        <div v-else-if="activeTab === 'waiting_for_submission'" class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Applicant</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">School</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Program</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Time</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Test Center</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="appointment in waitingForSubmissionAppointments" 
+                  :key="appointment.id" 
+                  class="hover:bg-gray-50 transition-colors duration-200">
+                <td class="px-3 py-2">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-100 to-yellow-200 flex items-center justify-center mr-2">
+                      <i class="fas fa-clock text-sm text-yellow-600"></i>
+                    </div>
+                    <div>
+                      <div class="text-xs font-medium text-gray-900">{{ appointment.full_name }}</div>
+                      <div class="text-xs text-gray-500">{{ appointment.email }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-900">{{ appointment.school_name }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-600">{{ appointment.contact_number }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs font-medium text-gray-900">{{ appointment.program_name }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-600">{{ formatDate(appointment.preferred_date) }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-600">
+                    {{ formatTimeSlot(appointment.assigned_test_time_slot || appointment.time_slot) }}
+                    <span v-if="appointment.assigned_test_time_slot && appointment.assigned_test_time_slot !== appointment.time_slot" 
+                          class="text-yellow-600 text-xs ml-1">
+                      (Modified)
+                    </span>
+                  </div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-900">{{ appointment.test_center || 'Assigned' }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <button @click="viewDetails(appointment.id)" 
+                          class="text-crimson-600 hover:text-crimson-900 flex items-center text-xs transition-colors duration-200">
+                    <i class="fas fa-eye mr-1"></i>
+                    <span>View</span>
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="waitingForSubmissionAppointments.length === 0">
+                <td colspan="8" class="text-center py-4 text-gray-500">No appointments waiting for submission found.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
         <!-- Approved Appointments Tab Content -->
         <div v-else-if="activeTab === 'approved'" class="overflow-x-auto">
           <table class="w-full text-sm">
@@ -364,6 +455,75 @@
           </table>
         </div>
 
+        <!-- Claimed Appointments Tab Content -->
+        <div v-else-if="activeTab === 'claimed'" class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Applicant</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">School</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Program</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Test Date</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Test Center</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Test Room</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Claimed Date</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="appointment in claimedAppointments" 
+                  :key="appointment.id" 
+                  class="hover:bg-gray-50 transition-colors duration-200">
+                <td class="px-3 py-2">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 flex items-center justify-center mr-2">
+                      <i class="fas fa-file-download text-sm text-blue-600"></i>
+                    </div>
+                    <div>
+                      <div class="text-xs font-medium text-gray-900">{{ appointment.full_name }}</div>
+                      <div class="text-xs text-gray-500">{{ appointment.email }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-900">{{ appointment.school_name }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs font-medium text-gray-900">{{ appointment.program_name }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-600">{{ formatDate(appointment.preferred_date) }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-900">{{ appointment.test_center || 'Not Assigned' }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-900">
+                    {{ appointment.room_number || 'Not Assigned' }}
+                    <span v-if="appointment.room_code && !String(appointment.room_number).includes(appointment.room_code)" 
+                          class="text-gray-500 text-xs ml-1">
+                      ({{ appointment.room_code }})
+                    </span>
+                  </div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-600">{{ formatDate(appointment.updated_at) }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <button @click="viewDetails(appointment.id)" 
+                          class="text-crimson-600 hover:text-crimson-900 flex items-center text-xs transition-colors duration-200">
+                    <i class="fas fa-eye mr-1"></i>
+                    <span>View</span>
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="claimedAppointments.length === 0">
+                <td colspan="8" class="text-center py-4 text-gray-500">No claimed appointments found.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <!-- Pagination -->
         <AdminPagination
           v-model="currentPage"
@@ -401,11 +561,13 @@ export default {
       // Appointments state
     const appointments = ref([])
     const approvedAppointments = ref([])
+    const waitingForSubmissionAppointments = ref([])
+    const claimedAppointments = ref([])
     const currentPage = ref(1)
     const itemsPerPage = ref(10)
     const totalAppointments = ref(0)  // Initialize with 0 instead of undefined
     const loadingAppointments = ref(true)
-    const activeTab = ref('all')  // 'all' or 'approved'
+    const activeTab = ref('all')  // 'all', 'waiting_for_submission', 'approved', or 'claimed'
     
     // Filter state
     const showFilters = ref(false)
@@ -462,8 +624,12 @@ export default {
     const fetchAppointments = async () => {
       if (activeTab.value === 'all') {
         fetchAllAppointments()
+      } else if (activeTab.value === 'waiting_for_submission') {
+        fetchWaitingForSubmissionAppointments()
       } else if (activeTab.value === 'approved') {
         fetchApprovedAppointments()
+      } else if (activeTab.value === 'claimed') {
+        fetchClaimedAppointments()
       }
     }
     
@@ -517,6 +683,53 @@ export default {
       }
     }
     
+    // Fetch appointments waiting for submission
+    const fetchWaitingForSubmissionAppointments = async () => {
+      loadingAppointments.value = true
+      try {
+        // Create params object with pagination
+        const params = {
+          page: currentPage.value,
+          page_size: itemsPerPage.value,
+          status: 'waiting_for_submission'  // Only fetch waiting for submission appointments
+        }
+        
+        // Add filters to params if they exist
+        if (filters.value.searchTerm) {
+          params.search = filters.value.searchTerm
+        }
+        
+        if (filters.value.fromDate) {
+          params.from_date = filters.value.fromDate
+        }
+        
+        if (filters.value.toDate) {
+          params.to_date = filters.value.toDate
+        }
+        
+        const response = await axiosInstance.get('/api/admin/dashboard/recent-appointments/', {
+          params: params
+        })
+        
+        // Handle the response structure
+        if (response.data.appointments) {
+          waitingForSubmissionAppointments.value = response.data.appointments || []
+          totalAppointments.value = response.data.total || 0
+        } else {
+          // Fallback if the API returns a different structure
+          waitingForSubmissionAppointments.value = Array.isArray(response.data) ? response.data : []
+          totalAppointments.value = waitingForSubmissionAppointments.value.length
+        }
+      } catch (error) {
+        console.error('Error fetching waiting for submission appointments:', error)
+        // Set default values on error
+        waitingForSubmissionAppointments.value = []
+        totalAppointments.value = 0
+      } finally {
+        loadingAppointments.value = false
+      }
+    }
+    
     // Fetch only approved appointments
     const fetchApprovedAppointments = async () => {
       loadingAppointments.value = true
@@ -558,6 +771,53 @@ export default {
         console.error('Error fetching approved appointments:', error)
         // Set default values on error
         approvedAppointments.value = []
+        totalAppointments.value = 0
+      } finally {
+        loadingAppointments.value = false
+      }
+    }
+
+    // Fetch claimed appointments
+    const fetchClaimedAppointments = async () => {
+      loadingAppointments.value = true
+      try {
+        // Create params object with pagination
+        const params = {
+          page: currentPage.value,
+          page_size: itemsPerPage.value,
+          status: 'claimed'  // Only fetch claimed appointments
+        }
+        
+        // Add filters to params if they exist
+        if (filters.value.searchTerm) {
+          params.search = filters.value.searchTerm
+        }
+        
+        if (filters.value.fromDate) {
+          params.from_date = filters.value.fromDate
+        }
+        
+        if (filters.value.toDate) {
+          params.to_date = filters.value.toDate
+        }
+        
+        const response = await axiosInstance.get('/api/admin/dashboard/recent-appointments/', {
+          params: params
+        })
+        
+        // Handle the response structure
+        if (response.data.appointments) {
+          claimedAppointments.value = response.data.appointments || []
+          totalAppointments.value = response.data.total || 0
+        } else {
+          // Fallback if the API returns a different structure
+          claimedAppointments.value = Array.isArray(response.data) ? response.data : []
+          totalAppointments.value = claimedAppointments.value.length
+        }
+      } catch (error) {
+        console.error('Error fetching claimed appointments:', error)
+        // Set default values on error
+        claimedAppointments.value = []
         totalAppointments.value = 0
       } finally {
         loadingAppointments.value = false
@@ -668,6 +928,8 @@ export default {
       // Appointments
       appointments,
       approvedAppointments,
+      waitingForSubmissionAppointments,
+      claimedAppointments,
       currentPage,
       itemsPerPage,
       totalAppointments,
