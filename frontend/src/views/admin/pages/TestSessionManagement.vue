@@ -1393,6 +1393,14 @@ export default {
       this.showConfirmationModal = true;
     },
     
+    showAutoAssignConfirmation() {
+      if (this.stats.pendingAssignments === 0) {
+        this.showToast('No pending assignments to auto-assign', 'info');
+        return;
+      }
+      this.showAutoAssignConfirmModal = true;
+    },
+    
     async deleteSession(session) {
       try {
         await axiosInstance.delete(`/api/admin/test-sessions/${session.id}/`);
@@ -1858,6 +1866,23 @@ export default {
     // Pagination methods
     changeSessionsPage(page) {
       this.pagination.sessions.currentPage = page;
+    },
+    
+    changeCentersPage(page) {
+      this.pagination.centers.currentPage = page;
+    },
+    
+    changeRoomsPage(page) {
+      this.pagination.rooms.currentPage = page;
+    },
+    
+    updateRoomsPagination() {
+      this.pagination.rooms.totalItems = this.filteredRooms.length;
+      // Reset to page 1 if current page is beyond available pages
+      const totalPages = Math.ceil(this.pagination.rooms.totalItems / this.pagination.rooms.itemsPerPage);
+      if (this.pagination.rooms.currentPage > totalPages && totalPages > 0) {
+        this.pagination.rooms.currentPage = 1;
+      }
     },
     
     cancelCenterModal() {
