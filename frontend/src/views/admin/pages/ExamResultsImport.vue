@@ -264,7 +264,7 @@ export default {
       dragover: false,
       selectedFile: null,
       selectedExamType: '',
-      selectedExamYear: '',
+      selectedExamYear: new Date().getFullYear().toString(), // Default to current year
       availableYears: [], // Will be populated from API
       examTypes: [], // Will be populated from backend
       loading: false,
@@ -430,6 +430,11 @@ export default {
             }
           }
         }
+        
+        // Ensure selectedExamYear is set to current year if empty
+        if (!this.selectedExamYear) {
+          this.selectedExamYear = new Date().getFullYear().toString();
+        }
       } catch (error) {
         console.error('Error fetching available years:', error);
         // Fallback to generating years if API fails
@@ -437,6 +442,11 @@ export default {
         this.availableYears = [];
         for (let year = currentYear; year >= currentYear - 5; year--) {
           this.availableYears.push(year.toString());
+        }
+        
+        // Ensure selectedExamYear is set to current year if empty
+        if (!this.selectedExamYear) {
+          this.selectedExamYear = currentYear.toString();
         }
       }
     },
@@ -462,6 +472,12 @@ export default {
         formData.append('file', this.selectedFile);
         formData.append('examType', this.selectedExamType);
         formData.append('year', this.selectedExamYear);
+        
+        // Debug logging
+        console.log('Sending import request with:');
+        console.log('- File:', this.selectedFile.name);
+        console.log('- Exam Type:', this.selectedExamType);
+        console.log('- Year:', this.selectedExamYear);
         
         // Send to the score import API endpoint
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';

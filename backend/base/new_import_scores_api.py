@@ -23,8 +23,9 @@ def import_scores_api(request):
         
     csv_file = request.FILES['file']
     exam_type = request.data.get('examType', '')
+    exam_year = request.data.get('year', '')
     
-    print(f"Processing file: {csv_file.name}, exam type: {exam_type}")
+    print(f"Processing file: {csv_file.name}, exam type: {exam_type}, exam year: {exam_year}")
     
     # Process the CSV file
     try:
@@ -236,6 +237,7 @@ def import_scores_api(request):
                     existing_score.oapr = oapr
                     existing_score.exam_date = exam_date
                     existing_score.exam_type = exam_type
+                    existing_score.year = exam_year
                     existing_score.imported_by = request.user
                     existing_score.save()
                     updated_count += 1
@@ -257,6 +259,7 @@ def import_scores_api(request):
                         oapr=oapr,
                         exam_date=exam_date,
                         exam_type=exam_type,
+                        year=exam_year,
                         imported_by=request.user
                     )
                     matched_count += 1
@@ -280,6 +283,7 @@ def import_scores_api(request):
                     oapr=oapr,
                     exam_date=exam_date,
                     exam_type=exam_type,
+                    year=exam_year,
                     imported_by=request.user
                 )
                 created_count += 1
