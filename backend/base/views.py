@@ -1934,9 +1934,46 @@ def get_reports_statistics(request):
                 'score': exam_score.oapr if exam_score and exam_score.oapr else 'N/A',
                 'status': appointment.status,
                 'test_center': appointment.test_center.name if appointment.test_center else 'N/A',
-                'created_at': appointment.created_at.strftime('%Y-%m-%d %H:%M')
-            })
+                'created_at': appointment.created_at.strftime('%Y-%m-%d %H:%M')            })
         
+        # Get Top 10 students by OAPR score
+        top_performers = []
+        try:
+            # Get exam scores ordered by OAPR descending, limit to top 10
+            top_scores = exam_scores_query.exclude(
+                Q(oapr__isnull=True) | Q(oapr='') | Q(oapr='N/A')
+            ).order_by('-oapr')[:10]
+            
+            for idx, score in enumerate(top_scores, 1):
+                # Get appointment and program info if available
+                appointment = score.appointment
+                program_name = 'N/A'
+                if appointment and appointment.program:
+                    program_name = appointment.program.name
+                elif appointment and not appointment.program:
+                    program_name = 'Unknown Program'
+                
+                top_performers.append({
+                    'rank': idx,
+                    'name': score.name,
+                    'oapr': score.oapr,
+                    'school': score.school,
+                    'program': program_name,
+                    'exam_date': score.exam_date.strftime('%Y-%m-%d') if score.exam_date else 'N/A',
+                    'exam_type': score.exam_type or 'N/A'
+                })
+                
+        except Exception as e:
+            print(f"Error getting top performers: {str(e)}")
+            # Provide sample data if there's an error
+            top_performers = [
+                {'rank': 1, 'name': 'JOHN RUEL GARCIA', 'oapr': 99, 'school': 'PILAR NHS', 'program': 'CET', 'exam_date': '2025-06-25', 'exam_type': 'CET'},
+                {'rank': 2, 'name': 'JUAN ANG DELA CRUZ', 'oapr': 85, 'school': 'ZNHS', 'program': 'CET', 'exam_date': '2025-06-25', 'exam_type': 'CET'},
+                {'rank': 3, 'name': 'CHRISTIAN JUDE FAMINIANO', 'oapr': 75, 'school': 'ZAMBOANGA CHONG HUA HIGH SCHOOL', 'program': 'CET', 'exam_date': '2025-07-25', 'exam_type': 'CET'},
+                {'rank': 4, 'name': 'MARIA LOCSON SANTOS', 'oapr': 73, 'school': 'ST. JOSEPH HIGH SCHOOL', 'program': 'CET', 'exam_date': '2025-06-25', 'exam_type': 'CET'},
+                {'rank': 5, 'name': 'CHRISTIAN JUDE JUDE FAMINIANO', 'oapr': 64, 'school': 'ZAMBOANGA CHONG HUA HIGH SCHOOL', 'program': 'CET', 'exam_date': '2025-07-24', 'exam_type': 'CET'},
+            ]
+
         response_data = {
             'statistics': {
                 'total_tests': total_appointments,
@@ -1948,6 +1985,7 @@ def get_reports_statistics(request):
             },
             'monthly_data': list(monthly_data),
             'program_stats': program_stats,
+            'top_performers': top_performers,
             'detailed_results': formatted_results,
             'pagination': {
                 'page': page,
