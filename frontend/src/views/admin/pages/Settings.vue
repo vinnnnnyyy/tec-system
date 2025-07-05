@@ -416,17 +416,24 @@
                       
                       <!-- Question -->
                       <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Question</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                          Question
+                          <span v-if="!faq.question || !faq.question.trim()" class="text-red-500 text-xs ml-1">*Required</span>
+                        </label>
                         <input type="text" 
                                v-model="faq.question" 
                                placeholder="Enter question"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500">
+                               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+                               :class="!faq.question || !faq.question.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'">
                       </div>
                       
                       <!-- Answer -->
                       <div class="mb-4">
                         <div class="flex justify-between items-center mb-1">
-                          <label class="block text-sm font-medium text-gray-700">Answer</label>
+                          <label class="block text-sm font-medium text-gray-700">
+                            Answer
+                            <span v-if="!faq.answer || !faq.answer.trim()" class="text-red-500 text-xs ml-1">*Required</span>
+                          </label>
                           <span class="text-xs text-gray-500" :class="{ 'text-amber-500': isAnswerNearLimit(faq.answer), 'text-red-500': isAnswerOverLimit(faq.answer) }">
                             {{ faq.answer ? faq.answer.length : 0 }}/1000 characters
                           </span>
@@ -435,8 +442,13 @@
                                  rows="3" 
                                  placeholder="Enter answer"
                                  @input="autoResizeTextarea($event)"
-                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
-                                 :class="{ 'border-amber-400': isAnswerNearLimit(faq.answer), 'border-red-500': isAnswerOverLimit(faq.answer) }"></textarea>
+                                 class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+                                 :class="{ 
+                                   'border-amber-400': isAnswerNearLimit(faq.answer), 
+                                   'border-red-500': isAnswerOverLimit(faq.answer),
+                                   'border-red-300 bg-red-50': !faq.answer || !faq.answer.trim(),
+                                   'border-gray-300': faq.answer && faq.answer.trim() && !isAnswerNearLimit(faq.answer) && !isAnswerOverLimit(faq.answer)
+                                 }"></textarea>
                       </div>
                     </div>
                   </div>
@@ -1035,18 +1047,40 @@ export default {
 
     const saveChanges = async () => {
       try {
-        // Save general settings
-        await axiosInstance.put(API_ENDPOINT + 'settings/', settings)
+        // Save general settings (if in general section)
+        if (activeSection.value === 'general') {
+          await axiosInstance.put(API_ENDPOINT + 'settings/', settings)
+        }
         
-        // Save FAQ changes
-        if (activeSection.value === 'content') {
+        // Save FAQ changes (if in content section and FAQ tab)
+        if (activeSection.value === 'content' && activeContentCategory.value === 'faq') {
+          // Check for validation errors before saving
+          const invalidFaqs = faqs.value.filter(faq => {
+            const errors = validateFaq(faq)
+            return errors.length > 0
+          })
+          
+          if (invalidFaqs.length > 0) {
+            // Show a more detailed validation message
+            const errorDetails = invalidFaqs.map((faq, index) => {
+              const errors = validateFaq(faq)
+              const faqNumber = faqs.value.indexOf(faq) + 1
+              return `FAQ ${faqNumber}: ${errors.join(', ')}`
+            }).join('\n')
+            
+            alert(`Please fix the following validation errors:\n\n${errorDetails}\n\nAll fields marked with * are required.`)
+            return
+          }
+          
           await saveFaqChanges()
+          return // Don't show the generic success message, saveFaqChanges has its own
         }
         
         alert('Changes saved successfully')
       } catch (error) {
         console.error('Failed to save changes:', error)
-        alert('Failed to save changes')
+        const errorMessage = error.response?.data?.detail || error.message || 'Failed to save changes'
+        alert(`Error: ${errorMessage}`)
       }
     }
 
@@ -1161,10 +1195,12 @@ export default {
         const response = await axiosInstance.get(API_ENDPOINT + 'admin/faqs/')
         // Handle both array and object responses
         const faqData = Array.isArray(response.data) ? response.data : (response.data.results || []);
-        faqs.value = faqData.map(faq => ({
+        faqs.value = faqData.map((faq, index) => ({
           ...faq,
-          is_active: faq.is_active || false,
-          icon: faq.icon || 'fas fa-question'
+          is_active: faq.is_active !== undefined ? faq.is_active : false,
+          icon: faq.icon || 'fas fa-question',
+          order: faq.order !== undefined ? faq.order : index,
+          category: faq.category || 'General'
         }));
       } catch (error) {
         console.error('Failed to fetch FAQs:', error);
@@ -1182,49 +1218,96 @@ export default {
     // Save FAQ changes
     const saveFaqChanges = async () => {
       try {
-        const promises = faqs.value.map(async (faq) => {
+        // Validate all FAQs first
+        const validationResults = faqs.value.map((faq, index) => ({
+          index,
+          faq,
+          errors: validateFaq(faq)
+        }))
+
+        // Filter out FAQs with validation errors
+        const validFaqs = validationResults.filter(result => result.errors.length === 0)
+        const invalidFaqs = validationResults.filter(result => result.errors.length > 0)
+
+        // Show validation errors if any
+        if (invalidFaqs.length > 0) {
+          const errorMessages = invalidFaqs.map(result => 
+            `FAQ ${result.index + 1}: ${result.errors.join(', ')}`
+          ).join('\n')
+          alert(`Please fix the following errors before saving:\n\n${errorMessages}`)
+          return
+        }
+
+        // Filter out empty FAQs (no question and no answer)
+        const faqsToSave = validFaqs.filter(result => 
+          result.faq.question && result.faq.question.trim() && 
+          result.faq.answer && result.faq.answer.trim()
+        )
+
+        if (faqsToSave.length === 0) {
+          alert('No valid FAQs to save. Please add some content.')
+          return
+        }
+
+        const promises = faqsToSave.map(async (result) => {
+          const faq = result.faq
           const faqData = {
-            question: faq.question,
-            answer: faq.answer,
-            category: faq.category,
-            icon: faq.icon,
-            is_active: faq.is_active,
-            order: faq.order
+            question: faq.question.trim(),
+            answer: faq.answer.trim(),
+            category: (faq.category || 'General').trim(),
+            icon: (faq.icon || 'fas fa-question').trim(),
+            is_active: Boolean(faq.is_active),
+            order: parseInt(faq.order) || 0
           }
 
-          if (faq.id) {
-            // Update existing FAQ
-            return axiosInstance.put(API_ENDPOINT + `admin/faqs/${faq.id}/`, faqData)
-          } else {
-            // Create new FAQ
-            return axiosInstance.post(API_ENDPOINT + 'admin/faqs/', faqData)
+          try {
+            if (faq.id) {
+              // Update existing FAQ
+              return await axiosInstance.put(API_ENDPOINT + `admin/faqs/${faq.id}/`, faqData)
+            } else {
+              // Create new FAQ
+              return await axiosInstance.post(API_ENDPOINT + 'admin/faqs/', faqData)
+            }
+          } catch (error) {
+            console.error(`Failed to save FAQ "${faq.question}":`, error.response?.data || error)
+            throw new Error(`Failed to save FAQ "${faq.question}": ${error.response?.data?.detail || error.message}`)
           }
         })
 
         await Promise.all(promises)
         await fetchFaqs() // Refresh the FAQ list
-        alert('FAQ changes saved successfully')
+        alert(`Successfully saved ${faqsToSave.length} FAQ(s)`)
       } catch (error) {
         console.error('Failed to save FAQ changes:', error)
-        alert('Failed to save FAQ changes')
+        const errorMessage = error.message || 
+                           error.response?.data?.detail || 
+                           error.response?.data?.question?.[0] || 
+                           error.response?.data?.answer?.[0] || 
+                           'Failed to save FAQ changes. Please check all fields are filled correctly.'
+        alert(errorMessage)
         throw error
       }
     }
 
     // Add new FAQ
     const addNewFAQ = () => {
+      const newOrder = Math.max(...faqs.value.map(faq => faq.order || 0), -1) + 1
       faqs.value.push({
         category: faqCategories.value[0] || 'General',
         is_active: true,
         question: '',
         answer: '',
         icon: 'fas fa-question',
-        order: faqs.value.length
+        order: newOrder
       })
     }
 
     // Remove FAQ
     const removeFAQ = async (index) => {
+      if (!confirm('Are you sure you want to delete this FAQ?')) {
+        return
+      }
+
       const faq = faqs.value[index]
       if (faq.id) {
         try {
@@ -1234,9 +1317,11 @@ export default {
           faqs.value.forEach((f, i) => {
             f.order = i
           })
+          alert('FAQ deleted successfully')
         } catch (error) {
           console.error('Failed to delete FAQ:', error)
-          alert('Failed to delete FAQ')
+          const errorMessage = error.response?.data?.detail || 'Failed to delete FAQ'
+          alert(errorMessage)
         }
       } else {
         faqs.value.splice(index, 1)
@@ -1725,6 +1810,39 @@ export default {
       return answer && answer.length >= 1000
     }
 
+    // Validate FAQ data before saving
+    const validateFaq = (faq) => {
+      const errors = []
+      
+      if (!faq.question || !faq.question.trim()) {
+        errors.push('Question is required')
+      }
+      
+      if (!faq.answer || !faq.answer.trim()) {
+        errors.push('Answer is required')
+      }
+      
+      if (!faq.category || !faq.category.trim()) {
+        errors.push('Category is required')
+      } else if (faq.category.length > 100) {
+        errors.push('Category must be 100 characters or less')
+      }
+      
+      if (faq.icon && faq.icon.length > 50) {
+        errors.push('Icon class must be 50 characters or less')
+      }
+      
+      return errors
+    }
+
+    // Check if there are any validation errors before saving
+    const hasValidationErrors = computed(() => {
+      return faqs.value.some(faq => {
+        const errors = validateFaq(faq)
+        return errors.length > 0
+      })
+    })
+
     // Consolidated onMounted hook - fetch all initial data
     onMounted(() => {
       console.log('Settings component mounted, fetching initial data...')
@@ -1817,7 +1935,9 @@ export default {
       confirmDeleteFAQ,
       deleteFAQ,
       isAnswerNearLimit,
-      isAnswerOverLimit
+      isAnswerOverLimit,
+      validateFaq,
+      hasValidationErrors
     }
   }
 }

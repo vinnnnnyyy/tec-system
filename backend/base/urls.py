@@ -25,6 +25,7 @@ router = DefaultRouter()
 router.register(r'programs', ProgramViewSet)
 router.register(r'appointments', AppointmentViewSet)
 router.register(r'admin/faqs', FAQViewSet)
+router.register(r'faqs', FAQViewSet, basename='faq-public')  # Public FAQ endpoint
 router.register(r'admin/test-centers', TestCenterViewSet)
 router.register(r'test-centers', TestCenterViewSet, basename='testcenter-public')  # Public endpoint
 router.register(r'admin/test-rooms', TestRoomViewSet)

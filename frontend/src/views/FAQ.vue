@@ -280,9 +280,25 @@ export default {
       error.value = null;
       
       try {
-        // Fixed API endpoint - using just API_URL without adding "api/" again
-        const response = await axiosInstance.get(`${API_URL}/admin/faqs/`);
-        faqs.value = response.data.filter(faq => faq.is_active).map(faq => {
+        // Use public FAQ endpoint with correct API prefix
+        const response = await axiosInstance.get(`${API_URL}/api/faqs/`);
+        
+        // Handle both array and object responses from the backend
+        let faqData = response.data;
+        if (!Array.isArray(faqData)) {
+          // If response is an object, try to extract array from common properties
+          if (faqData.results && Array.isArray(faqData.results)) {
+            faqData = faqData.results;
+          } else if (faqData.data && Array.isArray(faqData.data)) {
+            faqData = faqData.data;
+          } else {
+            // If it's not an array and doesn't have expected properties, set to empty array
+            console.warn('FAQ response is not an array and does not contain expected array properties:', faqData);
+            faqData = [];
+          }
+        }
+        
+        faqs.value = faqData.filter(faq => faq.is_active).map(faq => {
           // Add helpful links for some FAQs as an example
           if (faq.category === 'Scheduling') {
             faq.helpfulLinks = [
