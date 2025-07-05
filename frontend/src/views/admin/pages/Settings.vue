@@ -122,6 +122,26 @@
               <span>Add User</span>
             </button>
           </div>
+
+          <!-- Search Bar -->
+          <div v-if="users.length > 0" class="mb-6 bg-white p-4 rounded-lg border border-gray-200">
+            <div class="relative max-w-md">
+              <input 
+                v-model="userSearchQuery" 
+                type="text" 
+                placeholder="Search users by name, email, or role..." 
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+              >
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+              <button 
+                v-if="userSearchQuery" 
+                @click="userSearchQuery = ''" 
+                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-crimson-600"
+              >
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
           
           <!-- Users Table -->
           <div class="overflow-x-auto">
@@ -131,7 +151,7 @@
             </div>
             
             <!-- Users table -->
-            <table v-else-if="users.length > 0" class="w-full">
+            <table v-else-if="filteredUsers.length > 0" class="w-full">
               <thead class="bg-gray-50">
                 <tr>
                   <th v-for="header in userTableHeaders" 
@@ -143,7 +163,7 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
-                <tr v-for="user in users" :key="user.id">
+                <tr v-for="user in filteredUsers" :key="user.id">
                   <td class="px-4 py-3">
                     <div class="flex items-center">
                       <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
@@ -180,8 +200,17 @@
             <div v-else class="text-center py-8">
               <div class="text-gray-500">
                 <i class="fas fa-users text-4xl mb-2"></i>
-                <p class="text-lg">No users found</p>
-                <p class="text-sm">Click "Add User" to create the first user</p>
+                <p class="text-lg" v-if="userSearchQuery">No users found matching "{{ userSearchQuery }}"</p>
+                <p class="text-lg" v-else>No users found</p>
+                <p class="text-sm" v-if="userSearchQuery">Try adjusting your search criteria</p>
+                <p class="text-sm" v-else>Click "Add User" to create the first user</p>
+                <button 
+                  v-if="userSearchQuery" 
+                  @click="userSearchQuery = ''" 
+                  class="mt-3 inline-flex items-center px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm"
+                >
+                  <i class="fas fa-times mr-2"></i> Clear Search
+                </button>
               </div>
             </div>
           </div>
@@ -1622,6 +1651,7 @@ export default {
     }
 
     const searchQuery = ref('')
+    const userSearchQuery = ref('')
     const typeFilter = ref('all')
     const statusFilter = ref('all')
     const activeContentCategory = ref('faq')
@@ -1650,6 +1680,23 @@ export default {
       typeFilter.value = 'all'
       statusFilter.value = 'all'
     }
+
+    // Filter users based on search query
+    const filteredUsers = computed(() => {
+      let filtered = [...users.value]
+      
+      // Apply search filter
+      if (userSearchQuery.value.trim()) {
+        const query = userSearchQuery.value.toLowerCase().trim()
+        filtered = filtered.filter(user => 
+          user.name?.toLowerCase().includes(query) ||
+          user.email?.toLowerCase().includes(query) ||
+          user.role?.toLowerCase().includes(query)
+        )
+      }
+      
+      return filtered
+    })
 
     // Filter announcements based on search and filters
     const filteredAnnouncements = computed(() => {
@@ -1859,6 +1906,8 @@ export default {
       dateFormats,
       userTableHeaders,
       users,
+      userSearchQuery,
+      filteredUsers,
       isLoadingUsers,
       getStatusClass,
       saveChanges,
