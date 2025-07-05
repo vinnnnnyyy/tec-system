@@ -173,6 +173,117 @@
         </div>
       </div>
       
+      <!-- Top 10 Performers Section -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+        <div class="p-6 border-b border-gray-100">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-gray-800">🏆 Top 10 Performers</h2>
+              <p class="text-sm text-gray-500 mt-1">Highest OAPR scores</p>
+            </div>
+            <div class="text-right">
+              <span class="text-2xl font-bold text-yellow-600">{{ topPerformers.length }}</span>
+              <p class="text-xs text-gray-500">Students</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Loading state -->
+        <div v-if="loading" class="flex justify-center items-center py-10">
+          <i class="fas fa-circle-notch fa-spin text-4xl text-crimson-600"></i>
+        </div>
+        
+        <!-- Top Performers Grid -->
+        <div v-else class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div 
+              v-for="performer in topPerformers.slice(0, 10)" 
+              :key="performer.rank"
+              class="bg-gradient-to-br from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200 hover:shadow-md transition-all duration-300"
+              :class="{
+                'ring-2 ring-yellow-400 bg-gradient-to-br from-yellow-100 to-orange-100': performer.rank <= 3,
+                'transform hover:scale-105': performer.rank <= 3
+              }"
+            >
+              <div class="text-center">
+                <!-- Rank Badge -->
+                <div class="flex justify-center mb-3">
+                  <div 
+                    class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                    :class="{
+                      'bg-yellow-500 text-white': performer.rank === 1,
+                      'bg-gray-400 text-white': performer.rank === 2,
+                      'bg-amber-600 text-white': performer.rank === 3,
+                      'bg-blue-500 text-white': performer.rank > 3
+                    }"
+                  >
+                    {{ performer.rank }}
+                  </div>
+                </div>
+                
+                <!-- Trophy for top 3 -->
+                <div v-if="performer.rank <= 3" class="flex justify-center mb-2">
+                  <i 
+                    class="text-2xl"
+                    :class="{
+                      'fas fa-trophy text-yellow-500': performer.rank === 1,
+                      'fas fa-medal text-gray-400': performer.rank === 2,
+                      'fas fa-award text-amber-600': performer.rank === 3
+                    }"
+                  ></i>
+                </div>
+                
+                <!-- OAPR Score -->
+                <div class="mb-2">
+                  <span class="text-2xl font-bold text-gray-800">{{ performer.oapr }}</span>
+                  <p class="text-xs text-gray-500">OAPR</p>
+                </div>
+                
+                <!-- Student Name -->
+                <h4 class="font-semibold text-gray-800 text-sm mb-1 truncate" :title="performer.name">
+                  {{ performer.name }}
+                </h4>
+                
+                <!-- School -->
+                <p class="text-xs text-gray-600 mb-1 truncate" :title="performer.school">
+                  {{ performer.school }}
+                </p>
+                
+                <!-- Program & Date -->
+                <div class="text-xs text-gray-500">
+                  <p class="truncate">{{ performer.program }}</p>
+                  <p>{{ formatDate(performer.exam_date) }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Empty states if less than 10 -->
+            <div 
+              v-for="n in Math.max(0, 10 - topPerformers.length)" 
+              :key="`empty-${n}`"
+              class="bg-gray-50 p-4 rounded-xl border border-gray-200 flex items-center justify-center"
+            >
+              <div class="text-center text-gray-400">
+                <i class="fas fa-user-plus text-2xl mb-2"></i>
+                <p class="text-xs">No data</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Show more button if there are more than 10 results -->
+          <div v-if="topPerformers.length > 10" class="text-center mt-6">
+            <button 
+              @click="showAllPerformers = !showAllPerformers"
+              class="px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition-colors duration-200"
+            >
+              <i class="fas fa-chevron-down mr-2" v-if="!showAllPerformers"></i>
+              <i class="fas fa-chevron-up mr-2" v-else></i>
+              {{ showAllPerformers ? 'Show Less' : 'Show All' }}
+            </button>
+          </div>
+        </div>
+      </div>
+      
       <!-- Detailed Data Table -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-6 border-b border-gray-100">
@@ -295,6 +406,8 @@ export default {
     const programs = ref([])
     const testCenters = ref([])
     const testResults = ref([])
+    const topPerformers = ref([])
+    const showAllPerformers = ref(false)
     
     // Chart data
     const monthlyData = ref([])
@@ -358,15 +471,24 @@ export default {
         if (response.data) {
           console.log('Reports API response:', response.data)
           
-          // Update statistics
-          Object.assign(statistics, response.data.statistics)
+          // Update statistics - map backend field names to frontend field names
+          const backendStats = response.data.statistics
+          statistics.totalTests = backendStats.total_tests || 0
+          statistics.passRate = backendStats.pass_rate || 0
+          statistics.averageScore = backendStats.average_score || 0
+          statistics.topProgram = backendStats.top_program || 'N/A'
+          statistics.approved_appointments = backendStats.approved_appointments || 0
+          statistics.total_exam_results = backendStats.total_exam_results || 0
           
-          // Update test results table
+          // Update test results tables
           testResults.value = response.data.detailed_results || []
           
           // Update chart data
           monthlyData.value = response.data.monthly_data || []
           programStats.value = response.data.program_stats || []
+          
+          // Update top performers data
+          topPerformers.value = response.data.top_performers || []
           
           console.log('Monthly data:', monthlyData.value)
           console.log('Program stats:', programStats.value)
@@ -407,6 +529,15 @@ export default {
             { program: 'Medical School Test', total: 450, approved: 315, pass_rate: 70 },
             { program: 'Law School Test', total: 200, approved: 140, pass_rate: 70 },
             { program: 'Engineering Test', total: 300, approved: 270, pass_rate: 90 }
+          ]
+          
+          // Mock top performers data
+          topPerformers.value = [
+            { rank: 1, name: 'JOHN RUEL GARCIA', oapr: 99, school: 'PILAR NHS', program: 'CET', exam_date: '2025-06-25', exam_type: 'CET' },
+            { rank: 2, name: 'JUAN ANG DELA CRUZ', oapr: 85, school: 'ZNHS', program: 'CET', exam_date: '2025-06-25', exam_type: 'CET' },
+            { rank: 3, name: 'CHRISTIAN JUDE FAMINIANO', oapr: 75, school: 'ZAMBOANGA CHONG HUA HIGH SCHOOL', program: 'CET', exam_date: '2025-07-25', exam_type: 'CET' },
+            { rank: 4, name: 'MARIA LOCSON SANTOS', oapr: 73, school: 'ST. JOSEPH HIGH SCHOOL', program: 'CET', exam_date: '2025-06-25', exam_type: 'CET' },
+            { rank: 5, name: 'CHRISTIAN JUDE JUDE FAMINIANO', oapr: 64, school: 'ZAMBOANGA CHONG HUA HIGH SCHOOL', program: 'CET', exam_date: '2025-07-24', exam_type: 'CET' }
           ]
           
           // Mock test results
@@ -534,6 +665,8 @@ export default {
       programs,
       testCenters,
       testResults,
+      topPerformers,
+      showAllPerformers,
       monthlyData,
       programStats,
       applyFilters,
