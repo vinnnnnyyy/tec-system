@@ -2007,6 +2007,7 @@ def get_reports_statistics(request):
                 'score': exam_score.oapr if exam_score and exam_score.oapr else 'N/A',
                 'status': appointment.status,
                 'test_center': appointment.test_center.name if appointment.test_center else 'N/A',
+                'school': exam_score.school if exam_score and exam_score.school else 'N/A',
                 'created_at': appointment.created_at.strftime('%Y-%m-%d %H:%M')            })
         
         # Get Top 10 students by OAPR score

@@ -328,8 +328,70 @@
       <!-- Detailed Data Table -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-6 border-b border-gray-100">
-          <h2 class="text-xl font-bold text-gray-800">Test Results</h2>
-          <p class="text-sm text-gray-500 mt-1">Detailed test results data</p>
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-xl font-bold text-gray-800">Test Results</h2>
+              <p class="text-sm text-gray-500 mt-1">Detailed test results data</p>
+            </div>
+            <div class="text-right">
+              <span class="text-2xl font-bold text-blue-600">{{ filteredTestResults.length }}</span>
+              <p class="text-xs text-gray-500">Results</p>
+            </div>
+          </div>
+          
+          <!-- Test Results Filters -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Program</label>
+              <select 
+                v-model="testResultsFilters.program"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-crimson-500 focus:border-crimson-500 text-sm"
+              >
+                <option value="">All Programs</option>
+                <option v-for="program in uniqueTestPrograms" :key="program" :value="program">
+                  {{ program }}
+                </option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Year</label>
+              <select 
+                v-model="testResultsFilters.year"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-crimson-500 focus:border-crimson-500 text-sm"
+              >
+                <option value="">All Years</option>
+                <option v-for="year in uniqueTestYears" :key="year" :value="year">
+                  {{ year }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="flex items-end space-x-2">
+              <button 
+                @click="resetTestResultsFilters"
+                class="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200 text-sm"
+              >
+                <i class="fas fa-redo mr-1"></i>
+                Reset
+              </button>
+              <button 
+                @click="filterTestResults"
+                class="flex-1 px-3 py-2 bg-crimson-600 text-white rounded-md hover:bg-crimson-700 transition-colors duration-200 text-sm"
+              >
+                <i class="fas fa-filter mr-1"></i>
+                Filter
+              </button>
+              <button 
+                @click="exportTestResultsToPDF"
+                :disabled="exportingTestResultsPDF"
+                class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <i :class="exportingTestResultsPDF ? 'fas fa-spinner fa-spin' : 'fas fa-download'" class="mr-1"></i>
+                {{ exportingTestResultsPDF ? 'Exporting...' : 'Export PDF' }}
+              </button>
+            </div>
+          </div>
         </div>
         
         <!-- Loading state -->
@@ -343,6 +405,7 @@
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Student</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">School</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Program</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Test Date</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Score</th>
@@ -351,7 +414,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-              <tr v-for="result in testResults" :key="result.id" class="hover:bg-gray-50 transition-colors duration-200">
+              <tr v-for="result in filteredTestResults" :key="result.id" class="hover:bg-gray-50 transition-colors duration-200">
                 <td class="px-4 py-3">
                   <div class="flex items-center">
                     <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
@@ -362,6 +425,7 @@
                     </div>
                   </div>
                 </td>
+                <td class="px-4 py-3 text-sm text-gray-900">{{ result.school || 'N/A' }}</td>
                 <td class="px-4 py-3 text-sm text-gray-900">{{ result.program }}</td>
                 <td class="px-4 py-3 text-sm text-gray-500">{{ formatDate(result.test_date) }}</td>
                 <td class="px-4 py-3 font-medium">{{ result.score }}</td>
@@ -373,8 +437,8 @@
                 <td class="px-4 py-3 text-sm text-gray-900">{{ result.test_center }}</td>
               </tr>
               
-              <tr v-if="testResults.length === 0">
-                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+              <tr v-if="filteredTestResults.length === 0">
+                <td colspan="7" class="px-4 py-8 text-center text-gray-500">
                   No test results found for the selected filters.
                 </td>
               </tr>
@@ -445,6 +509,11 @@ export default {
       year: ''
     })
     
+    const testResultsFilters = reactive({
+      program: '',
+      year: ''
+    })
+    
     const statistics = reactive({
       totalTests: 0,
       passRate: 0,
@@ -458,6 +527,7 @@ export default {
     const topPerformers = ref([])
     const showAllPerformers = ref(false)
     const exportingPDF = ref(false)
+    const exportingTestResultsPDF = ref(false)
     const chartKey = ref(0) // Add reactive key for forcing chart re-render
     
     // Chart data
@@ -502,6 +572,42 @@ export default {
         ...performer,
         rank: index + 1
       }))
+    })
+    
+    // Computed properties for test results filtering
+    const uniqueTestPrograms = computed(() => {
+      const programs = [...new Set(testResults.value.map(result => result.program))]
+      return programs.sort()
+    })
+    
+    const uniqueTestYears = computed(() => {
+      const years = [...new Set(testResults.value.map(result => {
+        if (result.exam_date) {
+          return new Date(result.exam_date).getFullYear().toString()
+        }
+        return null
+      }).filter(Boolean))]
+      return years.sort().reverse() // Most recent years first
+    })
+    
+    const filteredTestResults = computed(() => {
+      let filtered = [...testResults.value]
+      
+      if (testResultsFilters.program) {
+        filtered = filtered.filter(result => result.program === testResultsFilters.program)
+      }
+      
+      if (testResultsFilters.year) {
+        filtered = filtered.filter(result => {
+          if (result.exam_date) {
+            const year = new Date(result.exam_date).getFullYear().toString()
+            return year === testResultsFilters.year
+          }
+          return false
+        })
+      }
+      
+      return filtered
     })
     
     // Fetch initial data
@@ -778,6 +884,17 @@ export default {
       topPerformersFilters.year = ''
     }
     
+    const resetTestResultsFilters = () => {
+      testResultsFilters.program = ''
+      testResultsFilters.year = ''
+    }
+    
+    const filterTestResults = () => {
+      // This method can be used for manual filtering if needed
+      // The computed property filteredTestResults already handles the filtering
+      console.log('Filtering test results with:', testResultsFilters)
+    }
+    
     const exportTopPerformersToPDF = async () => {
       if (exportingPDF.value) return
       
@@ -867,6 +984,111 @@ export default {
       }
     }
     
+    const exportTestResultsToPDF = async () => {
+      if (exportingTestResultsPDF.value) return
+      
+      try {
+        exportingTestResultsPDF.value = true
+        
+        // Create a temporary element with the filtered data
+        const element = document.createElement('div')
+        element.style.padding = '20px'
+        element.style.fontFamily = 'Arial, sans-serif'
+        
+        // Add title and filters info
+        let filtersText = 'All Programs, All Years'
+        if (testResultsFilters.program || testResultsFilters.year) {
+          const programText = testResultsFilters.program || 'All Programs'
+          const yearText = testResultsFilters.year || 'All Years'
+          filtersText = `${programText}, ${yearText}`
+        }
+        
+        element.innerHTML = `
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #1f2937; font-size: 24px; font-weight: bold; margin-bottom: 10px;">
+              Test Results Report
+            </h1>
+            <p style="color: #6b7280; font-size: 14px;">
+              Filters Applied: ${filtersText}
+            </p>
+            <p style="color: #6b7280; font-size: 12px;">
+              Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+            </p>
+          </div>
+          
+          <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <thead>
+              <tr style="background-color: #f9fafb;">
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: bold; color: #374151;">Student Name</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: bold; color: #374151;">School</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: bold; color: #374151;">Program</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: bold; color: #374151;">Score</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: bold; color: #374151;">Status</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: bold; color: #374151;">Exam Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredTestResults.value.map(result => `
+                <tr>
+                  <td style="border: 1px solid #e5e7eb; padding: 12px;">${result.student_name || 'N/A'}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 12px;">${result.school || 'N/A'}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 12px;">${result.program || 'N/A'}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: bold;">${result.score || 'N/A'}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 12px;">
+                    <span style="
+                      padding: 4px 8px; 
+                      border-radius: 9999px; 
+                      font-size: 12px; 
+                      font-weight: 500;
+                      ${result.status === 'PASSED' ? 'background-color: #d1fae5; color: #065f46;' : 'background-color: #fee2e2; color: #991b1b;'}
+                    ">
+                      ${result.status}
+                    </span>
+                  </td>
+                  <td style="border: 1px solid #e5e7eb; padding: 12px;">${formatDate(result.exam_date)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          ${filteredTestResults.value.length === 0 ? `
+            <div style="text-align: center; padding: 40px; color: #6b7280;">
+              No test results data available for the selected filters.
+            </div>
+          ` : ''}
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+            <p>Total Results: ${filteredTestResults.value.length}</p>
+            <p>Passed: ${filteredTestResults.value.filter(r => r.status === 'PASSED').length}</p>
+            <p>Failed: ${filteredTestResults.value.filter(r => r.status === 'FAILED').length}</p>
+          </div>
+        `
+        
+        // PDF options
+        const options = {
+          margin: 1,
+          filename: `test-results-${testResultsFilters.program || 'all-programs'}-${testResultsFilters.year || 'all-years'}-${new Date().toISOString().split('T')[0]}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { 
+            scale: 2, 
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: '#ffffff'
+          },
+          jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+        }
+        
+        // Generate and download PDF
+        await html2pdf().set(options).from(element).save()
+        
+      } catch (error) {
+        console.error('Error generating PDF:', error)
+        // You could add a toast notification here
+      } finally {
+        exportingTestResultsPDF.value = false
+      }
+    }
+    
     return {
       loading,
       page,
@@ -891,8 +1113,17 @@ export default {
       resetFilters,
       filterTopPerformers,
       resetTopPerformersFilters,
+      // Test results filtering
+      testResultsFilters,
+      uniqueTestPrograms,
+      uniqueTestYears,
+      filteredTestResults,
+      resetTestResultsFilters,
+      filterTestResults,
       exportTopPerformersToPDF,
+      exportTestResultsToPDF,
       exportingPDF,
+      exportingTestResultsPDF,
       formatDate,
       formatDateRange,
       getStatusClass,
