@@ -1314,10 +1314,10 @@ def import_scores_api(request):
         # Create global notification for exam results release
         total_scores_imported = matched_count + updated_count
         if total_scores_imported > 0:
-            create_exam_results_notification(
-                exam_type, 
-                exam_year, 
-                total_scores_imported, 
+            create_exam_scores_notification(
+                exam_type,
+                exam_year,
+                total_scores_imported,
                 request.user
             )
         
@@ -2498,6 +2498,37 @@ def create_exam_results_notification(exam_type, exam_year, score_count, admin_us
         icon = "graduation-cap"
         link = "/results"
         
+        # Create the global notification (visible to all users)
+        notification = Notification.objects.create(
+            user=None,  # No specific user - this is global
+            title=title,
+            message=message,
+            type='exam',
+            priority='high',  # High priority for exam results
+            icon=icon,
+            link=link,
+            created_by=admin_user,
+            is_read=False,
+            is_global=True  # This makes it visible to all users
+        )
+        
+        print(f"Created global exam results notification {notification.id} for {exam_type} ({exam_year})")
+        return notification
+        
+    except Exception as e:
+        print(f"Error creating exam results notification: {str(e)}")
+        return None
+
+# Helper function to create global notifications for exam results release
+def create_exam_scores_notification(exam_type, exam_year, score_count, admin_user):
+    """Create a global notification when exam results are released"""
+    try:
+        # Create notification message
+        title = "Exam Scores Released"
+        message = f"The scores for {exam_type} ({exam_year}) are now available. {score_count} scores have been published. You can check your results in the Profile section."
+        icon = "graduation-cap"
+        link = "/profile"
+
         # Create the global notification (visible to all users)
         notification = Notification.objects.create(
             user=None,  # No specific user - this is global

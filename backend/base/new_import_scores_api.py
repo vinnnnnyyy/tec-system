@@ -296,12 +296,12 @@ def import_scores_api(request):
             try:
                 Notification.objects.create(
                     user=None,  # No specific user - this is a global notification
-                    title="Exam Results Released",
+                    title="Exam Scores Released",
                     message=f"The results for {exam_type} ({exam_year}) are now available. {total_scores_imported} scores have been published. You can check your results in the Results section.",
                     type='exam',
                     priority='high',
                     icon='graduation-cap',
-                    link='/results',
+                    link='/profile',
                     created_by=request.user,
                     is_read=False,
                     is_global=True  # This makes it visible to all users
