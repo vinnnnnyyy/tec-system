@@ -1902,6 +1902,24 @@ export default {
       }
     },
     
+    cancelSessionModal() {
+      this.showCreateSessionModal = false;
+      this.newSession = {
+        exam_type: '',
+        registration_start_date: '',
+        registration_end_date: '',
+        exam_date: '',
+        status: 'SCHEDULED'
+      };
+      this.editingSessionId = null;
+      
+      // Reset button text
+      const createButton = document.querySelector("#createSessionBtn");
+      if (createButton) {
+        createButton.textContent = "Create Session";
+      }
+    },
+    
     cancelRoomModal() {
       this.showCreateRoomModal = false;
       this.newRoom = {
