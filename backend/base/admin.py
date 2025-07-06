@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     Program, Appointment, FAQ, ExamScore, 
     ExamResult, TestCenter, TestRoom, TestSession,
-    Announcement
+    Announcement, Notification
 )
 
 @admin.register(Program)
@@ -25,3 +25,26 @@ admin.site.register(TestCenter)
 admin.site.register(TestRoom)
 admin.site.register(TestSession)
 admin.site.register(Announcement)
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('title', 'type', 'priority', 'user', 'is_global', 'is_read', 'created_at')
+    list_filter = ('type', 'priority', 'is_global', 'is_read', 'created_at')
+    search_fields = ('title', 'message', 'user__username')
+    date_hierarchy = 'created_at'
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('title', 'message', 'type', 'priority', 'icon')
+        }),
+        ('Target', {
+            'fields': ('user', 'is_global')
+        }),
+        ('Status', {
+            'fields': ('is_read', 'link')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )

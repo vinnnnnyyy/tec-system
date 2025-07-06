@@ -12,7 +12,7 @@ from .views import (
     get_student_exam_score, import_scores_api, get_exam_years,
     get_dashboard_stats, get_recent_appointments, reset_test_session_rooms,
     search_public_exam_scores, get_public_test_sessions, get_reports_statistics,
-    test_reports_api
+    test_reports_api, NotificationViewSet
 )
 from .date_availability_view import program_availability
 from .auth_views import (
@@ -31,6 +31,7 @@ router.register(r'test-centers', TestCenterViewSet, basename='testcenter-public'
 router.register(r'admin/test-rooms', TestRoomViewSet)
 router.register(r'admin/test-sessions', TestSessionViewSet)
 router.register(r'announcements', AnnouncementViewSet)
+router.register(r'notifications', NotificationViewSet, basename='notifications')
 
 urlpatterns = [
     # Appointment creation endpoint - must come before router to avoid conflicts

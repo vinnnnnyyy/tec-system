@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import Program, Appointment, FAQ, ExamScore, ExamResult, TestCenter, TestRoom, TestSession, Announcement
+from django.utils import timezone
+import datetime
+from .models import Program, Appointment, FAQ, ExamScore, ExamResult, TestCenter, TestRoom, TestSession, Announcement, Notification
 
 class ProgramSerializer(serializers.ModelSerializer):
     class Meta:
@@ -116,3 +118,33 @@ class AnnouncementSerializer(serializers.ModelSerializer):
         elif obj.image_url:
             return obj.image_url
         return None
+
+class NotificationSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.username', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    time_ago = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'title', 'message', 'type', 'priority', 'user', 'user_name',
+            'is_read', 'is_global', 'icon', 'link', 'created_by', 'created_by_name',
+            'created_at', 'updated_at', 'time_ago'
+        ]
+        read_only_fields = ['created_at', 'updated_at', 'created_by']
+    
+    def get_time_ago(self, obj):
+        """Return a human-readable time difference"""
+        now = timezone.now()
+        diff = now - obj.created_at
+        
+        if diff.days > 0:
+            return f"{diff.days} day{'s' if diff.days > 1 else ''} ago"
+        elif diff.seconds >= 3600:
+            hours = diff.seconds // 3600
+            return f"{hours} hour{'s' if hours > 1 else ''} ago"
+        elif diff.seconds >= 60:
+            minutes = diff.seconds // 60
+            return f"{minutes} minute{'s' if minutes > 1 else ''} ago"
+        else:
+            return "Just now"

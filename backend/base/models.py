@@ -330,3 +330,53 @@ class OTPVerification(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+
+# Notification Model
+class Notification(models.Model):
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('normal', 'Normal'), 
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+    
+    TYPE_CHOICES = [
+        ('appointment', 'Appointment'),
+        ('exam', 'Exam'),
+        ('announcement', 'Announcement'),
+        ('system', 'System'),
+        ('reminder', 'Reminder'),
+    ]
+    
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='system')
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal')
+    
+    # User targeting
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
+    is_global = models.BooleanField(default=False, help_text="If true, notification will be shown to all users")
+    
+    # Status
+    is_read = models.BooleanField(default=False)
+    
+    # Optional fields
+    icon = models.CharField(max_length=50, blank=True, null=True, help_text="FontAwesome icon name")
+    link = models.CharField(max_length=255, blank=True, null=True, help_text="Optional link to redirect when clicked")
+    
+    # Meta fields
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_notifications')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        target = "Global" if self.is_global else f"User: {self.user.username if self.user else 'None'}"
+        return f"{self.title} ({target})"
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read']),
+            models.Index(fields=['is_global', 'created_at']),
+            models.Index(fields=['type', 'priority']),
+        ]

@@ -2,10 +2,11 @@ from rest_framework import viewsets, permissions
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from .models import Program, Appointment, FAQ, ExamScore, ExamResult, TestSession, TestCenter, TestRoom, Announcement
+from .models import Program, Appointment, FAQ, ExamScore, ExamResult, TestSession, TestCenter, TestRoom, Announcement, Notification
 from .serializers import (
     ProgramSerializer, AppointmentSerializer, FAQSerializer, TestSessionSerializer, 
-    TestCenterSerializer, TestRoomSerializer, AnnouncementSerializer, ExamScoreDetailSerializer
+    TestCenterSerializer, TestRoomSerializer, AnnouncementSerializer, ExamScoreDetailSerializer,
+    NotificationSerializer
 )
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -1127,7 +1128,7 @@ def import_scores_api(request):
                     print(f"  - ID {apt.id}: {apt.full_name} (first:'{apt.first_name}' middle:'{apt.middle_name}' last:'{apt.last_name}' exam_date:{apt.exam_date})")
                 matching_appointments = exact_matches
             else:
-                # Step 4: If no exact matches, try lastname + firstname exact matching ONLY if names are EXACT
+                # Step 4: If no exact matches, try lastname + firstname exact matching ONLY if names ARE EXACT
                 # This prevents "CHRISTIAN" from matching "CHRISTIAN JUDE"
                 partial_matches = base_query.filter(
                     last_name__iexact=lastname,
@@ -2161,3 +2162,92 @@ def test_reports_api(request):
             ]
         }
     })
+
+# Notification Views
+class NotificationViewSet(viewsets.ModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Get notifications for current user"""
+        user = self.request.user
+        # Get user-specific notifications and global notifications
+        return Notification.objects.filter(
+            Q(user=user) | Q(is_global=True)
+        ).order_by('-created_at')
+    
+    def list(self, request):
+        """List user's notifications with pagination"""
+        queryset = self.get_queryset()
+        # Limit to recent notifications (last 100)
+        queryset = queryset[:100]
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
+        
+        # Count unread notifications
+        unread_count = queryset.filter(is_read=False).count()
+        
+        return Response({
+            'results': serializer.data,
+            'unread_count': unread_count,
+            'total_count': queryset.count()
+        })
+    
+    def create(self, request, *args, **kwargs):
+        """Only admin users can create notifications"""
+        if not request.user.is_staff:
+            return Response(
+                {'error': 'Only admin users can create notifications'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(created_by=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['post'], url_path='mark-read')
+    def mark_read(self, request, pk=None):
+        """Mark a specific notification as read"""
+        try:
+            notification = self.get_object()
+            # Only allow user to mark their own notifications or global ones
+            if notification.user != request.user and not notification.is_global:
+                return Response(
+                    {'error': 'You can only mark your own notifications as read'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            notification.is_read = True
+            notification.save()
+            return Response({'message': 'Notification marked as read'})
+        except Notification.DoesNotExist:
+            return Response(
+                {'error': 'Notification not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=False, methods=['post'], url_path='mark-all-read')
+    def mark_all_read(self, request):
+        """Mark all user's notifications as read"""
+        user = request.user
+        updated_count = Notification.objects.filter(
+            Q(user=user) | Q(is_global=True),
+            is_read=False
+        ).update(is_read=True)
+        
+        return Response({
+            'message': f'Marked {updated_count} notifications as read',
+            'updated_count': updated_count
+        })
+    
+    @action(detail=False, methods=['get'], url_path='unread-count')
+    def unread_count(self, request):
+        """Get count of unread notifications"""
+        user = request.user
+        count = Notification.objects.filter(
+            Q(user=user) | Q(is_global=True),
+            is_read=False
+        ).count()
+        
+        return Response({'unread_count': count})
