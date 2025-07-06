@@ -1480,34 +1480,72 @@ export default {
 
       announcementStore.loading = true
       try {
-        const promises = announcements.value.map(async (announcement) => {
+        // Validate announcements before saving
+        const validAnnouncements = announcements.value.filter(announcement => {
+          return announcement.title && announcement.title.trim() && 
+                 announcement.content && announcement.content.trim()
+        })
+
+        if (validAnnouncements.length === 0) {
+          alert('Please add title and content to the announcements before saving.')
+          return
+        }
+
+        const promises = validAnnouncements.map(async (announcement) => {
           const announcementData = {
-            title: announcement.title,
-            content: announcement.content,
+            title: announcement.title.trim(),
+            content: announcement.content.trim(),
             type: announcement.type || 'New',
-            is_active: announcement.active,
+            is_active: announcement.active || announcement.is_active,
             icon: announcement.icon || 'fas fa-bell',
-            date: announcement.date,
             author: announcement.author || 'Admin Team',
             link: announcement.link || null
           }
 
+          // Don't send date field for new announcements - let the backend set it with auto_now_add
           if (announcement.id) {
-            // Update existing announcement
+            // Update existing announcement - include date if it exists
+            if (announcement.date) {
+              announcementData.date = announcement.date
+            }
             return axiosInstance.put(API_ENDPOINT + `announcements/${announcement.id}/`, announcementData)
           } else {
-            // Create new announcement
+            // Create new announcement - don't send date field
             return axiosInstance.post(API_ENDPOINT + 'announcements/', announcementData)
           }
         })
 
         await Promise.all(promises)
+        
+        // Remove announcements that don't have title or content from the local array
+        announcementStore.announcements = announcementStore.announcements.filter(announcement => {
+          return announcement.title && announcement.title.trim() && 
+                 announcement.content && announcement.content.trim()
+        })
+        
         await fetchAnnouncements() // Refresh the announcements list
         hasAnnouncementChanges.value = false
         alert('Announcement changes saved successfully')
       } catch (error) {
         console.error('Failed to save announcement changes:', error)
-        alert('Failed to save announcement changes')
+        console.error('Error response:', error.response?.data)
+        console.error('Error status:', error.response?.status)
+        
+        let errorMessage = 'Failed to save announcement changes'
+        if (error.response?.data) {
+          if (typeof error.response.data === 'string') {
+            errorMessage += ': ' + error.response.data
+          } else if (error.response.data.detail) {
+            errorMessage += ': ' + error.response.data.detail
+          } else if (error.response.data.title) {
+            errorMessage += ': Title - ' + error.response.data.title[0]
+          } else if (error.response.data.content) {
+            errorMessage += ': Content - ' + error.response.data.content[0]
+          } else {
+            errorMessage += ': ' + JSON.stringify(error.response.data)
+          }
+        }
+        alert(errorMessage)
         throw error
       } finally {
         announcementStore.loading = false
@@ -1530,10 +1568,10 @@ export default {
         is_active: true,
         type: 'New',
         icon: 'fas fa-bell',
-        date: new Date().toISOString().split('T')[0],
         title: '',
         content: '',
-        author: 'Admin Team'
+        author: 'Admin Team',
+        link: null
       }
       announcementStore.announcements.push(newAnnouncement)
       hasAnnouncementChanges.value = true
