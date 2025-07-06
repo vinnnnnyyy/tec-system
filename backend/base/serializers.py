@@ -99,7 +99,20 @@ class TestSessionSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
 class AnnouncementSerializer(serializers.ModelSerializer):
+    image_display = serializers.SerializerMethodField()
+    
     class Meta:
         model = Announcement
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'created_by']
+    
+    def get_image_display(self, obj):
+        """Return the appropriate image URL - either uploaded file or external URL"""
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        elif obj.image_url:
+            return obj.image_url
+        return None

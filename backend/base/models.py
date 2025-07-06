@@ -304,6 +304,8 @@ class Announcement(models.Model):
     icon = models.CharField(max_length=50, default='fas fa-bell')
     author = models.CharField(max_length=100, default='Admin Team')
     link = models.CharField(max_length=255, blank=True, null=True)
+    image = models.ImageField(upload_to='announcements/', blank=True, null=True, help_text='Image file for announcement')
+    image_url = models.URLField(max_length=1000, blank=True, null=True, help_text='External URL for announcement image (alternative to file upload)')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

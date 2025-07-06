@@ -12,9 +12,12 @@ from rest_framework.permissions import AllowAny
 import csv
 import io
 import json
+import uuid
 from django.http import HttpResponse
 from django.template.loader import get_template
 from django.views.decorators.csrf import csrf_exempt
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 from xhtml2pdf import pisa
 from io import BytesIO
 from django.utils import timezone
@@ -454,6 +457,12 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
     queryset = Announcement.objects.all()
     serializer_class = AnnouncementSerializer
     
+    def get_serializer_context(self):
+        """Pass request context to serializer"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+    
     def get_queryset(self):
         # Filter only active announcements for non-admin users
         queryset = Announcement.objects.all()
@@ -475,6 +484,55 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+    
+    @action(detail=False, methods=['post'], url_path='upload-image')
+    def upload_image(self, request):
+        """Handle image file uploads for announcements"""
+        if 'image' not in request.FILES:
+            return Response(
+                {'error': 'No image file provided'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        image_file = request.FILES['image']
+        
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+        if image_file.content_type not in allowed_types:
+            return Response(
+                {'error': 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate file size (5MB limit)
+        max_size = 5 * 1024 * 1024  # 5MB
+        if image_file.size > max_size:
+            return Response(
+                {'error': 'File size too large. Maximum size is 5MB.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Create a temporary announcement to save the image
+            # Generate unique filename
+            file_extension = image_file.name.split('.')[-1].lower()
+            unique_filename = f"announcements/{uuid.uuid4()}.{file_extension}"
+            
+            # Save the file
+            file_path = default_storage.save(unique_filename, ContentFile(image_file.read()))
+            file_url = default_storage.url(file_path)
+            
+            # Return the URL
+            return Response({
+                'image_url': request.build_absolute_uri(file_url),
+                'file_path': file_path
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to upload image: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

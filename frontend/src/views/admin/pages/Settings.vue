@@ -726,6 +726,57 @@
                                  :class="{ 'border-amber-400': isContentNearLimit(announcement.content), 'border-red-500': isContentOverLimit(announcement.content) }"></textarea>
                       </div>
                       
+                      <!-- Image URL or Upload -->
+                      <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Announcement Image</label>
+                        <div class="space-y-3">
+                          <!-- URL Input -->
+                          <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Image URL</label>
+                            <input type="url" 
+                                  v-model="announcement.image" 
+                                  placeholder="https://example.com/image.jpg"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 text-sm">
+                          </div>
+                          
+                          <!-- File Upload Alternative -->
+                          <div class="text-center">
+                            <div class="text-xs text-gray-500 mb-2">OR</div>
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-crimson-400 transition-colors">
+                              <div class="space-y-2">
+                                <i class="fas fa-cloud-upload-alt text-2xl text-gray-400"></i>
+                                <div>
+                                  <label class="cursor-pointer text-crimson-600 hover:text-crimson-700 font-medium text-sm">
+                                    <span>Upload an image</span>
+                                    <input type="file" 
+                                           accept="image/*" 
+                                           class="hidden" 
+                                           @change="handleImageUpload($event, getCurrentIndex(index))">
+                                  </label>
+                                </div>
+                                <p class="text-xs text-gray-500">JPG, PNG, GIF up to 5MB</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <!-- Image Preview -->
+                          <div v-if="announcement.image && announcement.image.trim()" class="mt-3">
+                            <div class="relative inline-block">
+                              <img :src="announcement.image" 
+                                   alt="Announcement image preview" 
+                                   class="max-w-xs h-32 object-cover rounded-lg border border-gray-200 shadow-sm"
+                                   @error="$event.target.style.display = 'none'"
+                                   @load="$event.target.style.display = 'block'">
+                              <button type="button" 
+                                      @click="announcement.image = ''"
+                                      class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors">
+                                <i class="fas fa-times"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
                       <!-- Author and Link -->
                       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -921,6 +972,17 @@
                 <i :class="[previewData.icon, 'mr-3 text-crimson-600']"></i>
                 {{ previewData.title || 'Untitled Announcement' }}
               </h3>
+              
+              <!-- Preview Image Display -->
+              <div v-if="previewData.image" class="mb-4">
+                <div class="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm">
+                  <img :src="previewData.image" 
+                       :alt="previewData.title || 'Announcement image'" 
+                       class="w-full max-h-64 object-cover"
+                       @error="$event.target.parentElement.style.display = 'none'"
+                       @load="$event.target.parentElement.classList.remove('bg-gray-100')">
+                </div>
+              </div>
               
               <p class="text-gray-600 mb-5 whitespace-pre-wrap">{{ previewData.content || 'No content provided.' }}</p>
               
@@ -1499,7 +1561,8 @@ export default {
             is_active: announcement.active || announcement.is_active,
             icon: announcement.icon || 'fas fa-bell',
             author: announcement.author || 'Admin Team',
-            link: announcement.link || null
+            link: announcement.link || null,
+            image_url: announcement.image || null  // Send image URL in image_url field
           }
 
           // Don't send date field for new announcements - let the backend set it with auto_now_add
@@ -1571,7 +1634,8 @@ export default {
         title: '',
         content: '',
         author: 'Admin Team',
-        link: null
+        link: null,
+        image: null
       }
       announcementStore.announcements.push(newAnnouncement)
       hasAnnouncementChanges.value = true
@@ -1595,6 +1659,51 @@ export default {
         type: 'New',
         date: new Date().toISOString().split('T')[0]
       })
+    }
+
+    // Handle image file upload
+    const handleImageUpload = async (event, announcementIndex) => {
+      const file = event.target.files[0]
+      if (!file) return
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select a valid image file (JPG, PNG, GIF)')
+        return
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024 // 5MB
+      if (file.size > maxSize) {
+        alert('Image file size must be less than 5MB')
+        return
+      }
+
+      try {
+        // Upload file to backend
+        const formData = new FormData()
+        formData.append('image', file)
+
+        const response = await axiosInstance.post(API_ENDPOINT + 'announcements/upload-image/', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+
+        // Use the returned image URL
+        const announcement = announcements.value[announcementIndex]
+        if (announcement) {
+          announcement.image = response.data.image_url
+          hasAnnouncementChanges.value = true
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error)
+        const errorMessage = error.response?.data?.detail || error.response?.data?.error || 'Failed to upload image. Please try again.'
+        alert(errorMessage)
+      }
+
+      // Clear the file input
+      event.target.value = ''
     }
 
     const showDeleteAnnouncementModal = ref(false)
@@ -1981,6 +2090,7 @@ export default {
       previewData,
       previewAnnouncement,
       duplicateAnnouncement,
+      handleImageUpload,
       showDeleteAnnouncementModal,
       isDeleting,
       deleteAnnouncement,

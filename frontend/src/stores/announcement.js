@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
+import axiosInstance from '../services/axios.interceptor'
 
 export const useAnnouncementStore = defineStore('announcement', {
   state: () => ({
@@ -14,9 +14,9 @@ export const useAnnouncementStore = defineStore('announcement', {
       this.error = null
       
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
-        const response = await axios.get(`${API_URL}/api/announcements/`)
+        const response = await axiosInstance.get('/api/announcements/')
         this.announcements = response.data.results || response.data
+        console.log('Fetched announcements:', this.announcements) // Debug log
       } catch (err) {
         console.error('Error fetching announcements:', err)
         this.error = 'Failed to load announcements'
