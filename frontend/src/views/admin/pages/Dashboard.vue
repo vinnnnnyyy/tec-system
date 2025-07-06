@@ -104,7 +104,7 @@
               <i class="fas fa-filter mr-2"></i>
               {{ showFilters ? 'Hide Filters' : 'Filter' }}
             </button>
-            <button class="px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition-colors duration-200">
+            <button @click="showAddAppointmentModal = true" class="px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition-colors duration-200">
               <i class="fas fa-plus mr-2"></i>
               New Appointment
             </button>
@@ -534,6 +534,13 @@
         />
       </div>
     </div>
+    
+    <!-- Add Appointment Modal -->
+    <AdminAppointmentModal
+      :visible="showAddAppointmentModal"
+      @close="closeAddAppointmentModal"
+      @submit="handleAppointmentSubmit"
+    />
   </main>
 </template>
 
@@ -541,12 +548,14 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AdminPagination from '../components/AdminPagination.vue'
+import AdminAppointmentModal from '../../../components/admin/AdminAppointmentModal.vue'
 import axiosInstance from '../../../services/axios.interceptor'
 
 export default {
   name: 'Dashboard',
   components: {
-    AdminPagination
+    AdminPagination,
+    AdminAppointmentModal
   },
   setup() {
     const router = useRouter()
@@ -577,6 +586,9 @@ export default {
       fromDate: '',
       toDate: ''
     })
+    
+    // Modal state
+    const showAddAppointmentModal = ref(false)
     
     // Apply filters
     const applyFilters = () => {
@@ -902,6 +914,64 @@ export default {
       return ['waiting_for_test_details'].includes(status)
     }
 
+    // Modal event handlers
+    const closeAddAppointmentModal = () => {
+      showAddAppointmentModal.value = false
+    }
+    
+    const handleAppointmentSubmit = async (submissionData) => {
+      try {
+        console.log('Submitting appointment data:', submissionData)
+        
+        // Extract appointment data and test assignment data
+        const { appointmentData, testAssignmentData } = submissionData
+        
+        // Step 1: Create the appointment first
+        const response = await axiosInstance.post('/api/appointments/create/', appointmentData)
+        console.log('Success creating appointment:', response.data)
+        
+        const appointmentId = response.data.id
+        
+        // Step 2: Assign test details if provided
+        if (testAssignmentData && testAssignmentData.test_session_id && 
+            testAssignmentData.test_center_id && testAssignmentData.test_room_id) {
+          
+          console.log('Assigning test details to appointment:', appointmentId)
+          
+          const assignmentResponse = await axiosInstance.post('/api/admin/assign-test-details/', {
+            appointment_id: appointmentId,
+            test_session_id: testAssignmentData.test_session_id,
+            test_center_id: testAssignmentData.test_center_id,
+            test_room_id: testAssignmentData.test_room_id
+          })
+          
+          console.log('Test assignment response:', assignmentResponse.data)
+          
+          if (assignmentResponse.data.success) {
+            console.log('Test details assigned successfully')
+          } else {
+            console.warn('Test assignment failed:', assignmentResponse.data.error)
+          }
+        }
+        
+        // Success - close modal and refresh data
+        showAddAppointmentModal.value = false
+        await fetchAppointments()
+        await fetchDashboardStats()
+        
+        // Show success message (you can replace this with a proper notification system)
+        console.log('Appointment created successfully!')
+        
+      } catch (error) {
+        console.error('Error creating appointment:', error)
+        // Show detailed error message
+        const errorMessage = error.response?.data?.error || 
+                           error.response?.data?.message || 
+                           'Failed to create appointment. Please try again.'
+        alert('Error creating appointment: ' + errorMessage)
+      }
+    }
+
     // View details handler
     const viewDetails = (appointmentId) => {
       // Navigate to appointment details page using Vue Router
@@ -944,6 +1014,11 @@ export default {
       filters,
       applyFilters,
       resetFilters,
+      
+      // Modal
+      showAddAppointmentModal,
+      closeAddAppointmentModal,
+      handleAppointmentSubmit,
       
       // UI helpers
       formatDate,

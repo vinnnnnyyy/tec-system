@@ -33,6 +33,9 @@ router.register(r'admin/test-sessions', TestSessionViewSet)
 router.register(r'announcements', AnnouncementViewSet)
 
 urlpatterns = [
+    # Appointment creation endpoint - must come before router to avoid conflicts
+    path('appointments/create/', create_appointment, name='create_appointment'),
+    
     # Score import endpoints - try multiple variations to ensure accessibility
     path('score-import/', import_scores_api, name='import_scores_api'),
     path('appointments/import-scores/', import_scores_api, name='import_scores_api2'),
@@ -88,7 +91,6 @@ urlpatterns = [
     path('admin/test-details/create-bulk/', create_bulk_test_details, name='create_bulk_test_details'),
     path('admin/test-session/reset-rooms/', reset_test_session_rooms, name='reset_test_session_rooms'),
     path('programs/<int:program_id>/availability/', program_availability, name='program_availability'),
-    path('appointments/create/', create_appointment, name='create_appointment'),
     path('appointments/<int:appointment_id>/mark-submitted/', mark_application_submitted, name='mark_application_submitted'),
     path('appointments/<int:appointment_id>/test-details/', get_test_details, name='get_test_details'),
     path('appointments/<int:appointment_id>/update-status/', update_appointment_status, name='update_appointment_status_detail'),
