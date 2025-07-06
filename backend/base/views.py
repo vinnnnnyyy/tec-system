@@ -481,28 +481,87 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
 def import_exam_results(request):
     """
     Import exam results from a CSV file
+    Expected CSV format: NO,APP_NO,NAME,SCHOOL
     """
     try:
-        data = request.data
-        exam_type = data.get('examType')
-        results = data.get('results', [])
+        # Check if file was uploaded
+        if 'file' not in request.FILES:
+            return Response({'error': 'No file provided'}, status=400)
         
-        # Delete existing results for this exam type if overwrite is true
-        if data.get('overwrite', False):
-            ExamResult.objects.filter(exam_type=exam_type).delete()        # Create new exam results
+        csv_file = request.FILES['file']
+        exam_type = request.data.get('examType', '')
+        exam_year = request.data.get('year', '')
+        
+        print(f"Processing exam results file: {csv_file.name}, exam type: {exam_type}, exam year: {exam_year}")
+        
+        if not exam_year:
+            exam_year = str(datetime.now().year)
+        
+        # Process the CSV file
+        import csv
+        import io
+        
+        # Read the CSV file
+        csv_text = csv_file.read().decode('utf-8')
+        csv_reader = csv.reader(io.StringIO(csv_text))
+        
+        # Get header row to identify columns
+        headers = next(csv_reader)
+        headers = [h.upper().strip() for h in headers]  # Convert to uppercase for consistency
+        
+        print(f"CSV Headers: {headers}")
+        
+        # Find column indices based on expected format: NO,APP_NO,NAME,SCHOOL
+        col_indices = {
+            'no': headers.index('NO') if 'NO' in headers else None,
+            'app_no': headers.index('APP_NO') if 'APP_NO' in headers else None,
+            'name': headers.index('NAME') if 'NAME' in headers else None,
+            'school': headers.index('SCHOOL') if 'SCHOOL' in headers else None,
+        }
+        
+        # Ensure required columns exist
+        if (col_indices['app_no'] is None or col_indices['name'] is None or 
+            col_indices['school'] is None):
+            return Response({
+                'error': 'CSV must include APP_NO, NAME, and SCHOOL columns'
+            }, status=400)
+        
+        # Delete existing results for this exam type if overwrite is requested
+        overwrite = request.data.get('overwrite', False)
+        if overwrite:
+            deleted_count = ExamResult.objects.filter(exam_type=exam_type, year=exam_year).count()
+            ExamResult.objects.filter(exam_type=exam_type, year=exam_year).delete()
+            print(f"Deleted {deleted_count} existing records for {exam_type} {exam_year}")
+        
+        # Process each row
         created_count = 0
-        exam_year = data.get('year')
-        for result in results:
-            # Convert the serial number to integer if possible
-            try:
-                serial_no = int(result.get('no'))
-            except (ValueError, TypeError):
-                serial_no = None
-                
-            ExamResult.objects.create(                serial_no=serial_no,
-                app_no=result.get('appNo', ''),
-                name=result.get('name', ''),
-                school=result.get('school', ''),
+        for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 because header is row 1
+            if len(row) < 2:
+                continue  # Skip rows without enough columns
+            
+            # Extract data from row
+            serial_no = None
+            if col_indices['no'] is not None and col_indices['no'] < len(row):
+                try:
+                    serial_no = int(row[col_indices['no']].strip())
+                except (ValueError, TypeError):
+                    serial_no = None
+            
+            app_no = row[col_indices['app_no']].strip() if col_indices['app_no'] < len(row) else ''
+            name = row[col_indices['name']].strip() if col_indices['name'] < len(row) else ''
+            school = row[col_indices['school']].strip() if col_indices['school'] < len(row) else ''
+            
+            # Skip rows with missing essential data
+            if not app_no or not name:
+                print(f"Skipping row {row_num}: missing app_no or name")
+                continue
+            
+            # Create ExamResult record
+            ExamResult.objects.create(
+                serial_no=serial_no,
+                app_no=app_no,
+                name=name,
+                school=school,
                 exam_type=exam_type,
                 year=exam_year,
                 imported_by=request.user
@@ -511,11 +570,13 @@ def import_exam_results(request):
             
         return Response({
             'success': True,
-            'message': f'Successfully imported {created_count} records',
-            'count': created_count
+            'message': f'Successfully imported {created_count} exam result records',
+            'count': created_count,
+            'created_count': created_count
         }, status=status.HTTP_201_CREATED)
         
     except Exception as e:
+        print(f"Error in import_exam_results: {str(e)}")
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])

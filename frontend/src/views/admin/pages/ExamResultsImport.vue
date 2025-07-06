@@ -9,7 +9,7 @@
           </div>
           <div>
             <h1 class="text-2xl font-bold text-gray-900">Admin: Import Exam Results</h1>
-            <p class="text-sm text-gray-600">Upload and import examination results for different exam types. Results will be available to all users.</p>
+            <p class="text-sm text-gray-600">Upload and import examination results for public release. Results will be available for public search by application number.</p>
           </div>
         </div>
       </div>
@@ -143,25 +143,25 @@
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <i class="fas fa-list text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">CSV columns must be in this exact order: app_no, lastname, firstname, middlename, school, date, part1, part2, part3, part4, part5, oapr</p>
+                <p class="text-sm text-gray-600">CSV columns must be in this exact order: NO, APP_NO, NAME, SCHOOL</p>
               </div>
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <i class="fas fa-user text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">Use <strong>middlename</strong> (full middle name) instead of middle initial for better matching</p>
+                <p class="text-sm text-gray-600">Use the simple format: NO (serial number), APP_NO (application number), NAME (full name), SCHOOL (school name)</p>
               </div>
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <i class="fas fa-check-circle text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">Scores will only match with <strong>approved</strong> appointments that have matching name, school, and date</p>
+                <p class="text-sm text-gray-600">Results will be stored for public viewing and lookup by application number</p>
               </div>
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <i class="fas fa-calendar text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">Date format should be YYYY-MM-DD or MM/DD/YYYY</p>
+                <p class="text-sm text-gray-600">This is for importing exam results (pass/fail status) for public release, not detailed scores with test parts and OAPR</p>
               </div>
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -479,14 +479,14 @@ export default {
         console.log('- Exam Type:', this.selectedExamType);
         console.log('- Year:', this.selectedExamYear);
         
-        // Send to the score import API endpoint
+        // Send to the exam results import API endpoint (NOT scores import)
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         const token = localStorage.getItem('token') || 
                      localStorage.getItem('access_token') || 
                      localStorage.getItem('authToken');
         
         const response = await axios.post(
-          `${apiUrl}/api/score-import/`,
+          `${apiUrl}/api/admin/results/import/`,
           formData,
           {
             headers: {
@@ -503,13 +503,13 @@ export default {
           const newImport = {
             examType: `${this.selectedExamType} (${this.selectedExamYear})`,
             date: new Date().toLocaleString(),
-            successful: response.data.matched + response.data.created_count,
-            failed: response.data.unmatched || 0
+            successful: response.data.created_count || response.data.count,
+            failed: 0
           };
           
           this.recentImports.unshift(newImport);
           
-          this.showToast(`Successfully imported ${response.data.matched + response.data.created_count} records. ${response.data.unmatched || 0} unmatched.`, 'success');
+          this.showToast(`Successfully imported ${response.data.created_count || response.data.count} records.`, 'success');
           
           // Reset form
           this.selectedFile = null;
