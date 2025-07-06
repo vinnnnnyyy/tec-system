@@ -105,7 +105,7 @@
                 <select v-model="selectedExamYear" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 transition-colors duration-200 text-sm">
                   <option value="">Choose an exam year</option>
-                  <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
+                  <option v-for="year in sortedAvailableYears" :key="year" :value="year">{{ year }}</option>
                 </select>
               </div>
 
@@ -229,7 +229,7 @@ export default {
       dragover: false,
       selectedFile: null,
       selectedExamType: '',
-      selectedExamYear: '',
+      selectedExamYear: new Date().getFullYear().toString(), // Default to current year
       examTypes: [], // Will be populated from backend
       loading: false,
       error: null,
@@ -257,38 +257,14 @@ export default {
   },  computed: {
     isReadyToImport() {
       return this.selectedFile && this.selectedExamType && this.selectedExamYear;
-    }
-  },
-  data() {
-    return {
-      dragover: false,
-      selectedFile: null,
-      selectedExamType: '',
-      selectedExamYear: new Date().getFullYear().toString(), // Default to current year
-      availableYears: [], // Will be populated from API
-      examTypes: [], // Will be populated from backend
-      loading: false,
-      error: null,
-      recentImports: [
-        {
-          examType: 'LSAT Exam',
-          date: '2024-03-15 14:30',
-          successful: 150,
-          failed: 3
-        },
-        {
-          examType: 'NAT Exam',
-          date: '2024-03-14 16:45',
-          successful: 200,
-          failed: 5
-        },
-        {
-          examType: 'EAT Exam',
-          date: '2024-03-13 09:15',
-          successful: 180,
-          failed: 2
-        }
-      ]
+    },
+    
+    // Static year range from 2015 to 2035
+    sortedAvailableYears() {
+      return [
+        '2035', '2034', '2033', '2032', '2031', '2030', '2029', '2028', '2027', '2026',
+        '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015'
+      ];
     }
   },
   methods: {
@@ -368,7 +344,7 @@ export default {
       }    },    
     // Dummy implementation to prevent errors from old references
     fetchAvailableYears() {
-      console.log('Using computed property for years instead of API call');
+      console.log('Using static year range instead of API call');
       return Promise.resolve([]);
     },
     onFileSelect(event) {
@@ -410,44 +386,6 @@ export default {
         return (bytes / 1024).toFixed(2) + ' KB';
       } else {
         return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-      }
-    },
-    
-    // Fetch available exam years from API
-    async fetchAvailableYears() {
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-        const response = await axios.get(`${apiUrl}/api/api/exam-years/`);
-        
-        if (response.data && Array.isArray(response.data)) {
-          this.availableYears = response.data;
-          
-          // If no years are returned, generate some default ones
-          if (this.availableYears.length === 0) {
-            const currentYear = new Date().getFullYear();
-            for (let year = currentYear; year >= currentYear - 5; year--) {
-              this.availableYears.push(year.toString());
-            }
-          }
-        }
-        
-        // Ensure selectedExamYear is set to current year if empty
-        if (!this.selectedExamYear) {
-          this.selectedExamYear = new Date().getFullYear().toString();
-        }
-      } catch (error) {
-        console.error('Error fetching available years:', error);
-        // Fallback to generating years if API fails
-        const currentYear = new Date().getFullYear();
-        this.availableYears = [];
-        for (let year = currentYear; year >= currentYear - 5; year--) {
-          this.availableYears.push(year.toString());
-        }
-        
-        // Ensure selectedExamYear is set to current year if empty
-        if (!this.selectedExamYear) {
-          this.selectedExamYear = currentYear.toString();
-        }
       }
     },
     
@@ -514,7 +452,7 @@ export default {
           // Reset form
           this.selectedFile = null;
           this.selectedExamType = '';
-          this.selectedExamYear = '';
+          this.selectedExamYear = new Date().getFullYear().toString();
         } else {
           this.error = response.data.error || 'Import failed';
           this.showToast(this.error, 'error');
@@ -529,8 +467,8 @@ export default {
       }
     }
   },  created() {
+    // Fetch program codes
     this.fetchProgramCodes();
-    this.fetchAvailableYears();
   },
   mounted() {
     // Check for authentication when component mounts
