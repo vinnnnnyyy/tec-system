@@ -14,7 +14,12 @@
       <!-- Branding Header with animation -->
       <div class="sm:mx-auto sm:w-full sm:max-w-md mb-4 sm:mb-6 animate-fade-in-up">
         <div class="flex justify-center mb-4 transform hover:scale-105 transition-transform duration-300">
-          <img src="../assets/images/wmsu-logo.png" alt="WMSU Logo" class="h-20 w-auto sm:h-24 drop-shadow-2xl">
+          <img 
+            @click="goToHomePage" 
+            src="../assets/images/wmsu-logo.png" 
+            alt="WMSU Logo" 
+            class="h-20 w-auto sm:h-24 drop-shadow-2xl cursor-pointer hover:opacity-80 transition-opacity duration-200"
+          >
         </div>
         <h2 class="text-center text-2xl sm:text-3xl font-extrabold text-white drop-shadow-lg">Sign in to your account</h2>
         <p class="mt-2 sm:mt-3 text-center text-sm text-gray-200 drop-shadow">
@@ -221,6 +226,10 @@ export default {
       console.log('Google login clicked');
     };
 
+    const goToHomePage = () => {
+      router.push('/');
+    };
+
     onMounted(() => {
       // Check if registeredEmail exists in the query (redirect from signup)
       if (route.query.registered === 'success') {
@@ -245,6 +254,7 @@ export default {
       togglePasswordVisibility,
       handleLogin,
       googleLogin,
+      goToHomePage,
       showToast
     };
   }

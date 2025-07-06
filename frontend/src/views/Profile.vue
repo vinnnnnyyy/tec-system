@@ -128,6 +128,17 @@
                   <i class="fas fa-clock mr-1"></i>
                   Score imported on {{ formatDateTime(appointment.exam_score.created_at) }}
                 </div>
+                
+                <!-- Information about score release -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mt-3">
+                  <div class="flex items-start space-x-2">
+                    <i class="fas fa-info-circle text-blue-500 text-sm mt-0.5 flex-shrink-0"></i>
+                    <div class="text-xs sm:text-sm text-blue-700">
+                      <p class="font-medium mb-1">Score Release Information</p>
+                      <p>If your scores are officially released, you must visit <strong>WMSU-TEC at Campus B of Western Mindanao State University</strong> to obtain your official score report.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- Other States -->

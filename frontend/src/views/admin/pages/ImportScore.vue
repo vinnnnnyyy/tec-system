@@ -157,12 +157,18 @@
                 </div>
                 <p class="text-sm text-gray-600">CSV columns: app_no, lastname, firstname, middlename, school, date, part1, part2, part3, part4, part5, oapr</p>
               </div>
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <i class="fas fa-font text-crimson-600 text-sm"></i>
+                </div>
+                <p class="text-sm text-gray-600">All text data in columns (lastname, firstname, middlename, school) must be CAPITALIZED for easy parsing</p>
+              </div>
               
               <!-- Sample CSV Format -->
               <div class="rounded-md bg-gray-50 p-3 border border-gray-200 text-xs font-mono overflow-x-auto whitespace-nowrap">
                 app_no,lastname,firstname,middlename,school,date,part1,part2,part3,part4,part5,oapr<br>
-                123-456,Doe,John,A,Sample School,2023-10-15,85,92,88,95,90,90<br>
-                789-012,Smith,Jane,B,Test Academy,2023-10-15,92,88,90,87,94,92
+                123-456,DOE,JOHN,ANTONIO,SAMPLE SCHOOL,2023-10-15,85,92,88,95,90,90<br>
+                789-012,SMITH,JANE,MARIE,TEST ACADEMY,2023-10-15,92,88,90,87,94,92
               </div>
             </div>
           </div>

@@ -489,7 +489,10 @@ export default {
         console.log('API Response:', response.data); // Debug log
         
         if (response.data && Array.isArray(response.data)) {
-          this.examTypes = response.data.map(program => ({
+          // Filter out SPECIAL-CET from the display
+          const filteredPrograms = response.data.filter(program => program.code !== 'SPECIAL-CET');
+          
+          this.examTypes = filteredPrograms.map(program => ({
             value: program.code,
             label: `${program.code} - ${program.name}`,
             icon: this.getProgramIcon(program.code),
