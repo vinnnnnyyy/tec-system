@@ -152,8 +152,15 @@
           <div class="h-64 flex items-center justify-center" v-if="loading">
             <i class="fas fa-circle-notch fa-spin text-2xl text-crimson-600"></i>
           </div>
+          <div v-else-if="!monthlyData || monthlyData.length === 0" class="h-64 flex items-center justify-center text-gray-500">
+            <div class="text-center">
+              <i class="fas fa-chart-bar text-4xl text-gray-300 mb-3"></i>
+              <p>No monthly data available</p>
+            </div>
+          </div>
           <MonthlyTestsChart 
             v-else 
+            :key="`monthly-${chartKey}-${monthlyData.length}`"
             :data="monthlyData" 
             canvas-id="monthly-tests-chart"
           />
@@ -165,8 +172,15 @@
           <div class="h-64 flex items-center justify-center" v-if="loading">
             <i class="fas fa-circle-notch fa-spin text-2xl text-crimson-600"></i>
           </div>
+          <div v-else-if="!programStats || programStats.length === 0" class="h-64 flex items-center justify-center text-gray-500">
+            <div class="text-center">
+              <i class="fas fa-chart-line text-4xl text-gray-300 mb-3"></i>
+              <p>No program data available</p>
+            </div>
+          </div>
           <PassRateByProgramChart 
             v-else 
+            :key="`program-${chartKey}-${programStats.length}`"
             :data="programStats" 
             canvas-id="pass-rate-program-chart"
           />
@@ -217,13 +231,21 @@
               </select>
             </div>
             
-            <div class="flex items-end">
+            <div class="flex items-end space-x-2">
               <button 
                 @click="resetTopPerformersFilters"
-                class="w-full px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200 text-sm"
+                class="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200 text-sm"
               >
                 <i class="fas fa-redo mr-1"></i>
-                Reset Filters
+                Reset
+              </button>
+              <button 
+                @click="exportTopPerformersToPDF"
+                :disabled="exportingPDF"
+                class="flex-1 px-3 py-2 bg-crimson-600 text-white rounded-md hover:bg-crimson-700 transition-colors duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <i :class="exportingPDF ? 'fas fa-spinner fa-spin' : 'fas fa-download'" class="mr-1"></i>
+                {{ exportingPDF ? 'Exporting...' : 'Export PDF' }}
               </button>
             </div>
           </div>
@@ -390,10 +412,12 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import axiosInstance from '../../../services/axios.interceptor'
 import MonthlyTestsChart from '../../../components/charts/MonthlyTestsChart.vue'
 import PassRateByProgramChart from '../../../components/charts/PassRateByProgramChart.vue'
+import html2pdf from 'html2pdf.js'
 
 export default {
   name: 'Reports',
@@ -402,6 +426,7 @@ export default {
     PassRateByProgramChart
   },
   setup() {
+    const route = useRoute()
     const loading = ref(true)
     const page = ref(1)
     const itemsPerPage = ref(10)
@@ -432,6 +457,8 @@ export default {
     const testResults = ref([])
     const topPerformers = ref([])
     const showAllPerformers = ref(false)
+    const exportingPDF = ref(false)
+    const chartKey = ref(0) // Add reactive key for forcing chart re-render
     
     // Chart data
     const monthlyData = ref([])
@@ -478,10 +505,25 @@ export default {
     })
     
     // Fetch initial data
-    onMounted(() => {
-      fetchPrograms()
-      fetchTestCenters()
-      fetchTestResults()
+    onMounted(async () => {
+      // Ensure component is fully mounted
+      await nextTick()
+      
+      console.log('Reports component mounted, starting data fetch...')
+      await fetchPrograms()
+      await fetchTestCenters()
+      await fetchTestResults()
+    })
+    
+    // Watch for route changes to refresh data when navigating to this page
+    watch(() => route.path, async (newPath) => {
+      if (newPath === '/admin/reports') {
+        console.log('Navigated to reports page, refreshing data...')
+        // Only refresh data if we're not already loading
+        if (!loading.value) {
+          await fetchTestResults()
+        }
+      }
     })
     
     const fetchPrograms = async () => {
@@ -566,11 +608,14 @@ export default {
         }
         
         loading.value = false
+        chartKey.value++ // Force chart re-render
+        console.log('Data loaded successfully, chartKey:', chartKey.value)
         
       } catch (error) {
         console.error('Error fetching test results:', error)
         
         // Fallback to demo data if API fails
+        console.log('API failed, loading demo data...')
         setTimeout(() => {
           // Mock statistics data
           statistics.totalTests = 2458
@@ -656,7 +701,12 @@ export default {
           totalResults.value = 145
           totalPages.value = 29
           loading.value = false
-        }, 800)
+          chartKey.value++ // Force chart re-render
+          
+          console.log('Demo data loaded successfully, chartKey:', chartKey.value)
+          console.log('Monthly data after demo load:', monthlyData.value)
+          console.log('Program stats after demo load:', programStats.value)
+        }, 300) // Reduced timeout
       }
     }
     
@@ -728,6 +778,95 @@ export default {
       topPerformersFilters.year = ''
     }
     
+    const exportTopPerformersToPDF = async () => {
+      if (exportingPDF.value) return
+      
+      try {
+        exportingPDF.value = true
+        
+        // Create a temporary element with the filtered data
+        const element = document.createElement('div')
+        element.style.padding = '20px'
+        element.style.fontFamily = 'Arial, sans-serif'
+        
+        // Add title and filters info
+        let filtersText = 'All Programs, All Years'
+        if (topPerformersFilters.program || topPerformersFilters.year) {
+          const programText = topPerformersFilters.program || 'All Programs'
+          const yearText = topPerformersFilters.year || 'All Years'
+          filtersText = `${programText}, ${yearText}`
+        }
+        
+        element.innerHTML = `
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #1f2937; font-size: 24px; font-weight: bold; margin-bottom: 10px;">
+              Top 10 Performers Report
+            </h1>
+            <p style="color: #6b7280; font-size: 14px;">
+              Filters Applied: ${filtersText}
+            </p>
+            <p style="color: #6b7280; font-size: 12px;">
+              Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+            </p>
+          </div>
+          
+          <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <thead>
+              <tr style="background-color: #f9fafb;">
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: bold; color: #374151;">Rank</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: bold; color: #374151;">Student Name</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: bold; color: #374151;">School</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: bold; color: #374151;">Program</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: bold; color: #374151;">OAPR Score</th>
+                <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left; font-weight: bold; color: #374151;">Exam Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredTopPerformers.value.slice(0, 10).map(performer => `
+                <tr style="${performer.rank <= 3 ? 'background-color: #fef3c7;' : ''}">
+                  <td style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: bold;">${performer.rank}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 12px;">${performer.name}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 12px;">${performer.school}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 12px;">${performer.program}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 12px; text-align: center; font-weight: bold;">${performer.oapr}</td>
+                  <td style="border: 1px solid #e5e7eb; padding: 12px;">${formatDate(performer.exam_date)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          ${filteredTopPerformers.value.length === 0 ? `
+            <div style="text-align: center; padding: 40px; color: #6b7280;">
+              No top performers data available for the selected filters.
+            </div>
+          ` : ''}
+        `
+        
+        // PDF options
+        const options = {
+          margin: 1,
+          filename: `top-performers-${topPerformersFilters.program || 'all-programs'}-${topPerformersFilters.year || 'all-years'}-${new Date().toISOString().split('T')[0]}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { 
+            scale: 2, 
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: '#ffffff'
+          },
+          jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+        }
+        
+        // Generate and download PDF
+        await html2pdf().set(options).from(element).save()
+        
+      } catch (error) {
+        console.error('Error generating PDF:', error)
+        // You could add a toast notification here
+      } finally {
+        exportingPDF.value = false
+      }
+    }
+    
     return {
       loading,
       page,
@@ -747,10 +886,13 @@ export default {
       showAllPerformers,
       monthlyData,
       programStats,
+      chartKey,
       applyFilters,
       resetFilters,
       filterTopPerformers,
       resetTopPerformersFilters,
+      exportTopPerformersToPDF,
+      exportingPDF,
       formatDate,
       formatDateRange,
       getStatusClass,

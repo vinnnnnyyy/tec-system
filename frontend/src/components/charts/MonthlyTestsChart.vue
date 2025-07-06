@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch, nextTick } from 'vue'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -43,24 +43,43 @@ export default {
   setup(props) {
     const chart = ref(null)
     
-    const createChart = () => {
-      const ctx = document.getElementById(props.canvasId)
-      if (!ctx) {
+    const createChart = async () => {
+      // Wait for next tick to ensure DOM is ready
+      await nextTick()
+      
+      const canvasElement = document.getElementById(props.canvasId)
+      if (!canvasElement) {
         console.log('Canvas element not found:', props.canvasId)
-        return
+        return false
       }
       
       // Destroy existing chart if it exists
       if (chart.value) {
-        chart.value.destroy()
+        try {
+          chart.value.destroy()
+        } catch (error) {
+          console.warn('Error destroying existing chart:', error)
+        }
         chart.value = null
       }
       
       // Check if we have data
       if (!props.data || props.data.length === 0) {
         console.log('No data available for monthly tests chart')
-        return
+        return false
       }
+      
+      // Check if canvas context is available
+      const ctx = canvasElement.getContext('2d')
+      if (!ctx) {
+        console.warn('Canvas context not available for:', props.canvasId)
+        return false
+      }
+      
+      // Clear any existing content
+      ctx.clearRect(0, 0, canvasElement.width, canvasElement.height)
+      
+      console.log('Creating chart with canvas:', props.canvasId, 'context:', ctx)
       
       // Prepare data
       const months = props.data.map(item => {
@@ -121,33 +140,70 @@ export default {
             }
           }
         })
+        
+        console.log('Monthly chart created successfully')
+        return true
       } catch (error) {
         console.error('Error creating chart:', error)
+        return false
       }
     }
     
-    onMounted(() => {
-      // Use timeout to ensure DOM is fully rendered
-      setTimeout(() => {
-        if (props.data && props.data.length > 0) {
-          createChart()
+    onMounted(async () => {
+      // Ensure DOM is fully rendered and Vue has updated
+      await nextTick()
+      
+      console.log('MonthlyTestsChart mounted with data:', props.data)
+      
+      // Use timeout to ensure DOM is fully rendered and stable
+      setTimeout(async () => {
+        // Only create chart if we have valid data
+        if (props.data && Array.isArray(props.data) && props.data.length > 0) {
+          const success = await createChart()
+          if (!success) {
+            console.log('MonthlyTestsChart: Initial chart creation failed, will retry when data changes')
+          }
+        } else {
+          console.log('MonthlyTestsChart mounted but no data available yet')
         }
-      }, 200)
+      }, 300) // Reduced timeout for better responsiveness
     })
     
     onUnmounted(() => {
       if (chart.value) {
-        chart.value.destroy()
+        try {
+          chart.value.destroy()
+        } catch (error) {
+          console.warn('Error destroying chart on unmount:', error)
+        }
+        chart.value = null
       }
     })
     
-    watch(() => props.data, (newData) => {
+    watch(() => props.data, async (newData) => {
       console.log('Monthly chart data changed:', newData)
-      if (newData && newData.length > 0) {
+      if (newData && Array.isArray(newData) && newData.length > 0) {
         // Add delay to prevent rapid re-creation and ensure DOM is ready
-        setTimeout(() => {
-          createChart()
+        setTimeout(async () => {
+          try {
+            const success = await createChart()
+            if (!success) {
+              console.warn('Chart creation failed during data change')
+            }
+          } catch (error) {
+            console.warn('Error recreating chart:', error)
+          }
         }, 300)
+      } else {
+        // If data becomes empty, destroy the chart
+        if (chart.value) {
+          try {
+            chart.value.destroy()
+            chart.value = null
+          } catch (error) {
+            console.warn('Error destroying chart when data cleared:', error)
+          }
+        }
       }
     }, { deep: true })
     
