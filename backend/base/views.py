@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.models import User
 from .models import Program, Appointment, FAQ, ExamScore, ExamResult, TestSession, TestCenter, TestRoom, Announcement, Notification
 from .serializers import (
     ProgramSerializer, AppointmentSerializer, FAQSerializer, TestSessionSerializer, 
@@ -201,8 +202,17 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             # Perform the update
             updated_instance = self.perform_update(serializer)
             
-            # Check if status was changed to 'rescheduled'
+            # Check if status was changed and create notification
             new_status = updated_instance.status
+            if original_status != new_status:
+                # Create notification for status change
+                create_status_change_notification(
+                    updated_instance, 
+                    original_status, 
+                    new_status, 
+                    request.user
+                )
+            
             room_updated = False
             response_data = serializer.data
             
@@ -626,6 +636,26 @@ def import_exam_results(request):
                 imported_by=request.user
             )
             created_count += 1
+
+        # Create global notification for exam results release
+        if created_count > 0:
+            try:
+                Notification.objects.create(
+                    user=None,  # No specific user - this is a global notification
+                    title="Exam Results Released",
+                    message=f"The results for {exam_type} ({exam_year}) are now available. You can search for results using your application number on the Exam Passers page.",
+                    type='exam',
+                    priority='high',
+                    icon='award',
+                    link='/results',
+                    created_by=request.user,
+                    is_read=False,
+                    is_global=True  # This makes it visible to all users
+                )
+                print(f"Created global notification for {exam_type} {exam_year} results release")
+            except Exception as notification_error:
+                print(f"Error creating notification: {str(notification_error)}")
+                # Don't fail the import if notification creation fails
             
         return Response({
             'success': True,
@@ -926,6 +956,9 @@ def assign_test_details(request):
             except TestRoom.DoesNotExist:
                 return Response({'error': 'Test room not found'}, status=status.HTTP_404_NOT_FOUND)
         
+        # Store original status for notification
+        original_status = appointment.status
+        
         # If test session, test center and test room were assigned, update the status to approved directly
         if appointment.test_session and appointment.test_center and appointment.test_room:
             appointment.status = 'approved'
@@ -934,6 +967,15 @@ def assign_test_details(request):
             print(f"Not setting to approved - test_session: {bool(appointment.test_session)}, test_center: {bool(appointment.test_center)}, test_room: {bool(appointment.test_room)}")
         
         appointment.save()
+        
+        # Create notification if status changed
+        if original_status != appointment.status:
+            create_status_change_notification(
+                appointment, 
+                original_status, 
+                appointment.status, 
+                request.user
+            )
         
         return Response({
             'success': True,
@@ -1269,6 +1311,16 @@ def import_scores_api(request):
                 created_count += 1
                 unmatched_count += 1
             
+        # Create global notification for exam results release
+        total_scores_imported = matched_count + updated_count
+        if total_scores_imported > 0:
+            create_exam_results_notification(
+                exam_type, 
+                exam_year, 
+                total_scores_imported, 
+                request.user
+            )
+        
         return Response({
             'success': True,
             'matched': matched_count,
@@ -1316,9 +1368,21 @@ def update_appointment_status(request, appointment_id=None):
             try:
                 appointment = Appointment.objects.get(id=appointment_id)
                 
+                # Store original status for notification
+                original_status = appointment.status
+                
                 # Update the status
                 appointment.status = new_status
                 appointment.save()
+                
+                # Create notification if status changed
+                if original_status != new_status:
+                    create_status_change_notification(
+                        appointment, 
+                        original_status, 
+                        new_status, 
+                        request.user
+                    )
                 
                 return Response({
                     'success': True,
@@ -1380,13 +1444,36 @@ def update_appointment_status(request, appointment_id=None):
                 except Exception as e:
                     print(f"Error updating room {room_id}: {str(e)}")
         
-        # Update appointments
-        updated_count = Appointment.objects.filter(id__in=appointment_ids).update(status=new_status)
+        # Update appointments and create notifications
+        appointments_to_update = Appointment.objects.filter(id__in=appointment_ids)
+        notifications_created = 0
+        
+        for appointment in appointments_to_update:
+            original_status = appointment.status
+            
+            # Only update if status is different
+            if original_status != new_status:
+                appointment.status = new_status
+                appointment.save()
+                
+                # Create notification for this appointment
+                notification = create_status_change_notification(
+                    appointment, 
+                    original_status, 
+                    new_status, 
+                    request.user
+                )
+                if notification:
+                    notifications_created += 1
+        
+        # Get the actual count of updated appointments
+        updated_count = appointments_to_update.count()
         
         response_data = {
             'success': True,
             'message': f'Updated {updated_count} appointments to status: {new_status}',
-            'updated_count': updated_count
+            'updated_count': updated_count,
+            'notifications_created': notifications_created
         }
         
         if new_status == 'rescheduled' and updated_rooms:
@@ -1503,13 +1590,36 @@ def batch_verify_applications(request):
         if not application_ids or not action:
             return Response({'error': 'Missing required parameters'}, status=400)
         
-        # Update the appointments
-        updated_count = Appointment.objects.filter(id__in=application_ids).update(status=action)
+        # Update the appointments and create notifications
+        appointments_to_update = Appointment.objects.filter(id__in=application_ids)
+        notifications_created = 0
+        
+        for appointment in appointments_to_update:
+            original_status = appointment.status
+            
+            # Only update if status is different
+            if original_status != action:
+                appointment.status = action
+                appointment.save()
+                
+                # Create notification for this appointment
+                notification = create_status_change_notification(
+                    appointment, 
+                    original_status, 
+                    action, 
+                    request.user
+                )
+                if notification:
+                    notifications_created += 1
+        
+        # Get the actual count of updated appointments
+        updated_count = appointments_to_update.count()
         
         return Response({
             'success': True,
             'message': f'Updated {updated_count} applications',
-            'updated_count': updated_count
+            'updated_count': updated_count,
+            'notifications_created': notifications_created
         })
     except Exception as e:
         return Response({'error': str(e)}, status=500)
@@ -2179,17 +2289,19 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def list(self, request):
         """List user's notifications with pagination"""
         queryset = self.get_queryset()
-        # Limit to recent notifications (last 100)
-        queryset = queryset[:100]
-        serializer = self.get_serializer(queryset, many=True, context={'request': request})
         
-        # Count unread notifications
+        # Count unread notifications BEFORE slicing
         unread_count = queryset.filter(is_read=False).count()
+        total_count = queryset.count()
+        
+        # Limit to recent notifications (last 100) AFTER counting
+        limited_queryset = queryset[:100]
+        serializer = self.get_serializer(limited_queryset, many=True, context={'request': request})
         
         return Response({
             'results': serializer.data,
             'unread_count': unread_count,
-            'total_count': queryset.count()
+            'total_count': total_count
         })
     
     def create(self, request, *args, **kwargs):
@@ -2251,3 +2363,158 @@ class NotificationViewSet(viewsets.ModelViewSet):
         ).count()
         
         return Response({'unread_count': count})
+
+# Test endpoint to create a notification manually
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_test_notification(request):
+    """Create a test notification for the current user"""
+    try:
+        notification = Notification.objects.create(
+            user=request.user,
+            title="Test Notification",
+            message="This is a test notification to verify the system is working.",
+            type='system',
+            priority='normal',
+            icon='info-circle',
+            link='/profile',
+            created_by=request.user,
+            is_read=False,
+            is_global=False
+        )
+        
+        return Response({
+            'success': True,
+            'message': 'Test notification created successfully',
+            'notification_id': notification.id
+        })
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Helper function to create status change notifications
+def create_status_change_notification(appointment, old_status, new_status, admin_user):
+    """Create a notification when an appointment status changes"""
+    try:
+        # Find the user associated with this appointment
+        target_user = None
+        if appointment.user:
+            target_user = appointment.user
+        elif appointment.email:
+            # Try to find user by email
+            try:
+                target_user = User.objects.get(email=appointment.email)
+            except User.DoesNotExist:
+                print(f"No user found for email: {appointment.email}")
+                return None
+        
+        if not target_user:
+            print(f"No target user found for appointment {appointment.id}")
+            return None
+        
+        # Status display mapping
+        status_display = {
+            'waiting_for_submission': 'Waiting for Submission',
+            'submitted': 'Submitted',
+            'approved': 'Approved',
+            'claimed': 'Claimed',
+            'rejected': 'Rejected',
+            'rescheduled': 'Rescheduled',
+            'waiting_for_test_details': 'Waiting for Test Details',
+            'cancelled': 'Cancelled'
+        }
+        
+        old_status_text = status_display.get(old_status, old_status.title())
+        new_status_text = status_display.get(new_status, new_status.title())
+        
+        # Create notification message based on status
+        if new_status == 'approved':
+            title = "Appointment Approved"
+            message = f"Your appointment for {appointment.program.name} has been approved. You can now view your test details."
+            icon = "check-circle"
+            link = "/profile"
+        elif new_status == 'submitted':
+            title = "Application Submitted"
+            message = f"Your application for {appointment.program.name} has been marked as submitted and is now under review."
+            icon = "paper-plane"
+            link = "/profile"
+        elif new_status == 'rejected':
+            title = "Appointment Update"
+            message = f"Your appointment for {appointment.program.name} status has been updated to rejected. Please contact the office for more information."
+            icon = "times-circle"
+            link = "/profile"
+        elif new_status == 'claimed':
+            title = "Application Claimed"
+            message = f"Your application for {appointment.program.name} has been marked as claimed. Thank you!"
+            icon = "check"
+            link = "/profile"
+        elif new_status == 'rescheduled':
+            title = "Appointment Rescheduled"
+            message = f"Your appointment for {appointment.program.name} has been rescheduled. Please check your new test details."
+            icon = "calendar-alt"
+            link = "/profile"
+        elif new_status == 'waiting_for_claiming':
+            title = "Ready for Claiming"
+            message = f"Your results for {appointment.program.name} are ready for claiming. Please visit the office to claim your documents."
+            icon = "hand-paper"
+            link = "/profile"
+        else:
+            title = "Appointment Status Updated"
+            message = f"Your appointment for {appointment.program.name} status has been updated from {old_status_text} to {new_status_text}."
+            icon = "info-circle"
+            link = "/profile"
+        
+        # Create the notification
+        notification = Notification.objects.create(
+            user=target_user,
+            title=title,
+            message=message,
+            type='appointment',
+            priority='normal',
+            icon=icon,
+            link=link,
+            created_by=admin_user,
+            is_read=False,
+            is_global=False
+        )
+        
+        print(f"Created notification {notification.id} for user {target_user.username}")
+        return notification
+        
+    except Exception as e:
+        print(f"Error creating status change notification: {str(e)}")
+        return None
+
+# Helper function to create global notifications for exam results release
+def create_exam_results_notification(exam_type, exam_year, score_count, admin_user):
+    """Create a global notification when exam results are released"""
+    try:
+        # Create notification message
+        title = "Exam Results Released"
+        message = f"The results for {exam_type} ({exam_year}) are now available. {score_count} scores have been published. You can check your results in the Results section."
+        icon = "graduation-cap"
+        link = "/results"
+        
+        # Create the global notification (visible to all users)
+        notification = Notification.objects.create(
+            user=None,  # No specific user - this is global
+            title=title,
+            message=message,
+            type='exam',
+            priority='high',  # High priority for exam results
+            icon=icon,
+            link=link,
+            created_by=admin_user,
+            is_read=False,
+            is_global=True  # This makes it visible to all users
+        )
+        
+        print(f"Created global exam results notification {notification.id} for {exam_type} ({exam_year})")
+        return notification
+        
+    except Exception as e:
+        print(f"Error creating exam results notification: {str(e)}")
+        return None

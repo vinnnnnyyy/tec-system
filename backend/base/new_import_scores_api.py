@@ -2,10 +2,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Q
+from django.contrib.auth.models import User
 from datetime import datetime
 import csv
 import io
-from .models import Appointment, ExamScore
+from .models import Appointment, ExamScore, Notification
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -288,6 +289,27 @@ def import_scores_api(request):
                 )
                 created_count += 1
                 unmatched_count += 1
+            
+        # Create global notification for exam results release
+        total_scores_imported = matched_count + updated_count
+        if total_scores_imported > 0:
+            try:
+                Notification.objects.create(
+                    user=None,  # No specific user - this is a global notification
+                    title="Exam Results Released",
+                    message=f"The results for {exam_type} ({exam_year}) are now available. {total_scores_imported} scores have been published. You can check your results in the Results section.",
+                    type='exam',
+                    priority='high',
+                    icon='graduation-cap',
+                    link='/results',
+                    created_by=request.user,
+                    is_read=False,
+                    is_global=True  # This makes it visible to all users
+                )
+                print(f"Created global exam results notification for {exam_type} ({exam_year})")
+            except Exception as notification_error:
+                print(f"Error creating notification: {str(notification_error)}")
+                # Don't fail the import if notification creation fails
             
         return Response({
             'success': True,

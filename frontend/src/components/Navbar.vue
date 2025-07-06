@@ -74,8 +74,8 @@
           
           <!-- Account buttons -->
           <div class="flex items-center space-x-3">
-            <!-- Notifications (only show when logged in) -->
-            <div v-if="isAuthenticated" class="relative" ref="notificationRef">
+            <!-- Notifications (show for all users, but different behavior for authenticated vs unauthenticated) -->
+            <div class="relative" ref="notificationRef">
               <button
                 @click.stop="toggleNotifications"
                 class="notification-bell-button relative p-2 text-gray-600 hover:text-crimson-600 hover:bg-crimson-50 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-crimson-500"
@@ -328,21 +328,23 @@ export default {
     const unreadNotificationsCount = ref(0)
     const notificationRef = ref(null)
     const notificationDropdownRef = ref(null)
+    const notificationPollingInterval = ref(null)
     
     // Check authentication status on component mount
     const checkAuth = () => {
       const wasAuthenticated = isAuthenticated.value
       isAuthenticated.value = !!AuthService.getCurrentUser()
       
-      // Fetch notifications when user logs in
+      // Fetch notifications when user logs in or when component loads
       if (!wasAuthenticated && isAuthenticated.value) {
         fetchNotifications()
+        startNotificationPolling()
       }
       
-      // Clear notifications when user logs out
+      // Clear personal notifications when user logs out, but keep global ones
       if (wasAuthenticated && !isAuthenticated.value) {
-        notifications.value = []
-        unreadNotificationsCount.value = 0
+        // Fetch notifications again to get only global notifications
+        fetchNotifications()
       }
     }
 
@@ -402,6 +404,7 @@ export default {
     const toggleNotifications = () => {
       showNotifications.value = !showNotifications.value
       if (showNotifications.value) {
+        // Always fetch fresh notifications when opening the dropdown
         fetchNotifications()
       }
     }
@@ -412,20 +415,39 @@ export default {
 
     const fetchNotifications = async () => {
       try {
-        if (!isAuthenticated.value) {
-          notifications.value = []
-          unreadNotificationsCount.value = 0
-          return
-        }
-
+        console.log('Fetching notifications...')
         const response = await NotificationService.getNotifications()
+        console.log('Notifications response:', response)
+        
         notifications.value = response.results || response
         unreadNotificationsCount.value = notifications.value.filter(n => !n.is_read).length
+        
+        console.log(`Loaded ${notifications.value.length} notifications, ${unreadNotificationsCount.value} unread`)
       } catch (error) {
         console.error('Error fetching notifications:', error)
+        console.error('Error details:', error.response?.data || error.message)
         // Fallback to empty array on error
         notifications.value = []
         unreadNotificationsCount.value = 0
+      }
+    }
+
+    // Polling functions for real-time notifications
+    const startNotificationPolling = () => {
+      if (notificationPollingInterval.value) {
+        clearInterval(notificationPollingInterval.value)
+      }
+      
+      // Poll for new notifications every 30 seconds (for all users)
+      notificationPollingInterval.value = setInterval(() => {
+        fetchNotifications()
+      }, 30000) // 30 seconds
+    }
+
+    const stopNotificationPolling = () => {
+      if (notificationPollingInterval.value) {
+        clearInterval(notificationPollingInterval.value)
+        notificationPollingInterval.value = null
       }
     }
 
@@ -560,12 +582,18 @@ export default {
 
     onMounted(() => {
       checkAuth() // Initial auth check
+      
+      // Always start polling for notifications (for global notifications)
+      fetchNotifications()
+      startNotificationPolling()
+      
       document.addEventListener('click', handleClickOutside)
       window.addEventListener('resize', handleResize)
       router.afterEach(handleRouteChange) // Use router hook for route changes
     })
 
     onUnmounted(() => {
+      stopNotificationPolling() // Stop polling when component unmounts
       document.removeEventListener('click', handleClickOutside)
       window.removeEventListener('resize', handleResize)
       // Clean up body overflow style if component is destroyed with menu open
@@ -595,6 +623,8 @@ export default {
       toggleNotifications,
       closeNotifications,
       fetchNotifications,
+      startNotificationPolling,
+      stopNotificationPolling,
       markAllAsRead,
       handleNotificationClick,
       getNotificationIcon,
