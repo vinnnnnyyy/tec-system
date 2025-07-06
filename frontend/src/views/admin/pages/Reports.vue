@@ -176,14 +176,55 @@
       <!-- Top 10 Performers Section -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
         <div class="p-6 border-b border-gray-100">
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between mb-4">
             <div>
               <h2 class="text-xl font-bold text-gray-800">🏆 Top 10 Performers</h2>
               <p class="text-sm text-gray-500 mt-1">Highest OAPR scores</p>
             </div>
             <div class="text-right">
-              <span class="text-2xl font-bold text-yellow-600">{{ topPerformers.length }}</span>
+              <span class="text-2xl font-bold text-yellow-600">{{ filteredTopPerformers.length }}</span>
               <p class="text-xs text-gray-500">Students</p>
+            </div>
+          </div>
+          
+          <!-- Top Performers Filters -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Program</label>
+              <select 
+                v-model="topPerformersFilters.program"
+                @change="filterTopPerformers"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-crimson-500 focus:border-crimson-500 text-sm"
+              >
+                <option value="">All Programs</option>
+                <option v-for="program in uniquePrograms" :key="program" :value="program">
+                  {{ program }}
+                </option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Year</label>
+              <select 
+                v-model="topPerformersFilters.year"
+                @change="filterTopPerformers"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-crimson-500 focus:border-crimson-500 text-sm"
+              >
+                <option value="">All Years</option>
+                <option v-for="year in uniqueYears" :key="year" :value="year">
+                  {{ year }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="flex items-end">
+              <button 
+                @click="resetTopPerformersFilters"
+                class="w-full px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200 text-sm"
+              >
+                <i class="fas fa-redo mr-1"></i>
+                Reset Filters
+              </button>
             </div>
           </div>
         </div>
@@ -193,94 +234,72 @@
           <i class="fas fa-circle-notch fa-spin text-4xl text-crimson-600"></i>
         </div>
         
-        <!-- Top Performers Grid -->
-        <div v-else class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div 
-              v-for="performer in topPerformers.slice(0, 10)" 
-              :key="performer.rank"
-              class="bg-gradient-to-br from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200 hover:shadow-md transition-all duration-300"
-              :class="{
-                'ring-2 ring-yellow-400 bg-gradient-to-br from-yellow-100 to-orange-100': performer.rank <= 3,
-                'transform hover:scale-105': performer.rank <= 3
-              }"
-            >
-              <div class="text-center">
-                <!-- Rank Badge -->
-                <div class="flex justify-center mb-3">
-                  <div 
-                    class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-                    :class="{
-                      'bg-yellow-500 text-white': performer.rank === 1,
-                      'bg-gray-400 text-white': performer.rank === 2,
-                      'bg-amber-600 text-white': performer.rank === 3,
-                      'bg-blue-500 text-white': performer.rank > 3
-                    }"
-                  >
-                    {{ performer.rank }}
+        <!-- Top Performers Table -->
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rank</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Student Name</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">School</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Program</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">OAPR Score</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Exam Date</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr 
+                v-for="performer in filteredTopPerformers.slice(0, 10)" 
+                :key="performer.rank"
+                class="hover:bg-gray-50 transition-colors duration-200"
+                :class="{
+                  'bg-yellow-50': performer.rank === 1,
+                  'bg-gray-100': performer.rank === 2,
+                  'bg-orange-50': performer.rank === 3
+                }"
+              >
+                <td class="px-4 py-3">
+                  <div class="flex items-center">
+                    <div 
+                      class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-2"
+                      :class="{
+                        'bg-yellow-500 text-white': performer.rank === 1,
+                        'bg-gray-400 text-white': performer.rank === 2,
+                        'bg-amber-600 text-white': performer.rank === 3,
+                        'bg-blue-500 text-white': performer.rank > 3
+                      }"
+                    >
+                      {{ performer.rank }}
+                    </div>
+                    <i 
+                      v-if="performer.rank <= 3"
+                      class="text-lg"
+                      :class="{
+                        'fas fa-trophy text-yellow-500': performer.rank === 1,
+                        'fas fa-medal text-gray-400': performer.rank === 2,
+                        'fas fa-award text-amber-600': performer.rank === 3
+                      }"
+                    ></i>
                   </div>
-                </div>
-                
-                <!-- Trophy for top 3 -->
-                <div v-if="performer.rank <= 3" class="flex justify-center mb-2">
-                  <i 
-                    class="text-2xl"
-                    :class="{
-                      'fas fa-trophy text-yellow-500': performer.rank === 1,
-                      'fas fa-medal text-gray-400': performer.rank === 2,
-                      'fas fa-award text-amber-600': performer.rank === 3
-                    }"
-                  ></i>
-                </div>
-                
-                <!-- OAPR Score -->
-                <div class="mb-2">
-                  <span class="text-2xl font-bold text-gray-800">{{ performer.oapr }}</span>
-                  <p class="text-xs text-gray-500">OAPR</p>
-                </div>
-                
-                <!-- Student Name -->
-                <h4 class="font-semibold text-gray-800 text-sm mb-1 truncate" :title="performer.name">
-                  {{ performer.name }}
-                </h4>
-                
-                <!-- School -->
-                <p class="text-xs text-gray-600 mb-1 truncate" :title="performer.school">
-                  {{ performer.school }}
-                </p>
-                
-                <!-- Program & Date -->
-                <div class="text-xs text-gray-500">
-                  <p class="truncate">{{ performer.program }}</p>
-                  <p>{{ formatDate(performer.exam_date) }}</p>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Empty states if less than 10 -->
-            <div 
-              v-for="n in Math.max(0, 10 - topPerformers.length)" 
-              :key="`empty-${n}`"
-              class="bg-gray-50 p-4 rounded-xl border border-gray-200 flex items-center justify-center"
-            >
-              <div class="text-center text-gray-400">
-                <i class="fas fa-user-plus text-2xl mb-2"></i>
-                <p class="text-xs">No data</p>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Show more button if there are more than 10 results -->
-          <div v-if="topPerformers.length > 10" class="text-center mt-6">
-            <button 
-              @click="showAllPerformers = !showAllPerformers"
-              class="px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition-colors duration-200"
-            >
-              <i class="fas fa-chevron-down mr-2" v-if="!showAllPerformers"></i>
-              <i class="fas fa-chevron-up mr-2" v-else></i>
-              {{ showAllPerformers ? 'Show Less' : 'Show All' }}
-            </button>
-          </div>
+                </td>
+                <td class="px-4 py-3">
+                  <p class="font-medium text-gray-900">{{ performer.name }}</p>
+                </td>
+                <td class="px-4 py-3 text-gray-600">{{ performer.school }}</td>
+                <td class="px-4 py-3 text-gray-900">{{ performer.program }}</td>
+                <td class="px-4 py-3">
+                  <span class="text-lg font-bold text-gray-800">{{ performer.oapr }}</span>
+                </td>
+                <td class="px-4 py-3 text-gray-500">{{ formatDate(performer.exam_date) }}</td>
+              </tr>
+              
+              <tr v-if="filteredTopPerformers.length === 0">
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                  No top performers data available for the selected filters.
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
       
@@ -371,7 +390,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import axiosInstance from '../../../services/axios.interceptor'
 import MonthlyTestsChart from '../../../components/charts/MonthlyTestsChart.vue'
 import PassRateByProgramChart from '../../../components/charts/PassRateByProgramChart.vue'
@@ -396,6 +415,11 @@ export default {
       testCenter: ''
     })
     
+    const topPerformersFilters = reactive({
+      program: '',
+      year: ''
+    })
+    
     const statistics = reactive({
       totalTests: 0,
       passRate: 0,
@@ -412,6 +436,46 @@ export default {
     // Chart data
     const monthlyData = ref([])
     const programStats = ref([])
+    
+    // Computed properties for top performers filtering
+    const uniquePrograms = computed(() => {
+      const programs = [...new Set(topPerformers.value.map(p => p.program))]
+      return programs.sort()
+    })
+    
+    const uniqueYears = computed(() => {
+      const years = [...new Set(topPerformers.value.map(p => {
+        if (p.exam_date) {
+          return new Date(p.exam_date).getFullYear().toString()
+        }
+        return null
+      }).filter(Boolean))]
+      return years.sort().reverse() // Most recent years first
+    })
+    
+    const filteredTopPerformers = computed(() => {
+      let filtered = [...topPerformers.value]
+      
+      if (topPerformersFilters.program) {
+        filtered = filtered.filter(p => p.program === topPerformersFilters.program)
+      }
+      
+      if (topPerformersFilters.year) {
+        filtered = filtered.filter(p => {
+          if (p.exam_date) {
+            const year = new Date(p.exam_date).getFullYear().toString()
+            return year === topPerformersFilters.year
+          }
+          return false
+        })
+      }
+      
+      // Re-rank the filtered results
+      return filtered.map((performer, index) => ({
+        ...performer,
+        rank: index + 1
+      }))
+    })
     
     // Fetch initial data
     onMounted(() => {
@@ -654,6 +718,16 @@ export default {
       // In a real implementation, this would trigger an API call to generate a PDF or Excel report
     }
     
+    const filterTopPerformers = () => {
+      // The filtering is handled by the computed property, this method can be used for additional logic if needed
+      console.log('Top performers filtered:', topPerformersFilters)
+    }
+    
+    const resetTopPerformersFilters = () => {
+      topPerformersFilters.program = ''
+      topPerformersFilters.year = ''
+    }
+    
     return {
       loading,
       page,
@@ -661,16 +735,22 @@ export default {
       totalResults,
       totalPages,
       filters,
+      topPerformersFilters,
       statistics,
       programs,
       testCenters,
       testResults,
       topPerformers,
+      filteredTopPerformers,
+      uniquePrograms,
+      uniqueYears,
       showAllPerformers,
       monthlyData,
       programStats,
       applyFilters,
       resetFilters,
+      filterTopPerformers,
+      resetTopPerformersFilters,
       formatDate,
       formatDateRange,
       getStatusClass,
