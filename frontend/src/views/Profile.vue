@@ -147,9 +147,51 @@
                   <i class="fas fa-lock text-gray-400 text-xl sm:text-2xl mb-2"></i>
                   <p class="text-xs sm:text-sm text-gray-600">Score will be available once application is submitted</p>
                 </div>
-                <div v-else-if="(appointment.status === 'submitted' || appointment.status === 'approved') && !appointment.exam_score">
+                <div v-else-if="appointment.status === 'approved' && !appointment.exam_score">
                   <i class="fas fa-hourglass-half text-gray-400 text-xl sm:text-2xl mb-2"></i>
-                  <p class="text-xs sm:text-sm text-gray-600">Score is being processed</p>
+                  <p class="text-xs sm:text-sm text-gray-600 mb-3">Score is being processed</p>
+                  <!-- Simple View Scores Button (no password required) -->
+                  <button 
+                    @click="fetchScoresForAppointment(appointment)" 
+                    class="px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition-colors duration-200 text-sm font-medium"
+                    :disabled="loadingScores"
+                  >
+                    <i v-if="loadingScores" class="fas fa-spinner fa-spin mr-2"></i>
+                    <i v-else class="fas fa-eye mr-2"></i>
+                    {{ loadingScores ? 'Loading...' : 'View Scores' }}
+                  </button>
+                  
+                  <!-- Alternative search option -->
+                  <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p class="text-xs text-blue-700 mb-2">
+                      Can't find your scores? Try our secure search:
+                    </p>
+                    <button 
+                      @click="showSecureSearchModal"
+                      class="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+                    >
+                      <i class="fas fa-search mr-2"></i>
+                      Search Exam Scores (Secure)
+                    </button>
+                  </div>
+                </div>
+                <div v-else-if="(appointment.status === 'submitted') && !appointment.exam_score">
+                  <i class="fas fa-hourglass-half text-gray-400 text-xl sm:text-2xl mb-2"></i>
+                  <p class="text-xs sm:text-sm text-gray-600 mb-3">Score is being processed</p>
+                  
+                  <!-- Alternative search option for submitted appointments -->
+                  <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p class="text-xs text-blue-700 mb-2">
+                      If your scores have been released, you can search for them:
+                    </p>
+                    <button 
+                      @click="showSecureSearchModal"
+                      class="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+                    >
+                      <i class="fas fa-search mr-2"></i>
+                      Search Exam Scores (Secure)
+                    </button>
+                  </div>
                 </div>
                 <div v-else>
                   <i class="fas fa-calendar-check text-gray-400 text-xl sm:text-2xl mb-2"></i>
@@ -161,6 +203,73 @@
         </div>
       </div>
     </div>
+
+    <!-- Secure Search Password Modal -->
+    <div v-if="showSecureSearchVerification" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Secure Search Access</h3>
+            <button @click="closeSecureSearchModal" class="text-gray-400 hover:text-gray-600">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          
+          <div class="mb-4">
+            <p class="text-sm text-gray-600 mb-4">
+              Please enter your account password to access the secure exam scores search.
+            </p>
+            
+            <div class="space-y-4">
+              <div>
+                <label for="securePassword" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <div class="relative">
+                  <input
+                    id="securePassword"
+                    v-model="secureSearchForm.password"
+                    :type="secureSearchForm.showPassword ? 'text' : 'password'"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+                    placeholder="Enter your password"
+                    @keyup.enter="verifyPasswordAndSearch"
+                  >
+                  <button
+                    type="button"
+                    @click="secureSearchForm.showPassword = !secureSearchForm.showPassword"
+                    class="absolute inset-y-0 right-0 px-3 py-2 flex items-center focus:outline-none hover:text-crimson-500 transition-colors duration-200"
+                  >
+                    <i :class="secureSearchForm.showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'" class="h-4 w-4 text-gray-400"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <div v-if="secureSearchForm.error" class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 flex items-start gap-2">
+                <i class="fas fa-exclamation-circle mt-1 text-red-500 flex-shrink-0"></i>
+                <p class="text-sm">{{ secureSearchForm.error }}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex justify-end space-x-3">
+            <button 
+              @click="closeSecureSearchModal"
+              class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+            >
+              Cancel
+            </button>
+            <button 
+              @click="verifyPasswordAndSearch"
+              :disabled="secureSearchForm.loading || !secureSearchForm.password"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
+            >
+              <i v-if="secureSearchForm.loading" class="fas fa-spinner fa-spin mr-2"></i>
+              <i v-else class="fas fa-search mr-2"></i>
+              {{ secureSearchForm.loading ? 'Verifying...' : 'Search Scores' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -185,7 +294,15 @@ export default {
       loading: true,
       error: null,
       detailedScores: null,
-      scoreModelInfo: null
+      scoreModelInfo: null,
+      loadingScores: false,
+      showSecureSearchVerification: false,
+      secureSearchForm: {
+        password: '',
+        showPassword: false,
+        loading: false,
+        error: ''
+      }
     }
   },
   computed: {
@@ -332,6 +449,95 @@ export default {
         return 'Afternoon';
       }
       return timeSlot || 'Not specified';
+    },
+    
+    async fetchScoresForAppointment(appointment) {
+      this.loadingScores = true;
+      
+      try {
+        // Try to fetch scores for the specific appointment
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        const response = await axios.get(`${apiUrl}/api/appointments/${appointment.id}/scores/`);
+        
+        if (response.data) {
+          // Successfully retrieved scores
+          this.showToast('Scores retrieved successfully!', 'success');
+          
+          // Update the appointment with the score data
+          const appointmentIndex = this.appointments.findIndex(
+            app => app.id === appointment.id
+          );
+          
+          if (appointmentIndex !== -1) {
+            this.appointments[appointmentIndex].exam_score = response.data;
+            // Force reactivity update
+            this.$forceUpdate();
+          }
+        } else {
+          this.showToast('No scores available yet. Please try again later.', 'warning');
+        }
+      } catch (error) {
+        console.error('Error fetching scores:', error);
+        if (error.response?.status === 404) {
+          this.showToast('No scores found for this appointment yet.', 'warning');
+        } else {
+          this.showToast('Failed to retrieve scores. Please try again.', 'error');
+        }
+      } finally {
+        this.loadingScores = false;
+      }
+    },
+    
+    showSecureSearchModal() {
+      this.showSecureSearchVerification = true;
+      this.secureSearchForm.password = '';
+      this.secureSearchForm.error = '';
+      this.secureSearchForm.loading = false;
+    },
+    
+    closeSecureSearchModal() {
+      this.showSecureSearchVerification = false;
+      this.secureSearchForm.password = '';
+      this.secureSearchForm.error = '';
+      this.secureSearchForm.loading = false;
+    },
+    
+    async verifyPasswordAndSearch() {
+      if (!this.secureSearchForm.password) {
+        this.secureSearchForm.error = 'Please enter your password';
+        return;
+      }
+      
+      this.secureSearchForm.loading = true;
+      this.secureSearchForm.error = '';
+      
+      try {
+        // Verify password with backend
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        const verifyResponse = await axios.post(`${apiUrl}/api/verify-password/`, {
+          password: this.secureSearchForm.password
+        });
+        
+        if (verifyResponse.data.valid) {
+          // Password is correct, redirect to the secure search page
+          this.showToast('Password verified! Redirecting to secure search...', 'success');
+          this.closeSecureSearchModal();
+          
+          // Navigate to the secure search page
+          this.$router.push('/scores');
+        } else {
+          this.secureSearchForm.error = 'Invalid password. Please try again.';
+        }
+      } catch (error) {
+        console.error('Error verifying password:', error);
+        if (error.response?.status === 401) {
+          this.secureSearchForm.error = 'Invalid password. Please try again.';
+        } else {
+          this.secureSearchForm.error = 'Authentication failed. Please try again.';
+        }
+      } finally {
+        this.secureSearchForm.loading = false;
+      }
     }
   }
 }

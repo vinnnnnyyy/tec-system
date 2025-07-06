@@ -17,7 +17,7 @@ from .views import (
 from .date_availability_view import program_availability
 from .auth_views import (
     register_user, admin_login, validate_admin, 
-    admin_users, delete_user, update_user, get_user_profile
+    admin_users, delete_user, update_user, get_user_profile, verify_password
 )
 from .otp_views import request_otp, signup_with_otp, verify_otp_endpoint
 
@@ -77,6 +77,7 @@ urlpatterns = [
     path('admin/users/<int:user_id>/', delete_user, name='delete_user'),
     path('admin/users/<int:user_id>/update/', update_user, name='update_user'),
     path('profile/', get_user_profile, name='get_user_profile'),
+    path('verify-password/', verify_password, name='verify_password'),
     
     # OTP verification routes
     path('request-otp/', request_otp, name='request_otp'),

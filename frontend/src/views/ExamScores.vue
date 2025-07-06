@@ -56,6 +56,17 @@
         <p class="text-sm text-gray-600 mb-4">
           Please enter your information to retrieve your exam scores. You must provide at least your Application Number and Last Name.
         </p>
+        
+        <!-- Information about secure search -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div class="flex items-start space-x-2">
+            <font-awesome-icon :icon="['fas', 'info-circle']" class="text-blue-500 text-sm mt-0.5 flex-shrink-0" />
+            <div class="text-sm text-blue-700">
+              <p class="font-medium mb-1">Can't find your scores?</p>
+              <p>If the regular search doesn't work, try our <strong>Secure Search</strong> feature. This helps find scores that may not have been automatically matched due to name formatting differences during import. Password verification is required for security.</p>
+            </div>
+          </div>
+        </div>
 
         <form @submit.prevent="searchScores" class="space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -310,15 +321,121 @@
       <div v-if="noResults" class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center animate-fade-in">
         <font-awesome-icon :icon="['fas', 'exclamation-triangle']" class="text-yellow-500 text-3xl mb-3" />
         <h3 class="text-lg font-semibold text-gray-900 mb-2">No Exam Scores Found</h3>
-        <p class="text-gray-600">
+        <p class="text-gray-600 mb-4">
           We couldn't find any exam scores matching your provided information. Please ensure all details are correct and try again.
         </p>
-        <button 
-          @click="resetSearch" 
-          class="mt-4 px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition-colors"
-        >
-          Try Again
-        </button>
+        <div class="space-y-3">
+          <button 
+            @click="resetSearch" 
+            class="px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition-colors"
+          >
+            Try Again
+          </button>
+          <div class="text-sm text-gray-600">
+            <p class="mb-2">If you have an approved appointment but can't find your scores, this might be due to name formatting differences during import.</p>
+            <button 
+              @click="showSecureSearchModal = true" 
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              <font-awesome-icon :icon="['fas', 'shield-alt']" class="mr-2" />
+              Try Secure Search
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secure Search Modal -->
+      <div v-if="showSecureSearchModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold text-gray-900">Secure Score Search</h3>
+              <button @click="closeSecureSearchModal" class="text-gray-400 hover:text-gray-600">
+                <font-awesome-icon :icon="['fas', 'times']" />
+              </button>
+            </div>
+            
+            <div class="mb-4">
+              <p class="text-sm text-gray-600 mb-4">
+                This secure search helps find scores that may not have been automatically matched due to name formatting differences. 
+                Password verification is required for security.
+              </p>
+              
+              <form @submit.prevent="performSecureSearch" class="space-y-4">
+                <div>
+                  <label for="secureEmail" class="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+                  <input
+                    id="secureEmail"
+                    v-model="secureSearchForm.email"
+                    type="email"
+                    placeholder="Enter your registered email"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label for="securePassword" class="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                  <div class="relative">
+                    <input
+                      id="securePassword"
+                      v-model="secureSearchForm.password"
+                      :type="secureSearchForm.showPassword ? 'text' : 'password'"
+                      placeholder="Enter your account password"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      @click="secureSearchForm.showPassword = !secureSearchForm.showPassword"
+                      class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    >
+                      <font-awesome-icon :icon="['fas', secureSearchForm.showPassword ? 'eye-slash' : 'eye']" />
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <label for="secureAppNo" class="block text-sm font-medium text-gray-700 mb-1">Application Number *</label>
+                  <input
+                    id="secureAppNo"
+                    v-model="secureSearchForm.appNo"
+                    type="text"
+                    placeholder="e.g., 2023-12345"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+                    required
+                  />
+                </div>
+
+                <!-- Error Display -->
+                <div v-if="secureSearchError" class="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 flex items-start gap-2">
+                  <font-awesome-icon :icon="['fas', 'exclamation-circle']" class="mt-1 text-red-500" />
+                  <p class="text-sm">{{ secureSearchError }}</p>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex space-x-3">
+                  <button
+                    type="button"
+                    @click="closeSecureSearchModal"
+                    class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    :disabled="secureSearchLoading"
+                    class="flex-1 px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <font-awesome-icon v-if="secureSearchLoading" :icon="['fas', 'spinner']" spin class="mr-2" />
+                    <font-awesome-icon v-else :icon="['fas', 'search']" class="mr-2" />
+                    {{ secureSearchLoading ? 'Searching...' : 'Secure Search' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -400,13 +517,24 @@ export default {
         return true
       }
     }
-      // States
+    // States
     const loading = ref(false)
     const error = ref('')
     const examScores = ref([])
     const selectedScoreIndex = ref(0)
     const multipleScoresFound = ref(false)
     const noResults = ref(false)
+    
+    // Secure search states
+    const showSecureSearchModal = ref(false)
+    const secureSearchLoading = ref(false)
+    const secureSearchError = ref('')
+    const secureSearchForm = reactive({
+      email: '',
+      password: '',
+      appNo: '',
+      showPassword: false
+    })
     
     // Computed property to get current selected exam score
     const currentExamScore = computed(() => {
@@ -448,6 +576,78 @@ export default {
       noResults.value = false
       error.value = ''
       refreshCaptcha()
+    }
+
+    // Close secure search modal
+    const closeSecureSearchModal = () => {
+      showSecureSearchModal.value = false
+      secureSearchError.value = ''
+      secureSearchForm.email = ''
+      secureSearchForm.password = ''
+      secureSearchForm.appNo = ''
+      secureSearchForm.showPassword = false
+    }
+
+    // Perform secure search
+    const performSecureSearch = async () => {
+      secureSearchError.value = ''
+      secureSearchLoading.value = true
+
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+        const apiUrlWithoutTrailingSlash = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl
+
+        // First verify the password
+        const verifyResponse = await axios.post(`${apiUrlWithoutTrailingSlash}/api/verify-password/`, {
+          email: secureSearchForm.email,
+          password: secureSearchForm.password
+        })
+
+        if (!verifyResponse.data.valid) {
+          secureSearchError.value = 'Invalid email or password. Please check your credentials and try again.'
+          return
+        }
+
+        // If password is valid, search for scores using the application number
+        const searchResponse = await axios.get(`${apiUrlWithoutTrailingSlash}/api/public/search-exam-scores/`, {
+          params: {
+            app_no: secureSearchForm.appNo
+          }
+        })
+
+        if (searchResponse.data) {
+          // Process the search results similar to regular search
+          if (Array.isArray(searchResponse.data)) {
+            examScores.value = searchResponse.data
+            if (examScores.value.length > 1) {
+              multipleScoresFound.value = true
+              showToast('Success', `Found ${examScores.value.length} exam scores for application ${secureSearchForm.appNo}.`, 'success')
+            } else if (examScores.value.length === 1) {
+              showToast('Success', 'Exam score found via secure search.', 'success')
+            }
+          } else {
+            examScores.value = [searchResponse.data]
+            showToast('Success', 'Exam score found via secure search.', 'success')
+          }
+
+          // Close modal and reset form
+          closeSecureSearchModal()
+          noResults.value = false
+        } else {
+          secureSearchError.value = 'No exam scores found for the provided application number.'
+        }
+      } catch (err) {
+        console.error('Error in secure search:', err)
+        if (err.response && err.response.status === 404) {
+          secureSearchError.value = 'No exam scores found for the provided application number.'
+        } else if (err.response && err.response.status === 400) {
+          secureSearchError.value = err.response.data.detail || 'Invalid credentials or application number.'
+        } else {
+          secureSearchError.value = 'An error occurred during secure search. Please try again later.'
+        }
+      } finally {
+        secureSearchLoading.value = false
+      }
     }
       // Search for exam scores
     const searchScores = async () => {
@@ -584,7 +784,14 @@ export default {
       refreshCaptcha,
       formatDate,
       availableYears,
-      examTypes
+      examTypes,
+      // Secure search
+      showSecureSearchModal,
+      secureSearchLoading,
+      secureSearchError,
+      secureSearchForm,
+      closeSecureSearchModal,
+      performSecureSearch
     }
   }
 }
