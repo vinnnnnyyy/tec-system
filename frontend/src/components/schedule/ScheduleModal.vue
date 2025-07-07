@@ -313,58 +313,13 @@
                         </p>
                       </div>
 
-                      <!-- Barangay -->
-                      <div class="space-y-2">
-                        <label for="barangay" class="block text-sm font-medium text-gray-700 mb-1.5">Barangay</label>
-                        <div class="relative">
-                          <input 
-                            id="barangay"
-                            v-model="formData.barangay"
-                            @input="handleTextInput('barangay')"
-                            @blur="markAsTouched('barangay'); validateBarangay()"
-                            type="text"
-                            list="barangay-list"
-                            :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('barangay')]"
-                            placeholder="Enter your Barangay"
-                            autocomplete="off"
-                          />
-                          <div v-if="isFieldValid('barangay')" class="absolute inset-y-0 right-3 flex items-center text-green-500 animate-fadeIn">
-                            <i class="fas fa-check-circle"></i>
-                          </div>
-                        </div>
-                        <datalist id="barangay-list">
-                          <option v-for="barangay in philippineBarangays" :key="barangay" :value="barangay">{{ barangay }}</option>
-                        </datalist>
-                        <p v-if="isFieldInvalid('barangay')" class="text-sm text-red-600 mt-1 error-text">
-                          {{ validationErrors.barangay }}
-                        </p>
-                      </div>
-
-                      <!-- City -->
-                      <div class="space-y-2">
-                        <label for="city" class="block text-sm font-medium text-gray-700 mb-1.5">City/Municipality</label>
-                        <div class="relative">
-                          <input 
-                            id="city"
-                            v-model="formData.city"
-                            @input="handleTextInput('city')"
-                            @blur="markAsTouched('city'); validateCity()"
-                            type="text"
-                            list="city-list"
-                            :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('city')]"
-                            placeholder="Enter your City/Municipality"
-                            autocomplete="off"
-                          />
-                          <div v-if="isFieldValid('city')" class="absolute inset-y-0 right-3 flex items-center text-green-500 animate-fadeIn">
-                            <i class="fas fa-check-circle"></i>
-                          </div>
-                        </div>
-                        <datalist id="city-list">
-                          <option v-for="city in philippineCities" :key="city" :value="city">{{ city }}</option>
-                        </datalist>
-                        <p v-if="isFieldInvalid('city')" class="text-sm text-red-600 mt-1 error-text">
-                          {{ validationErrors.city }}
-                        </p>
+                      <!-- Location Dropdowns Component -->
+                      <div class="md:col-span-2">
+                        <LocationDropdowns 
+                          v-model="locationData"
+                          @change="onLocationChange"
+                          :show-debug="false"
+                        />
                       </div>
                       
                       <!-- Citizenship -->
@@ -908,6 +863,7 @@
 <script>
 import axios from '../../plugins/axios'
 import CustomCalendar from './CustomCalendar.vue'
+import LocationDropdowns from '../common/LocationDropdowns.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import ApplicationFormStore from '../../services/ApplicationFormStore'
 import AuthService from '../../services/auth.service'
@@ -918,7 +874,8 @@ import { allZamboanganSchoolsFull } from '../../data/schoolData'
 export default {
   name: 'ScheduleModal',
   components: {
-    CustomCalendar
+    CustomCalendar,
+    LocationDropdowns
   },
   props: {
     modelValue: {
@@ -999,6 +956,8 @@ export default {
       gender: '',
       age: '',
       streetPurok: '',
+      region: '',
+      province: '',
       barangay: '',
       city: '',
       citizenship: '',
@@ -1032,6 +991,14 @@ export default {
     const philippineCities = ref(citiesData);
     const citizenshipOptions = ref(citizenshipsData);
     const zamboanganSchools = ref(allZamboanganSchoolsFull);
+    
+    // Location data for the new LocationDropdowns component
+    const locationData = ref({
+      region: '',
+      province: '',
+      city: '',
+      barangay: ''
+    });
     
     // Address autocomplete state
     const addressSuggestions = ref({
@@ -1325,20 +1292,29 @@ export default {
       }, 150);
     };
     
+    // Handle location changes from LocationDropdowns component
+    const onLocationChange = (locationData) => {
+      // Update the formData with the new location data
+      formData.value.region = locationData.region;
+      formData.value.province = locationData.province;
+      formData.value.city = locationData.city;
+      formData.value.barangay = locationData.barangay;
+      
+      // Mark location fields as touched for validation
+      markAsTouched('region');
+      markAsTouched('province');
+      markAsTouched('city');
+      markAsTouched('barangay');
+      
+      // Trigger validation for location fields
+      validateBarangay();
+      validateCity();
+    };
+    
     // Computed property for birth years (100 years back from current year)
     const birthYears = computed(() => {
       const currentYear = new Date().getFullYear();
       return Array.from({ length: 100 }, (_, i) => currentYear - i);
-    });
-    
-    // Computed property for filtered barangays (for better performance)
-    const filteredBarangays = computed(() => {
-      return philippineBarangays.value;
-    });
-    
-    // Computed property for filtered cities (for better performance)
-    const filteredCities = computed(() => {
-      return philippineCities.value;
     });
     
     // Computed property to check if the form is valid
@@ -2205,7 +2181,7 @@ export default {
         
         // Show a notification about missing fields
         const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md z-[100] animate-fade-in'; // Increased z-index
+        notification.className = 'fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md z-[100] animate-fade-in';
         notification.innerHTML = `
           <div class="flex items-center">
             <div class="flex-shrink-0">
@@ -2527,8 +2503,6 @@ export default {
       zamboanganSchools,
       testSessions,
       userAppointments,
-      filteredBarangays,
-      filteredCities,
       fetchData,
       formatDate,
       selectTimeSlot,
@@ -2569,7 +2543,9 @@ export default {
       validateCitizenship,
       validateWmsucetExperience,
       validateApplicantType,
-      validateDateTime
+      validateDateTime,
+      locationData,
+      onLocationChange
     };
   }
 }
