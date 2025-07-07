@@ -517,8 +517,8 @@
                         <i class="fas fa-calendar-check text-gray-400 text-2xl"></i>
                       </div>
                       <div class="space-y-1">
-                        <h4 class="text-lg font-semibold text-gray-600">Exam Pending</h4>
-                        <p class="text-sm text-gray-500">Complete your exam and submit your application to receive your score</p>
+                        <h4 class="text-lg font-semibold text-gray-600">Submit and Pass All Requirements</h4>
+                        <p class="text-sm text-gray-500">You must submit and pass all requirements to be approved and assigned to take the exam. Only applicants who pass all requirements will receive their official score.</p>
                       </div>
                     </div>
                   </div>
@@ -711,7 +711,7 @@ export default {
     },
     getStatusClass(status) {
       const classes = {
-        pending: 'bg-yellow-100 text-yellow-800',
+        waiting_for_submission: 'bg-yellow-100 text-yellow-800',
         approved: 'bg-green-100 text-green-800',
         rejected: 'bg-red-100 text-red-800',
         submitted: 'bg-blue-100 text-blue-800',
