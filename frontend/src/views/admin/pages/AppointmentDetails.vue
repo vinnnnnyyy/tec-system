@@ -80,12 +80,7 @@
               <i class="fas fa-clipboard-check mr-2"></i>
               Mark as Submitted
             </button>
-            <button v-if="canSetWaitingForClaiming()"
-                    @click="setWaitingForClaiming"
-                    class="button button-success">
-              <i class="fas fa-hourglass-start mr-2"></i>
-              Set Waiting to be Claimed
-            </button>
+            
             <button v-if="canMarkAsClaimed()"
                     @click="markAsClaimed"
                     class="button button-primary">
