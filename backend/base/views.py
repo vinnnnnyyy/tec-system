@@ -26,6 +26,12 @@ from django.utils import timezone
 from datetime import datetime, date, timedelta
 from django.db.models import Sum, Count, Q, Avg
 from collections import defaultdict
+from .notification_utils import (
+    send_test_details_notification, 
+    send_gmail_notification, 
+    send_bulk_gmail_notifications,
+    send_notification_digest_email
+)
 
 class ProgramViewSet(viewsets.ModelViewSet):
     queryset = Program.objects.all()
@@ -2274,6 +2280,8 @@ def test_reports_api(request):
     })
 
 # Notification Views
+from .notification_utils import send_gmail_notification, send_bulk_gmail_notifications
+
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
@@ -2314,7 +2322,18 @@ class NotificationViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(created_by=request.user)
+            notification = serializer.save(created_by=request.user)
+            
+            # Send Gmail notification automatically
+            try:
+                if notification.is_global:
+                    send_bulk_gmail_notifications(notification)
+                else:
+                    send_gmail_notification(notification)
+            except Exception as e:
+                print(f"Error sending Gmail notification: {str(e)}")
+                # Don't fail the notification creation if email fails
+            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -2481,6 +2500,12 @@ def create_status_change_notification(appointment, old_status, new_status, admin
             is_global=False
         )
         
+        # Send Gmail notification
+        try:
+            send_gmail_notification(notification, appointment=appointment)
+        except Exception as e:
+            print(f"Error sending Gmail notification for status change: {str(e)}")
+        
         print(f"Created notification {notification.id} for user {target_user.username}")
         return notification
         
@@ -2511,6 +2536,12 @@ def create_exam_results_notification(exam_type, exam_year, score_count, admin_us
             is_read=False,
             is_global=True  # This makes it visible to all users
         )
+        
+        # Send Gmail notifications to all users
+        try:
+            send_bulk_gmail_notifications(notification)
+        except Exception as e:
+            print(f"Error sending Gmail notifications for exam results: {str(e)}")
         
         print(f"Created global exam results notification {notification.id} for {exam_type} ({exam_year})")
         return notification
@@ -2543,9 +2574,86 @@ def create_exam_scores_notification(exam_type, exam_year, score_count, admin_use
             is_global=True  # This makes it visible to all users
         )
         
+        # Send Gmail notifications to all users
+        try:
+            send_bulk_gmail_notifications(notification)
+        except Exception as e:
+            print(f"Error sending Gmail notifications for exam scores: {str(e)}")
+        
         print(f"Created global exam results notification {notification.id} for {exam_type} ({exam_year})")
         return notification
         
     except Exception as e:
         print(f"Error creating exam results notification: {str(e)}")
         return None
+
+# Test endpoint for Gmail notifications
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def test_gmail_notification(request):
+    """Test Gmail notification functionality"""
+    try:
+        # Create a test notification
+        notification = Notification.objects.create(
+            user=request.user,
+            title="Test Gmail Notification",
+            message="This is a test Gmail notification to verify the email system is working properly.",
+            type='system',
+            priority='normal',
+            icon='info-circle',
+            link='/profile',
+            created_by=request.user,
+            is_read=False,
+            is_global=False
+        )
+        
+        # Send Gmail notification
+        success = send_gmail_notification(notification)
+        
+        return Response({
+            'success': success,
+            'message': 'Gmail notification test completed',
+            'notification_id': notification.id,
+            'email_sent': success
+        })
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def test_bulk_gmail_notification(request):
+    """Test bulk Gmail notification functionality"""
+    try:
+        # Create a test global notification
+        notification = Notification.objects.create(
+            user=None,
+            title="Test Global Gmail Notification",
+            message="This is a test global Gmail notification sent to all users to verify the bulk email system is working.",
+            type='system',
+            priority='normal',
+            icon='bullhorn',
+            link='/notifications',
+            created_by=request.user,
+            is_read=False,
+            is_global=True
+        )
+        
+        # Send bulk Gmail notifications
+        success = send_bulk_gmail_notifications(notification)
+        
+        return Response({
+            'success': success,
+            'message': 'Bulk Gmail notification test completed',
+            'notification_id': notification.id,
+            'emails_sent': success
+        })
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

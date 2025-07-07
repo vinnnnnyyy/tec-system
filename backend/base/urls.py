@@ -12,7 +12,8 @@ from .views import (
     get_student_exam_score, import_scores_api, get_exam_years,
     get_dashboard_stats, get_recent_appointments, reset_test_session_rooms,
     search_public_exam_scores, get_public_test_sessions, get_reports_statistics,
-    test_reports_api, NotificationViewSet, create_test_notification
+    test_reports_api, NotificationViewSet, create_test_notification,
+    test_gmail_notification, test_bulk_gmail_notification
 )
 from .date_availability_view import program_availability
 from .auth_views import (
@@ -61,8 +62,10 @@ urlpatterns = [
     path('admin/reports/statistics/', get_reports_statistics, name='get_reports_statistics'),
     path('test/reports/', test_reports_api, name='test_reports_api'),
     
-    # Test notification endpoint
+    # Test notification endpoints
     path('test/create-notification/', create_test_notification, name='create_test_notification'),
+    path('test/gmail-notification/', test_gmail_notification, name='test_gmail_notification'),
+    path('test/bulk-gmail-notification/', test_bulk_gmail_notification, name='test_bulk_gmail_notification'),
     
     # Then include the router URLs
     path('', include(router.urls)),

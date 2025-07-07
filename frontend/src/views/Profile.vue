@@ -150,6 +150,20 @@
                 <div v-else-if="appointment.status === 'approved' && !appointment.exam_score">
                   <i class="fas fa-hourglass-half text-gray-400 text-xl sm:text-2xl mb-2"></i>
                   <p class="text-xs sm:text-sm text-gray-600 mb-3">Score is being processed</p>
+                  
+                  <!-- Download Application Form Button for Approved Appointments -->
+                  <div class="mb-4">
+                    <button 
+                      @click="downloadApplicationForm(appointment)" 
+                      :disabled="isGeneratingPdf"
+                      class="w-full sm:w-auto bg-crimson-600 hover:bg-crimson-700 text-white py-2.5 px-5 rounded-lg flex items-center justify-center transition-colors duration-200 text-sm font-medium mb-3"
+                      aria-label="Download Application Form"
+                    >
+                      <i :class="isGeneratingPdf ? 'fas fa-spinner fa-spin' : 'fas fa-file-pdf'" class="mr-2"></i>
+                      {{ isGeneratingPdf ? 'Generating PDF...' : 'Download Application Form' }}
+                    </button>
+                  </div>
+                  
                   <!-- Simple View Scores Button (no password required) -->
                   <button 
                     @click="fetchScoresForAppointment(appointment)" 
@@ -296,6 +310,7 @@ export default {
       detailedScores: null,
       scoreModelInfo: null,
       loadingScores: false,
+      isGeneratingPdf: false,
       showSecureSearchVerification: false,
       secureSearchForm: {
         password: '',
@@ -313,6 +328,23 @@ export default {
   created() {
     this.fetchUserProfile()
     this.fetchAppointments()
+  },
+  mounted() {
+    // Check for download form URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const downloadFormId = urlParams.get('download_form');
+    
+    if (downloadFormId) {
+      // Wait for appointments to load, then trigger download
+      this.$nextTick(() => {
+        setTimeout(() => {
+          const appointment = this.appointments.find(app => app.id == downloadFormId);
+          if (appointment && appointment.status === 'approved') {
+            this.downloadApplicationForm(appointment);
+          }
+        }, 1000); // Wait 1 second for data to load
+      });
+    }
   },
   methods: {
     async fetchUserProfile() {
@@ -493,6 +525,109 @@ export default {
       this.secureSearchForm.password = '';
       this.secureSearchForm.error = '';
       this.secureSearchForm.loading = false;
+    },
+    
+    async downloadApplicationForm(appointment) {
+      if (!appointment || this.isGeneratingPdf) {
+        console.warn('Cannot download form: No appointment data or PDF generation already in progress.');
+        return;
+      }
+      
+      try {
+        this.isGeneratingPdf = true;
+        this.showToast('Generating application form PDF...', 'info');
+        
+        // Import ApplicationForm component dynamically
+        const { default: ApplicationForm } = await import('@/components/ApplicationForm.vue');
+        
+        // Create a Vue instance with the ApplicationForm component
+        const { createApp } = await import('vue');
+        
+        // Prepare form data from appointment
+        const formData = {
+          appointmentId: appointment.id,
+          fullName: appointment.full_name,
+          email: appointment.email,
+          birthMonth: appointment.birth_month,
+          birthDay: appointment.birth_day,
+          birthYear: appointment.birth_year,
+          gender: {
+            male: appointment.gender === 'Male',
+            female: appointment.gender === 'Female'
+          },
+          age: appointment.age,
+          homeAddress: appointment.home_address,
+          citizenship: appointment.citizenship,
+          contactNumber: appointment.contact_number,
+          programName: appointment.program?.name || 'College Entrance Test',
+          preferredDate: appointment.created_at,
+          applicantType: appointment.applicant_type,
+          schoolName: appointment.school_name,
+          wmsucetExperience: {
+            firstTime: appointment.is_first_time_taking_test,
+            notFirstTime: !appointment.is_first_time_taking_test,
+            timesTaken: appointment.times_taken_test || ''
+          },
+          highSchoolCode: appointment.high_school_code || '',
+          // Test details
+          test_date: appointment.test_session?.exam_date,
+          test_center: appointment.test_center?.name,
+          test_center_code: appointment.test_center?.id,
+          room_number: appointment.test_room?.name || appointment.test_room?.room_code,
+          room_code: appointment.test_room?.room_code,
+          time_slot: appointment.assigned_test_time_slot || appointment.time_slot
+        };
+        
+        // Create a temporary container for the form
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.top = '-9999px';
+        tempContainer.style.width = '8.5in';
+        tempContainer.style.height = '14in';
+        document.body.appendChild(tempContainer);
+        
+        // Create Vue app instance
+        const app = createApp(ApplicationForm, {
+          appointmentData: formData,
+          outputPdfOnly: true,
+          startDownload: true
+        });
+        
+        // Handle PDF generation complete event
+        app.config.globalProperties.$emit = (event, data) => {
+          if (event === 'pdf-generation-complete') {
+            this.isGeneratingPdf = false;
+            document.body.removeChild(tempContainer);
+            
+            if (data.success) {
+              this.showToast('Application form downloaded successfully!', 'success');
+            } else {
+              this.showToast('Failed to generate PDF. Please try again.', 'error');
+              console.error('PDF generation failed:', data.error);
+            }
+          }
+        };
+        
+        // Mount the app
+        const instance = app.mount(tempContainer);
+        
+        // Fallback timeout in case PDF generation fails
+        setTimeout(() => {
+          if (this.isGeneratingPdf) {
+            this.isGeneratingPdf = false;
+            if (document.body.contains(tempContainer)) {
+              document.body.removeChild(tempContainer);
+            }
+            this.showToast('PDF generation timed out. Please try again.', 'error');
+          }
+        }, 30000); // 30 second timeout
+        
+      } catch (error) {
+        console.error('Error downloading application form:', error);
+        this.isGeneratingPdf = false;
+        this.showToast('Failed to download application form. Please try again.', 'error');
+      }
     },
     
     closeSecureSearchModal() {
