@@ -386,6 +386,8 @@ export default {
       try {
         // Emit the submit event with date and time data
         emit('submit', {
+          // Include original appointment ID for proper updating
+          appointmentId: props.originalAppointment.id,
           // Include original appointment data
           fullName: props.originalAppointment.full_name,
           contactNumber: props.originalAppointment.contact_number,

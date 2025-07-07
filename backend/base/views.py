@@ -203,10 +203,48 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         # Store original test_room for room capacity update
         original_test_room = instance.test_room
         
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        if serializer.is_valid():
-            # Perform the update
-            updated_instance = self.perform_update(serializer)
+        # Check if this is a rescheduling operation (date or time changes)
+        is_rescheduling = (
+            'preferred_date' in request.data or 
+            'time_slot' in request.data or 
+            request.data.get('is_rescheduled', False)
+        )
+        
+        # For rescheduling, we need to handle the unique constraint properly
+        if is_rescheduling:
+            # Check if there's actually a conflict with another appointment first
+            new_date = request.data.get('preferred_date', instance.preferred_date)
+            new_time = request.data.get('time_slot', instance.time_slot)
+            
+            # Only check for conflicts if the date/time is actually changing
+            if (str(new_date) != str(instance.preferred_date) or new_time != instance.time_slot):
+                conflicting_appointment = Appointment.objects.filter(
+                    email=instance.email,
+                    program=instance.program,
+                    preferred_date=new_date,
+                    time_slot=new_time
+                ).exclude(id=instance.id).first()
+                
+                if conflicting_appointment:
+                    return Response({
+                        "error": "You already have an appointment scheduled for this date and time slot. Please select a different date or time slot."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # If no conflict, proceed with the update
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            if serializer.is_valid():
+                # Temporarily remove the unique constraint by excluding the current instance
+                # This allows us to update the same appointment even if it's to the same date/time
+                updated_instance = self.perform_update(serializer)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            # Normal update (not rescheduling)
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            if serializer.is_valid():
+                updated_instance = self.perform_update(serializer)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
             # Check if status was changed and create notification
             new_status = updated_instance.status

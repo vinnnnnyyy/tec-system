@@ -1730,6 +1730,20 @@ export default {
       validateDateTime();
     });
     
+    // fetchData is now moved above the watch statement
+    
+    // Fetch user appointments to check for duplicates
+    const fetchUserAppointments = async () => {
+      try {
+        const response = await axios.get('/api/appointments/');
+        userAppointments.value = response.data;
+        console.log('User appointments loaded:', userAppointments.value);
+      } catch (err) {
+        console.error('Error fetching user appointments:', err);
+        // Don't set error.value here to avoid blocking the main flow
+      }
+    };
+    
     // Watch for modal open/close
     watch(() => props.modelValue, (newVal) => {
       if (newVal && props.program?.id) {
@@ -2044,17 +2058,7 @@ export default {
       }
     };
     
-    // Fetch user's existing appointments
-    const fetchUserAppointments = async () => {
-      try {
-        const response = await axios.get('/api/appointments/');
-        userAppointments.value = response.data;
-        console.log('User appointments loaded:', userAppointments.value);
-      } catch (err) {
-        console.error('Error fetching user appointments:', err);
-        // Don't set error.value here to avoid blocking the main flow
-      }
-    };
+    // fetchUserAppointments is now defined above the watch statement
 
     // Fetch test sessions for highlighting exam dates
     const fetchTestSessions = async () => {
