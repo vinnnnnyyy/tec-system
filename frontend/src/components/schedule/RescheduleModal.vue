@@ -73,6 +73,7 @@
                       v-model="formData.preferredDate" 
                       v-model:timeSlotValue="formData.timeSlot"
                       :dateAvailability="enhancedDateAvailability"
+                      :testSessions="localTestSessions"
                       @time-slot-selected="closeCalendarWithDelay"
                     />
                   </div>
@@ -235,6 +236,10 @@ export default {
     dateAvailability: {
       type: Object,
       default: () => ({})
+    },
+    testSessions: {
+      type: Array,
+      default: () => []
     }
   },
   emits: ['update:modelValue', 'submit'],
@@ -248,6 +253,54 @@ export default {
     const isSubmitting = ref(false);
     const dateError = ref('');
     const dateInput = ref(null);
+    const localTestSessions = ref([]);
+    const { showToast } = useToast();
+
+    // Fetch test sessions if they weren't passed as props
+    const fetchTestSessions = async () => {
+      if (props.testSessions && props.testSessions.length > 0) {
+        localTestSessions.value = props.testSessions;
+        return;
+      }
+      
+      try {
+        // Try different endpoints to find the working one
+        const endpoints = [
+          '/api/public/test-sessions/',  // Public endpoint (no auth required)
+          '/api/admin/test-sessions/'    // Admin endpoint (auth required)
+        ];
+        
+        let response = null;
+        
+        for (const endpoint of endpoints) {
+          try {
+            // Use fetch to avoid importing axios here
+            const res = await fetch(endpoint);
+            if (res.ok) {
+              response = await res.json();
+              break;
+            }
+          } catch (err) {
+            console.log(`Failed to fetch from ${endpoint}`, err.message);
+            continue;
+          }
+        }
+        
+        if (!response) {
+          console.warn('No test sessions available');
+          localTestSessions.value = [];
+          return;
+        }
+        
+        localTestSessions.value = response;
+        console.log('Test sessions loaded for reschedule modal:', localTestSessions.value.length);
+      } catch (err) {
+        console.error('Error fetching test sessions for reschedule modal:', err);
+        localTestSessions.value = [];
+        showToast('Failed to load test session dates', 'error');
+      }
+    };
+
     const showCalendar = ref(false);
     
     // Create a computed property to ensure capacity always matches current program
@@ -292,8 +345,13 @@ export default {
       
       return enhanced;
     });
-    
-    const { showToast } = useToast();
+
+    // Watch for modal open to fetch test sessions
+    watch(() => props.modelValue, (newValue) => {
+      if (newValue) {
+        fetchTestSessions();
+      }
+    });
 
     // Date validation function
     const validateDateSelection = () => {
@@ -506,6 +564,11 @@ export default {
     onMounted(() => {
       // Add click outside listener
       document.addEventListener('click', handleClickOutside);
+      
+      // Fetch test sessions if modal is already open
+      if (props.modelValue) {
+        fetchTestSessions();
+      }
     });
 
     // Toggle the calendar visibility
@@ -526,6 +589,7 @@ export default {
       isSubmitting,
       dateError,
       dateInput,
+      localTestSessions,
       submitForm,
       confirmSubmit,
       formatDate,
@@ -587,4 +651,4 @@ export default {
   transform: scale(0.95);
   opacity: 0;
 }
-</style> 
+</style>

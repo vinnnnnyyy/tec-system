@@ -134,6 +134,7 @@
       :program="selectedProgram"
       :original-appointment="reschedulingInfo.originalAppointment"
       :date-availability="dateAvailability"
+      :test-sessions="testSessions"
       @submit="handleScheduleSubmit"
     />
 
