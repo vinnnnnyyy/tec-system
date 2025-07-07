@@ -529,12 +529,30 @@
                               <input 
                                 id="seniorGraduatingSchoolAddress"
                                 v-model="formData.seniorGraduating.schoolAddress"
-                                @input="handleTextInput('seniorGraduatingSchoolAddress', 'seniorGraduating.schoolAddress')"
-                                @blur="validateApplicantType()"
+                                @input="handleAddressInput('seniorGraduatingSchoolAddress', 'seniorGraduating.schoolAddress')"
+                                @focus="showAddressSuggestions('seniorGraduatingSchoolAddress')"
+                                @blur="hideAddressSuggestions('seniorGraduatingSchoolAddress')"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
                                 placeholder="Enter your school address"
+                                autocomplete="off"
                               />
+                              <!-- Address Suggestions Dropdown -->
+                              <div v-if="addressSuggestions.seniorGraduatingSchoolAddress.show && addressSuggestions.seniorGraduatingSchoolAddress.results.length > 0"
+                                   class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                <div v-for="(suggestion, index) in addressSuggestions.seniorGraduatingSchoolAddress.results" 
+                                     :key="index"
+                                     @mousedown="selectAddressSuggestion('seniorGraduatingSchoolAddress', suggestion)"
+                                     class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0">
+                                  <div class="text-sm font-medium text-gray-900">{{ suggestion.display_name }}</div>
+                                  <div class="text-xs text-gray-500">{{ suggestion.type }}</div>
+                                </div>
+                              </div>
+                              <!-- Loading indicator -->
+                              <div v-if="addressSuggestions.seniorGraduatingSchoolAddress.loading"
+                                   class="absolute inset-y-0 right-3 flex items-center">
+                                <div class="w-4 h-4 border-2 border-gray-300 border-t-crimson-500 rounded-full animate-spin"></div>
+                              </div>
                             </div>
                           </div>
                           
@@ -580,12 +598,30 @@
                               <input 
                                 id="seniorGraduateSchoolAddress"
                                 v-model="formData.seniorGraduate.schoolAddress"
-                                @input="handleTextInput('seniorGraduateSchoolAddress', 'seniorGraduate.schoolAddress')"
-                                @blur="validateApplicantType()"
+                                @input="handleAddressInput('seniorGraduateSchoolAddress', 'seniorGraduate.schoolAddress')"
+                                @focus="showAddressSuggestions('seniorGraduateSchoolAddress')"
+                                @blur="hideAddressSuggestions('seniorGraduateSchoolAddress')"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
                                 placeholder="Enter your school address"
+                                autocomplete="off"
                               />
+                              <!-- Address Suggestions Dropdown -->
+                              <div v-if="addressSuggestions.seniorGraduateSchoolAddress.show && addressSuggestions.seniorGraduateSchoolAddress.results.length > 0"
+                                   class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                <div v-for="(suggestion, index) in addressSuggestions.seniorGraduateSchoolAddress.results" 
+                                     :key="index"
+                                     @mousedown="selectAddressSuggestion('seniorGraduateSchoolAddress', suggestion)"
+                                     class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0">
+                                  <div class="text-sm font-medium text-gray-900">{{ suggestion.display_name }}</div>
+                                  <div class="text-xs text-gray-500">{{ suggestion.type }}</div>
+                                </div>
+                              </div>
+                              <!-- Loading indicator -->
+                              <div v-if="addressSuggestions.seniorGraduateSchoolAddress.loading"
+                                   class="absolute inset-y-0 right-3 flex items-center">
+                                <div class="w-4 h-4 border-2 border-gray-300 border-t-crimson-500 rounded-full animate-spin"></div>
+                              </div>
                             </div>
                           </div>
                           
@@ -631,12 +667,30 @@
                               <input 
                                 id="collegeSchoolAddress"
                                 v-model="formData.college.schoolAddress"
-                                @input="handleTextInput('collegeSchoolAddress', 'college.schoolAddress')"
-                                @blur="validateApplicantType()"
+                                @input="handleAddressInput('collegeSchoolAddress', 'college.schoolAddress')"
+                                @focus="showAddressSuggestions('collegeSchoolAddress')"
+                                @blur="hideAddressSuggestions('collegeSchoolAddress')"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
                                 placeholder="Enter your college/university address"
+                                autocomplete="off"
                               />
+                              <!-- Address Suggestions Dropdown -->
+                              <div v-if="addressSuggestions.collegeSchoolAddress.show && addressSuggestions.collegeSchoolAddress.results.length > 0"
+                                   class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                <div v-for="(suggestion, index) in addressSuggestions.collegeSchoolAddress.results" 
+                                     :key="index"
+                                     @mousedown="selectAddressSuggestion('collegeSchoolAddress', suggestion)"
+                                     class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0">
+                                  <div class="text-sm font-medium text-gray-900">{{ suggestion.display_name }}</div>
+                                  <div class="text-xs text-gray-500">{{ suggestion.type }}</div>
+                                </div>
+                              </div>
+                              <!-- Loading indicator -->
+                              <div v-if="addressSuggestions.collegeSchoolAddress.loading"
+                                   class="absolute inset-y-0 right-3 flex items-center">
+                                <div class="w-4 h-4 border-2 border-gray-300 border-t-crimson-500 rounded-full animate-spin"></div>
+                              </div>
                             </div>
                           </div>
                           
@@ -979,6 +1033,28 @@ export default {
     const citizenshipOptions = ref(citizenshipsData);
     const zamboanganSchools = ref(allZamboanganSchoolsFull);
     
+    // Address autocomplete state
+    const addressSuggestions = ref({
+      seniorGraduatingSchoolAddress: {
+        show: false,
+        loading: false,
+        results: []
+      },
+      seniorGraduateSchoolAddress: {
+        show: false,
+        loading: false,
+        results: []
+      },
+      collegeSchoolAddress: {
+        show: false,
+        loading: false,
+        results: []
+      }
+    });
+    
+    // Debounce timer for address search
+    let addressSearchTimeout = null;
+    
     // Function to mark field as touched
     const markAsTouched = (fieldName) => {
       touchedFields.value[fieldName] = true;
@@ -1070,6 +1146,183 @@ export default {
           }
           break;
       }
+    };
+    
+    // Address autocomplete functions
+    const handleAddressInput = (fieldName, modelPath) => {
+      // Get the current input value
+      const keys = modelPath.split('.');
+      let target = formData.value;
+      for (let i = 0; i < keys.length - 1; i++) {
+        target = target[keys[i]];
+      }
+      const finalKey = keys[keys.length - 1];
+      const currentValue = target[finalKey];
+      
+      // Apply auto-capitalization for school address fields
+      const fieldsToUppercase = [
+        'seniorGraduatingSchoolAddress', 'seniorGraduateSchoolAddress', 'collegeSchoolAddress'
+      ];
+      
+      if (fieldsToUppercase.includes(fieldName)) {
+        target[finalKey] = currentValue.toUpperCase();
+      }
+      
+      // Mark field as touched for validation
+      markAsTouched(fieldName);
+      
+      // Trigger validation
+      validateApplicantType();
+      
+      // Get the updated input value after capitalization
+      const inputValue = target[finalKey];
+      
+      // Debounce the address search
+      if (addressSearchTimeout) {
+        clearTimeout(addressSearchTimeout);
+      }
+      
+      // Don't search for very short queries
+      if (!inputValue || inputValue.length < 3) {
+        addressSuggestions.value[fieldName].results = [];
+        addressSuggestions.value[fieldName].show = false;
+        return;
+      }
+      
+      addressSearchTimeout = setTimeout(() => {
+        searchAddresses(fieldName, inputValue);
+      }, 300); // 300ms debounce
+    };
+    
+    const searchAddresses = async (fieldName, query) => {
+      if (!query || query.length < 3) return;
+      
+      addressSuggestions.value[fieldName].loading = true;
+      
+      try {
+        // Use OpenStreetMap Nominatim API
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?` +
+          `q=${encodeURIComponent(query)}&` +
+          `format=json&` +
+          `addressdetails=1&` +
+          `limit=8&` +
+          `countrycodes=ph&` + // Limit to Philippines
+          `accept-language=en`
+        );
+        
+        if (!response.ok) throw new Error('Address search failed');
+        
+        const results = await response.json();
+        
+        // Filter and format results for better relevance
+        const filteredResults = results
+          .filter(result => {
+            // Prefer results that are likely to be educational institutions or their addresses
+            const displayName = result.display_name.toLowerCase();
+            const type = result.type?.toLowerCase() || '';
+            const categoryClass = result.class?.toLowerCase() || '';
+            
+            // Include educational institutions, addresses, and places
+            return (
+              displayName.includes('school') ||
+              displayName.includes('university') ||
+              displayName.includes('college') ||
+              displayName.includes('institute') ||
+              type.includes('education') ||
+              categoryClass.includes('amenity') ||
+              type.includes('house') ||
+              type.includes('road') ||
+              type.includes('suburb') ||
+              type.includes('city') ||
+              type.includes('town') ||
+              type.includes('village') ||
+              type.includes('administrative')
+            );
+          })
+          .map(result => ({
+            display_name: result.display_name,
+            type: result.type || 'address',
+            importance: result.importance || 0
+          }))
+          .sort((a, b) => {
+            // Prioritize educational institutions
+            const aIsSchool = a.display_name.toLowerCase().includes('school') ||
+                            a.display_name.toLowerCase().includes('university') ||
+                            a.display_name.toLowerCase().includes('college');
+            const bIsSchool = b.display_name.toLowerCase().includes('school') ||
+                            b.display_name.toLowerCase().includes('university') ||
+                            b.display_name.toLowerCase().includes('college');
+            
+            if (aIsSchool && !bIsSchool) return -1;
+            if (!aIsSchool && bIsSchool) return 1;
+            
+            // Then sort by importance
+            return (b.importance || 0) - (a.importance || 0);
+          });
+        
+        addressSuggestions.value[fieldName].results = filteredResults;
+        addressSuggestions.value[fieldName].show = filteredResults.length > 0;
+        
+      } catch (error) {
+        console.error('Address search error:', error);
+        addressSuggestions.value[fieldName].results = [];
+        addressSuggestions.value[fieldName].show = false;
+      } finally {
+        addressSuggestions.value[fieldName].loading = false;
+      }
+    };
+    
+    const selectAddressSuggestion = (fieldName, suggestion) => {
+      // Determine the model path based on field name
+      let modelPath;
+      if (fieldName === 'seniorGraduatingSchoolAddress') {
+        modelPath = 'seniorGraduating.schoolAddress';
+      } else if (fieldName === 'seniorGraduateSchoolAddress') {
+        modelPath = 'seniorGraduate.schoolAddress';
+      } else if (fieldName === 'collegeSchoolAddress') {
+        modelPath = 'college.schoolAddress';
+      }
+      
+      // Set the selected address with auto-capitalization
+      const keys = modelPath.split('.');
+      let target = formData.value;
+      for (let i = 0; i < keys.length - 1; i++) {
+        target = target[keys[i]];
+      }
+      const finalKey = keys[keys.length - 1];
+      
+      // Apply auto-capitalization to the selected suggestion
+      const fieldsToUppercase = [
+        'seniorGraduatingSchoolAddress', 'seniorGraduateSchoolAddress', 'collegeSchoolAddress'
+      ];
+      
+      if (fieldsToUppercase.includes(fieldName)) {
+        target[finalKey] = suggestion.display_name.toUpperCase();
+      } else {
+        target[finalKey] = suggestion.display_name;
+      }
+      
+      // Hide suggestions
+      addressSuggestions.value[fieldName].show = false;
+      addressSuggestions.value[fieldName].results = [];
+      
+      // Trigger validation
+      validateApplicantType();
+    };
+    
+    const showAddressSuggestions = (fieldName) => {
+      // Show suggestions if we have results
+      if (addressSuggestions.value[fieldName].results.length > 0) {
+        addressSuggestions.value[fieldName].show = true;
+      }
+    };
+    
+    const hideAddressSuggestions = (fieldName) => {
+      // Delay hiding to allow for selection
+      setTimeout(() => {
+        addressSuggestions.value[fieldName].show = false;
+      }, 150);
     };
     
     // Computed property for birth years (100 years back from current year)
@@ -1563,7 +1816,6 @@ export default {
           middleName: '',
           contactNumber: '',
           email: '',
-          schoolName: '',
           birthDate: '',
           gender: '',
           age: '',
@@ -2291,6 +2543,12 @@ export default {
       isFieldInvalid,
       getInputClasses,
       handleTextInput,
+      handleAddressInput,
+      searchAddresses,
+      selectAddressSuggestion,
+      showAddressSuggestions,
+      hideAddressSuggestions,
+      addressSuggestions,
       calculateAndSetAge,
       currentStep,
       nextStep,
