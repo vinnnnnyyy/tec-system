@@ -159,6 +159,7 @@ class Appointment(models.Model):
 # Exam Score Model
 class ExamScore(models.Model):
     appointment = models.OneToOneField(Appointment, on_delete=models.CASCADE, related_name='exam_score', null=True, blank=True)
+    program = models.ForeignKey(Program, on_delete=models.SET_NULL, related_name='exam_scores', null=True, blank=True)
     app_no = models.CharField(max_length=50, null=True, blank=True)
     name = models.CharField(max_length=255, null=True, blank=True)
     school = models.CharField(max_length=255, null=True, blank=True)

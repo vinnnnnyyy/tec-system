@@ -1082,10 +1082,24 @@ def import_scores_api(request):
         
     csv_file = request.FILES['file']
     exam_type = request.data.get('examType', '')
-    exam_year = request.data.get('year', '')
+    exam_year = request.data.get('examYear', '') or request.data.get('year', '')
+    program_id = request.data.get('program_id')
     
     print(f"Processing file: {csv_file.name}, exam type: {exam_type}, exam year: {exam_year}")
+    print(f"Program ID received: {program_id}, type: {type(program_id)}")
     print(f"Raw request data: {dict(request.data)}")
+    
+    # Check if program_id exists in the database
+    if program_id:
+        try:
+            program = Program.objects.get(id=program_id)
+            print(f"Found program in database: {program} (ID: {program.id})")
+        except Program.DoesNotExist:
+            print(f"Warning: Program with ID {program_id} does not exist in the database")
+        except ValueError:
+            print(f"Warning: Invalid program_id format: {program_id}")
+    else:
+        print("Warning: No program_id received in request")
     
     if not exam_year:
         print("WARNING: No exam year provided, using current year as fallback")
@@ -1188,6 +1202,17 @@ def import_scores_api(request):
             )
             print(f"Base query count (approved + school '{school}'): {base_query.count()}")
             
+            # If program_id is provided, filter by program_id for more accurate matching
+            if program_id:
+                try:
+                    program_id_int = int(program_id) if isinstance(program_id, str) else program_id
+                    program_filtered = base_query.filter(program_id=program_id_int)
+                    print(f"Program filtered (program_id={program_id}): {program_filtered.count()}")
+                    if program_filtered.exists():
+                        base_query = program_filtered
+                except (ValueError, TypeError):
+                    print(f"Invalid program_id format: {program_id}, ignoring program filter")
+            
             # If no school match, try more flexible school matching
             if not base_query.exists():
                 print("No exact school match, trying flexible school matching...")
@@ -1198,6 +1223,18 @@ def import_scores_api(request):
                 print(f"Flexible school query count: {flexible_school_query.count()}")
                 if flexible_school_query.exists():
                     print(f"Found schools: {[apt.school_name for apt in flexible_school_query]}")
+                    
+                    # If program_id is provided, filter flexible matches by program_id too
+                    if program_id:
+                        try:
+                            program_id_int = int(program_id) if isinstance(program_id, str) else program_id
+                            program_filtered = flexible_school_query.filter(program_id=program_id_int)
+                            if program_filtered.exists():
+                                print(f"Program filtered flexible: {program_filtered.count()}")
+                                flexible_school_query = program_filtered
+                        except (ValueError, TypeError):
+                            print(f"Invalid program_id format: {program_id}, using all flexible matches")
+                    
                     base_query = flexible_school_query
             
             # Step 3: Try EXACT component matching first (most strict)
@@ -1286,6 +1323,20 @@ def import_scores_api(request):
                 print(f"Selected appointment: ID {appointment.id}: {appointment.full_name}")
                 print(f"CSV data: app_no={app_no}, oapr={oapr}, parts=[{part1},{part2},{part3},{part4},{part5}]")
                 
+                # Get program from program_id if provided, otherwise use appointment's program
+                program_obj = None
+                if program_id:
+                    try:
+                        # Convert to integer if it's a string
+                        program_id_int = int(program_id) if isinstance(program_id, str) else program_id
+                        program_obj = Program.objects.get(id=program_id_int)
+                        print(f"Using provided program ID {program_id}: {program_obj}")
+                    except (Program.DoesNotExist, ValueError, TypeError) as e:
+                        print(f"Program with ID {program_id} not found or invalid: {str(e)}, falling back to appointment's program")
+                        program_obj = appointment.program
+                else:
+                    program_obj = appointment.program
+                
                 # Check if score already exists to avoid duplicates
                 existing_score = ExamScore.objects.filter(appointment=appointment).first()
                 if existing_score:
@@ -1305,7 +1356,14 @@ def import_scores_api(request):
                     existing_score.exam_type = exam_type
                     existing_score.year = exam_year
                     existing_score.imported_by = request.user
+                    
+                    # Update program if we have one from program_id
+                    if program_obj:
+                        existing_score.program = program_obj
+                        print(f"Updated score program to: {program_obj}")
+                    
                     existing_score.save()
+                    print(f"After save, score program_id: {existing_score.program_id}")
                     updated_count += 1
                     print(f"Updated score for {appointment.full_name} with OAPR: {oapr}")
                 else:
@@ -1313,6 +1371,7 @@ def import_scores_api(request):
                     # Create new score
                     new_score = ExamScore.objects.create(
                         appointment=appointment,
+                        program=program_obj,  # Use the determined program (from program_id or appointment)
                         app_no=app_no,
                         name=full_name,
                         school=school,
@@ -1328,15 +1387,29 @@ def import_scores_api(request):
                         year=exam_year,
                         imported_by=request.user
                     )
+                    print(f"After creation, score program_id: {new_score.program_id}")
                     matched_count += 1
-                    print(f"Created new score for {appointment.full_name} with OAPR: {oapr}")
+                    print(f"Created new score for {appointment.full_name} with OAPR: {oapr} and program: {program_obj}")
                 
                 print(f"Score processed for appointment {appointment.id}")
                 print("---")
             else:
+                # Create unmatched score with program_id if available
+                # Try to get the Program from program_id if provided
+                program = None
+                if program_id:
+                    try:
+                        # Convert to integer if it's a string
+                        program_id_int = int(program_id) if isinstance(program_id, str) else program_id
+                        program = Program.objects.get(id=program_id_int)
+                        print(f"Found program for ID {program_id}: {program}")
+                    except (Program.DoesNotExist, ValueError, TypeError) as e:
+                        print(f"Program with ID {program_id} not found or invalid: {str(e)}")
+                
                 # Create unmatched score
-                ExamScore.objects.create(
+                unmatched_score = ExamScore.objects.create(
                     appointment=None,
+                    program=program,  # Link directly to program if available
                     app_no=app_no,
                     name=full_name,  # Use constructed full name
                     school=school,
@@ -1352,6 +1425,7 @@ def import_scores_api(request):
                     year=exam_year,
                     imported_by=request.user
                 )
+                print(f"Created unmatched score with ID {unmatched_score.id}, program: {program}")
                 created_count += 1
                 unmatched_count += 1
             

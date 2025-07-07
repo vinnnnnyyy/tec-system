@@ -93,10 +93,19 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Select Exam Type</label>
                 <select v-model="selectedExamType" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 transition-colors duration-200 text-sm">
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 transition-colors duration-200 text-sm"
+                        @change="updateSelectedProgramId">
                   <option value="">Choose an exam type</option>
                   <option v-for="exam in examTypes" :key="exam.value" :value="exam.value">{{ exam.label }}</option>
                 </select>
+                <p v-if="selectedProgramId" class="mt-1 text-xs text-green-600">
+                  <i class="fas fa-check-circle mr-1"></i>
+                  Program ID: {{ selectedProgramId }} (Will be used to match appointments)
+                </p>
+                <p v-else-if="selectedExamType" class="mt-1 text-xs text-amber-600">
+                  <i class="fas fa-exclamation-circle mr-1"></i>
+                  No program ID found for this exam type. Matching might be less accurate.
+                </p>
               </div>
 
               <!-- Exam Year Selection -->
@@ -232,7 +241,9 @@ export default {
       selectedFile: null,
       selectedExamType: '',
       selectedExamYear: '',
-      examTypes: [], // Will be populated from backend
+      selectedProgramId: null, // Store the program ID associated with the selected exam type
+      examTypes: [], // Will be populated from backend with program ID mapping
+      programMapping: {}, // Map from exam type code to program ID
       availableYears: [], // Will be populated based on the current year
       loading: false,
       error: null,
@@ -317,6 +328,8 @@ export default {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         const apiUrlWithoutTrailingSlash = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
         
+        console.log(`Fetching programs from ${apiUrlWithoutTrailingSlash}/api/programs/`);
+        
         // Try different possible API endpoints
         let response = null;
         let lastError = null;
@@ -344,41 +357,54 @@ export default {
         
         // Process the API response
         if (Array.isArray(response.data)) {
+          // Store both code and program ID
           this.examTypes = response.data.map(program => ({
             value: program.code,
-            label: `${program.code} - ${program.name}`
+            label: `${program.code} - ${program.name}`,
+            programId: program.id
           }));
+          
+          // Create mapping from exam type code to program ID
+          this.programMapping = {};
+          response.data.forEach(program => {
+            this.programMapping[program.code] = program.id;
+            console.log(`Mapped ${program.code} to program ID ${program.id}`);
+          });
         } else if (response.data.results && Array.isArray(response.data.results)) {
           // Handle paginated response
           this.examTypes = response.data.results.map(program => ({
             value: program.code,
-            label: `${program.code} - ${program.name}`
+            label: `${program.code} - ${program.name}`,
+            programId: program.id
           }));
+          
+          // Create mapping from exam type code to program ID
+          this.programMapping = {};
+          response.data.results.forEach(program => {
+            this.programMapping[program.code] = program.id;
+            console.log(`Mapped ${program.code} to program ID ${program.id}`);
+          });
         } else {
           console.error('Unexpected response format:', response.data);
           
           // Fallback to static exam types if API response format is unexpected
           this.examTypes = [
-            { value: 'CET', label: 'CET - College Entrance Test' },
-            { value: 'NAT', label: 'NAT - National Achievement Test' },
-            { value: 'LSAT', label: 'LSAT - Law School Admission Test' },
-            { value: 'EAT', label: 'EAT - Engineering Aptitude Test' },
-            { value: 'MAT', label: 'MAT - Medical Admission Test' }
+            { value: 'CET', label: 'CET - College Entrance Test', programId: null },
+            { value: 'NAT', label: 'NAT - National Achievement Test', programId: null },
+            { value: 'LSAT', label: 'LSAT - Law School Admission Test', programId: null },
+            { value: 'EAT', label: 'EAT - Engineering Aptitude Test', programId: null },
+            { value: 'MAT', label: 'MAT - Medical Admission Test', programId: null }
           ];
           
           this.error = 'Warning: Using default exam types. Server returned invalid format.';
         }
+        
+        // If we have a selected exam type, update the program ID
+        if (this.selectedExamType) {
+          this.updateSelectedProgramId();
+        }
       } catch (error) {
         console.error('Error fetching program codes:', error);
-        
-        // Fallback to static exam types if API request fails
-        this.examTypes = [
-          { value: 'CET', label: 'CET - College Entrance Test' },
-          { value: 'NAT', label: 'NAT - National Achievement Test' },
-          { value: 'LSAT', label: 'LSAT - Law School Admission Test' },
-          { value: 'EAT', label: 'EAT - Engineering Aptitude Test' },
-          { value: 'MAT', label: 'MAT - Medical Admission Test' }
-        ];
         
         // Set appropriate error message
         if (error.response) {
@@ -392,6 +418,15 @@ export default {
           console.error('Error setting up request:', error.message);
           this.error = 'Error setting up request. Using default exam types.';
         }
+        
+        // Fallback to static exam types
+        this.examTypes = [
+          { value: 'CET', label: 'CET - College Entrance Test', programId: null },
+          { value: 'NAT', label: 'NAT - National Achievement Test', programId: null },
+          { value: 'LSAT', label: 'LSAT - Law School Admission Test', programId: null },
+          { value: 'EAT', label: 'EAT - Engineering Aptitude Test', programId: null },
+          { value: 'MAT', label: 'MAT - Medical Admission Test', programId: null }
+        ];
       } finally {
         this.loading = false;
       }
@@ -427,6 +462,42 @@ export default {
       }
       
       this.selectedFile = file;
+    },
+    updateSelectedProgramId() {
+      // Reset the program ID if no exam type is selected
+      if (!this.selectedExamType) {
+        this.selectedProgramId = null;
+        return;
+      }
+      
+      console.log('Updating program ID for exam type:', this.selectedExamType);
+      console.log('Program mapping:', this.programMapping);
+      console.log('Exam types:', this.examTypes);
+      
+      // Try to find the program ID from the mapping first
+      if (this.programMapping && this.programMapping[this.selectedExamType]) {
+        this.selectedProgramId = this.programMapping[this.selectedExamType];
+        console.log(`Selected exam type: ${this.selectedExamType}, mapped to program ID: ${this.selectedProgramId}`);
+        return;
+      }
+      
+      // If not found in the mapping, look directly in the examTypes array
+      const matchingExam = this.examTypes.find(exam => exam.value === this.selectedExamType);
+      if (matchingExam && matchingExam.programId) {
+        this.selectedProgramId = matchingExam.programId;
+        console.log(`Found program ID ${this.selectedProgramId} directly from examTypes array`);
+        return;
+      }
+      
+      // If still not found, log a warning and set to null
+      console.warn(`Could not find program ID for exam type: ${this.selectedExamType}`);
+      this.selectedProgramId = null;
+      
+      // If we couldn't find a program ID, try to fetch programs again
+      if (!this.selectedProgramId) {
+        console.log('No program ID found, trying to fetch programs again...');
+        this.fetchProgramCodes();
+      }
     },
     formatFileSize(bytes) {
       if (bytes < 1024) {
@@ -465,14 +536,31 @@ export default {
       formData.append('examType', this.selectedExamType);
       formData.append('examYear', this.selectedExamYear);
       
+      // Add program_id if available
+      if (this.selectedProgramId) {
+        // Make sure it's a string - the Django REST framework expects string values in FormData
+        formData.append('program_id', String(this.selectedProgramId));
+        console.log(`Including program_id ${this.selectedProgramId} in import request`);
+      } else {
+        // Warning message but continue with import
+        console.warn('No program ID available for the selected exam type. Scores may not be properly categorized.');
+        this.showToast('Warning: No program ID found for the selected exam type. Scores may not be properly categorized.', 'warning');
+      }
+      
       // Add file structure information for the backend
       const fileStructure = 'app_no,lastname,firstname,middlename,school,date,part1,part2,part3,part4,part5,oapr';
       formData.append('file_structure', fileStructure); 
       formData.append('has_headers', 'true');
       
+      // Debug the form data
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}: ${key === 'file' ? value.name : value}`);
+      }
+      
       console.log('Sending import with structure:', fileStructure);
       
-      try {        // Try multiple URLs in sequence - from most specific to most general
+      try {
+        // Try multiple URLs in sequence - from most specific to most general
         const urls = [
           `${apiUrlWithoutTrailingSlash}/api/appointments/import-scores/`,
           `${apiUrlWithoutTrailingSlash}/api/admin/import-scores/`,
