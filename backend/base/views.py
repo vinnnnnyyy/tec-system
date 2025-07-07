@@ -2537,13 +2537,9 @@ def create_exam_results_notification(exam_type, exam_year, score_count, admin_us
             is_global=True  # This makes it visible to all users
         )
         
-        # Send Gmail notifications to all users
-        try:
-            send_bulk_gmail_notifications(notification)
-        except Exception as e:
-            print(f"Error sending Gmail notifications for exam results: {str(e)}")
-        
-        print(f"Created global exam results notification {notification.id} for {exam_type} ({exam_year})")
+        # Note: Gmail notifications are only sent for appointment-related events
+        # Exam results notifications are only shown in the web interface
+        print(f"Created global exam results notification {notification.id} for {exam_type} ({exam_year}) - web notification only")
         return notification
         
     except Exception as e:
@@ -2593,12 +2589,12 @@ def create_exam_scores_notification(exam_type, exam_year, score_count, admin_use
 def test_gmail_notification(request):
     """Test Gmail notification functionality"""
     try:
-        # Create a test notification
+        # Create a test notification (using appointment type since only appointments send Gmail)
         notification = Notification.objects.create(
             user=request.user,
             title="Test Gmail Notification",
             message="This is a test Gmail notification to verify the email system is working properly.",
-            type='system',
+            type='appointment',  # Changed to appointment so it actually sends
             priority='normal',
             icon='info-circle',
             link='/profile',

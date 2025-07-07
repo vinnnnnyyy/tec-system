@@ -82,8 +82,19 @@ Thank you,
             """,
             "html": f"""
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
-    <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #8B0000; margin: 0;">Your Test Details Are Ready</h1>
+    <!-- Header with WMSU Logo -->
+    <div style="text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #8B0000 0%, #A0002A 100%); border-radius: 5px; color: white;">
+        <img src="https://wmsu.edu.ph/wp-content/uploads/2024/05/site_logo.png" 
+             alt="WMSU Logo" 
+             style="height: 50px; width: auto; margin-bottom: 10px; filter: brightness(0) invert(1);"
+             onerror="this.style.display='none'">
+        <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px; opacity: 0.9;">
+            Western Mindanao State University
+        </div>
+        <div style="font-size: 12px; opacity: 0.8; margin-bottom: 15px;">
+            Testing and Evaluation Center
+        </div>
+        <h1 style="color: white; margin: 0; font-size: 20px;">Your Test Details Are Ready</h1>
     </div>
 
     <p>Hello {full_name},</p>
@@ -152,8 +163,14 @@ Thank you,
 def send_gmail_notification(notification, user_email=None, appointment=None):
     """
     Send Gmail SMTP notification based on a Notification object
+    Only sends emails for appointment-related notifications
     """
     try:
+        # Only send Gmail notifications for appointment-related events
+        if notification.type != 'appointment':
+            print(f"Skipping Gmail notification for type '{notification.type}' - only appointment notifications are sent via email")
+            return True  # Return True to indicate success (notification was processed)
+        
         # Determine recipient email
         if user_email:
             recipient_email = user_email
@@ -193,6 +210,20 @@ def send_gmail_notification(notification, user_email=None, appointment=None):
         
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #8B0000 0%, #A0002A 100%); color: white; padding: 30px 20px; text-align: center;">
+            <!-- WMSU Logo -->
+            <div style="margin-bottom: 20px;">
+                <img src="https://wmsu.edu.ph/wp-content/uploads/2024/05/site_logo.png" 
+                     alt="WMSU Logo" 
+                     style="height: 60px; width: auto; margin-bottom: 10px; filter: brightness(0) invert(1);"
+                     onerror="this.style.display='none'">
+                <div style="font-size: 14px; font-weight: bold; margin-top: 5px; opacity: 0.9;">
+                    Western Mindanao State University
+                </div>
+                <div style="font-size: 12px; opacity: 0.8;">
+                    Testing and Evaluation Center
+                </div>
+            </div>
+            
             <h1 style="margin: 0; font-size: 24px; font-weight: bold;">
                 <i class="fas fa-{notification.icon}" style="margin-right: 10px;"></i>
                 {notification.title}
@@ -319,7 +350,13 @@ def get_action_button_html(notification):
 def send_bulk_gmail_notifications(notification):
     """
     Send Gmail notifications to multiple users for global notifications
+    Only sends emails for appointment-related notifications
     """
+    # Only send Gmail notifications for appointment-related events
+    if notification.type != 'appointment':
+        print(f"Skipping bulk Gmail notification for type '{notification.type}' - only appointment notifications are sent via email")
+        return True  # Return True to indicate success (notification was processed)
+    
     if not notification.is_global:
         # For non-global notifications, send to specific user
         return send_gmail_notification(notification)
@@ -345,17 +382,25 @@ def send_bulk_gmail_notifications(notification):
 def send_notification_digest_email(user, notifications):
     """
     Send a digest email with multiple notifications to a user
+    Only includes appointment-related notifications in email digests
     """
     try:
         if not user.email:
             return False
         
+        # Filter notifications to only include appointment-related ones for email
+        appointment_notifications = [n for n in notifications if n.type == 'appointment']
+        
+        if not appointment_notifications:
+            print(f"No appointment notifications to send in digest for user {user.email}")
+            return True  # Return True as this is not an error
+        
         recipient_name = user.get_full_name() or user.username
-        subject = f"[TEC] You have {len(notifications)} new notifications"
+        subject = f"[TEC] You have {len(appointment_notifications)} new appointment notifications"
         
         # Create HTML content for digest
         notifications_html = ""
-        for notification in notifications:
+        for notification in appointment_notifications:
             notifications_html += f"""
             <div style="border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin: 10px 0; background-color: #fafafa;">
                 <h4 style="margin: 0 0 10px 0; color: #8B0000;">
@@ -381,10 +426,24 @@ def send_notification_digest_email(user, notifications):
         
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #8B0000 0%, #A0002A 100%); color: white; padding: 30px 20px; text-align: center;">
+            <!-- WMSU Logo -->
+            <div style="margin-bottom: 20px;">
+                <img src="https://wmsu.edu.ph/wp-content/uploads/2024/05/site_logo.png" 
+                     alt="WMSU Logo" 
+                     style="height: 60px; width: auto; margin-bottom: 10px; filter: brightness(0) invert(1);"
+                     onerror="this.style.display='none'">
+                <div style="font-size: 14px; font-weight: bold; margin-top: 5px; opacity: 0.9;">
+                    Western Mindanao State University
+                </div>
+                <div style="font-size: 12px; opacity: 0.8;">
+                    Testing and Evaluation Center
+                </div>
+            </div>
+            
             <h1 style="margin: 0; font-size: 24px; font-weight: bold;">
                 <i class="fas fa-bell"></i> Notification Digest
             </h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">You have {len(notifications)} new notifications</p>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">You have {len(appointment_notifications)} new appointment notifications</p>
         </div>
         
         <!-- Content -->
@@ -394,7 +453,7 @@ def send_notification_digest_email(user, notifications):
             </p>
             
             <p style="color: #555; font-size: 14px; margin: 0 0 20px 0;">
-                Here are your recent notifications from the Testing and Evaluation Center:
+                Here are your recent appointment notifications from the Testing and Evaluation Center:
             </p>
             
             {notifications_html}
@@ -428,10 +487,10 @@ Notification Digest
 
 Hello {recipient_name},
 
-You have {len(notifications)} new notifications from the Testing and Evaluation Center:
+You have {len(appointment_notifications)} new appointment notifications from the Testing and Evaluation Center:
 
 """
-        for i, notification in enumerate(notifications, 1):
+        for i, notification in enumerate(appointment_notifications, 1):
             text_content += f"""
 {i}. {notification.title}
    {notification.message}
@@ -536,68 +595,96 @@ def get_appointment_details_html(notification, appointment=None):
         
         return f"""
         <!-- Appointment Details Section -->
-        <div style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); padding: 25px; border-radius: 8px; margin: 25px 0; border: 1px solid #c3e6cb;">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <div style="background-color: #28a745; color: white; width: 60px; height: 60px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px;">
-                    <span style="font-size: 24px;">✓</span>
-                </div>
-                <div style="background-color: #28a745; color: white; padding: 8px 16px; border-radius: 20px; display: inline-block; font-weight: bold;">
-                    Approved
+        <div style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #c3e6cb; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <!-- Improved Status Badge Layout -->
+            <div style="text-align: center; margin-bottom: 25px;">
+                <div style="display: inline-flex; align-items: center; background-color: #28a745; color: white; padding: 12px 24px; border-radius: 25px; box-shadow: 0 3px 8px rgba(40, 167, 69, 0.3);">
+                    <div style="background-color: rgba(255,255,255,0.2); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                        <span style="font-size: 20px; font-weight: bold;">✓</span>
+                    </div>
+                    <span style="font-size: 18px; font-weight: bold; letter-spacing: 0.5px;">APPROVED</span>
                 </div>
             </div>
             
-            <div style="background-color: rgba(40, 167, 69, 0.1); padding: 20px; border-radius: 6px; border-left: 4px solid #28a745; margin: 20px 0;">
-                <p style="color: #155724; font-size: 16px; margin: 0 0 15px 0; font-weight: bold;">
+            <!-- Congratulations Message -->
+            <div style="background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(195, 230, 203, 0.3) 100%); padding: 25px; border-radius: 10px; border-left: 5px solid #28a745; margin: 25px 0; text-align: center;">
+                <h3 style="color: #155724; font-size: 20px; margin: 0 0 15px 0; font-weight: bold;">
                     🎉 Congratulations! Your application has been approved.
-                </p>
-                <p style="color: #155724; font-size: 14px; margin: 0;">
-                    You are scheduled for the examination on <strong>{test_date}</strong> during the <strong>{formatted_time}</strong> session.
+                </h3>
+                <p style="color: #155724; font-size: 16px; margin: 0; line-height: 1.5;">
+                    You are scheduled for the examination on <strong style="color: #0d4e1a;">{test_date}</strong> during the <strong style="color: #0d4e1a;">{formatted_time}</strong> session.
                 </p>
             </div>
             
-            <div style="margin: 20px 0;">
-                <h3 style="color: #155724; font-size: 18px; margin: 0 0 15px 0; font-weight: bold;">
-                    📍 Test Location Details:
+            <!-- Test Location Card -->
+            <div style="background-color: white; padding: 25px; border-radius: 10px; margin: 25px 0; border: 2px solid #c3e6cb; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <h3 style="color: #155724; font-size: 18px; margin: 0 0 20px 0; font-weight: bold; display: flex; align-items: center;">
+                    <span style="background: linear-gradient(135deg, #28a745, #20c997); color: white; width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 16px;">📍</span>
+                    Test Location Details
                 </h3>
                 
-                <table style="width: 100%; border-collapse: collapse;">
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
                     <tr>
-                        <td style="padding: 8px 0; font-weight: bold; color: #155724; width: 30%;">Test Center:</td>
-                        <td style="padding: 8px 0; color: #155724;">{test_center_name}</td>
+                        <td style="padding: 12px 0; font-weight: bold; color: #155724; width: 35%; border-bottom: 1px solid #e8f5e8;">
+                            <span style="display: inline-flex; align-items: center;">
+                                <span style="width: 6px; height: 6px; background-color: #28a745; border-radius: 50%; margin-right: 10px;"></span>
+                                Test Center:
+                            </span>
+                        </td>
+                        <td style="padding: 12px 0; color: #155724; border-bottom: 1px solid #e8f5e8; font-weight: 500;">{test_center_name}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; font-weight: bold; color: #155724;">Test Room:</td>
-                        <td style="padding: 8px 0; color: #155724;">{room_info}</td>
+                        <td style="padding: 12px 0; font-weight: bold; color: #155724; border-bottom: 1px solid #e8f5e8;">
+                            <span style="display: inline-flex; align-items: center;">
+                                <span style="width: 6px; height: 6px; background-color: #28a745; border-radius: 50%; margin-right: 10px;"></span>
+                                Test Room:
+                            </span>
+                        </td>
+                        <td style="padding: 12px 0; color: #155724; border-bottom: 1px solid #e8f5e8; font-weight: 500;">{room_info}</td>
                     </tr>
-                    {f'<tr><td style="padding: 8px 0; font-weight: bold; color: #155724;">Address:</td><td style="padding: 8px 0; color: #155724;">{test_center_address}</td></tr>' if test_center_address else ''}
+                    {f'<tr><td style="padding: 12px 0; font-weight: bold; color: #155724;"><span style="display: inline-flex; align-items: center;"><span style="width: 6px; height: 6px; background-color: #28a745; border-radius: 50%; margin-right: 10px;"></span>Address:</span></td><td style="padding: 12px 0; color: #155724; font-weight: 500;">{test_center_address}</td></tr>' if test_center_address else ''}
                 </table>
             </div>
             
-            <div style="background-color: #fff3cd; padding: 15px; border-radius: 6px; border-left: 4px solid #ffc107; margin: 20px 0;">
-                <h4 style="color: #856404; margin: 0 0 10px 0; font-size: 16px;">⚠️ Important:</h4>
-                <p style="color: #856404; font-size: 14px; margin: 0 0 10px 0;">
-                    Please arrive 30 minutes before your scheduled time and bring the following:
+            <!-- Important Instructions Card -->
+            <div style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 30%); padding: 20px; border-radius: 10px; border-left: 5px solid #ffc107; margin: 25px 0; box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);">
+                <h4 style="color: #856404; margin: 0 0 15px 0; font-size: 18px; display: flex; align-items: center;">
+                    <span style="background: linear-gradient(135deg, #ffc107, #ffab00); color: white; width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 16px;">⚠️</span>
+                    Important Exam Day Requirements
+                </h4>
+                <p style="color: #856404; font-size: 15px; margin: 0 0 15px 0; line-height: 1.5;">
+                    Please arrive <strong>30 minutes before</strong> your scheduled time and bring the following items:
                 </p>
-                <ul style="color: #856404; font-size: 14px; margin: 0; padding-left: 20px;">
-                    <li>Printed application form</li>
-                    <li>Valid ID</li>
-                    <li>Examination permit</li>
-                </ul>
+                <div style="background-color: rgba(255,255,255,0.7); padding: 15px; border-radius: 8px; margin-top: 10px;">
+                    <ul style="color: #856404; font-size: 14px; margin: 0; padding-left: 20px; line-height: 1.8;">
+                        <li style="margin-bottom: 8px;"><strong>Printed application form</strong> (mandatory)</li>
+                        <li style="margin-bottom: 8px;"><strong>Valid government-issued ID</strong></li>
+                        <li style="margin-bottom: 8px;"><strong>Examination permit</strong> (if issued)</li>
+                        <li style="margin-bottom: 8px;"><strong>#2 pencils</strong> and <strong>eraser</strong></li>
+                    </ul>
+                </div>
             </div>
             
-            <!-- Download Application Form Button -->
-            <div style="text-align: center; margin: 25px 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
-                <h4 style="color: #495057; margin: 0 0 15px 0; font-size: 16px;">📄 Download Your Application Form</h4>
-                <p style="color: #6c757d; font-size: 14px; margin: 0 0 15px 0;">
-                    Click the button below to download your completed application form. You'll need to print and bring this form on your test day.
-                </p>
+            <!-- Download Application Form Section -->
+            <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 25px; border-radius: 12px; border: 2px solid #dee2e6; margin: 25px 0; text-align: center; box-shadow: 0 3px 10px rgba(0,0,0,0.1);">
+                <div style="margin-bottom: 20px;">
+                    <div style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; width: 50px; height: 50px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);">
+                        <span style="font-size: 24px;">📋</span>
+                    </div>
+                    <h4 style="color: #495057; margin: 0 0 10px 0; font-size: 18px; font-weight: bold;">Download Your Application Form</h4>
+                    <p style="color: #6c757d; font-size: 14px; margin: 0; line-height: 1.6; max-width: 400px; margin: 0 auto;">
+                        Click the button below to download your completed application form. <strong>You must print and bring this form on your test day.</strong>
+                    </p>
+                </div>
+                
                 <a href="{settings.FRONTEND_URL or 'http://localhost:3001'}/profile?download_form={appointment.id}" 
-                   style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-flex; align-items: center; box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);">
-                    <span style="margin-right: 8px;">📋</span>
+                   style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-flex; align-items: center; box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4); transition: all 0.3s ease; font-size: 16px;">
+                    <span style="margin-right: 10px; font-size: 18px;">�</span>
                     Download Application Form (PDF)
                 </a>
-                <p style="color: #6c757d; font-size: 12px; margin: 15px 0 0 0;">
-                    If the download doesn't start automatically, please visit your profile page and use the "Download Application Form" button.
+                
+                <p style="color: #6c757d; font-size: 12px; margin: 20px 0 0 0; font-style: italic;">
+                    Having trouble downloading? Visit your profile page and use the "Download Application Form" button.
                 </p>
             </div>
         </div>
