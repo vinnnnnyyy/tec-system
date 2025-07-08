@@ -67,100 +67,219 @@
 
       <!-- Appointments Table -->
       <div v-else class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+          <div>
+            <h2 class="text-xl font-bold text-gray-800">Appointments</h2>
+            <p class="text-sm text-gray-500 mt-1">Manage and track your appointments</p>
+          </div>
+          <div class="flex space-x-2">
+            <button @click="showFilters = !showFilters" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200">
+              <i class="fas fa-filter mr-2"></i>
+              {{ showFilters ? 'Hide Filters' : 'Filter' }}
+            </button>
+            <button class="px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition-colors duration-200">
+              <i class="fas fa-plus mr-2"></i>
+              New Appointment
+            </button>
+          </div>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-gray-200">
+          <button 
+            @click="activeTab = 'all'" 
+            :class="[
+              'px-4 py-2 font-medium text-sm focus:outline-none',
+              activeTab === 'all' 
+                ? 'border-b-2 border-crimson-600 text-crimson-600' 
+                : 'text-gray-500 hover:text-gray-700'
+            ]"
+          >
+            All Appointments
+          </button>
+          <button 
+            @click="activeTab = 'waiting_for_submission'" 
+            :class="[
+              'px-4 py-2 font-medium text-sm focus:outline-none',
+              activeTab === 'waiting_for_submission' 
+                ? 'border-b-2 border-crimson-600 text-crimson-600' 
+                : 'text-gray-500 hover:text-gray-700'
+            ]"
+          >
+            Waiting for Submission
+          </button>
+          <button 
+            @click="activeTab = 'approved'" 
+            :class="[
+              'px-4 py-2 font-medium text-sm focus:outline-none',
+              activeTab === 'approved' 
+                ? 'border-b-2 border-crimson-600 text-crimson-600' 
+                : 'text-gray-500 hover:text-gray-700'
+            ]"
+          >
+            Approved Appointments
+          </button>
+          <button 
+            @click="activeTab = 'claimed'" 
+            :class="[
+              'px-4 py-2 font-medium text-sm focus:outline-none',
+              activeTab === 'claimed' 
+                ? 'border-b-2 border-crimson-600 text-crimson-600' 
+                : 'text-gray-500 hover:text-gray-700'
+            ]"
+          >
+            Claimed
+          </button>
+        </div>
+        
+        <!-- Filter Section -->
+        <div v-if="showFilters" class="p-4 bg-gray-50 border-b border-gray-100">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Search Filter -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Search by Name</label>
+              <input 
+                type="text" 
+                v-model="searchQuery" 
+                placeholder="Search by name..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-crimson-500 focus:border-crimson-500"
+                @keyup.enter="applyFilters"
+              />
+            </div>
+            
+            <!-- Status Filter -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select 
+                v-model="statusFilter" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-crimson-500 focus:border-crimson-500"
+                @change="applyFilters"
+              >
+                <option value="all">All Statuses</option>
+                <option value="waiting_for_test_details">Waiting for Test Details</option>
+                <option value="waiting_for_submission">Waiting for Submission</option>
+                <option value="submitted">Submitted</option>
+                <option value="rejected">Rejected</option>
+                <option value="claimed">Claimed</option>
+                <option value="rescheduled">Rescheduled</option>
+              </select>
+            </div>
+            
+            <!-- Date Range Filters -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+              <input 
+                type="date" 
+                v-model="dateFilterFrom" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-crimson-500 focus:border-crimson-500"
+                @change="applyFilters"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+              <input 
+                type="date" 
+                v-model="dateFilterTo" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-crimson-500 focus:border-crimson-500"
+                @change="applyFilters"
+              />
+            </div>
+            
+            <!-- Filter Actions -->
+            <div class="md:col-span-4 flex justify-end space-x-2 mt-2">
+              <button 
+                @click="resetFilters" 
+                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200"
+              >
+                Reset Filters
+              </button>
+              <button 
+                @click="applyFilters" 
+                class="px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition-colors duration-200"
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="overflow-x-auto">
-          <table class="w-full">
+          <table class="w-full text-sm">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-2.5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
-                  <div class="flex items-center space-x-1">
-                    <span>Applicant</span>
-                    <i class="fas fa-sort text-gray-400"></i>
-                  </div>
-                </th>
-                <th class="px-2.5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell w-1/6">
-                  <div class="flex items-center space-x-1">
-                    <span>School</span>
-                    <i class="fas fa-sort text-gray-400"></i>
-                  </div>
-                </th>
-                <th class="px-2.5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/8">
-                  <div class="flex items-center space-x-1">
-                    <span>Contact</span>
-                    <i class="fas fa-sort text-gray-400"></i>
-                  </div>
-                </th>
-                <th class="px-2.5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                  <div class="flex items-center space-x-1">
-                    <span>Program</span>
-                    <i class="fas fa-sort text-gray-400"></i>
-                  </div>
-                </th>
-                <th class="px-2.5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/7">
-                  <div class="flex items-center space-x-1">
-                    <span>Schedule</span>
-                    <i class="fas fa-sort text-gray-400"></i>
-                  </div>
-                </th>
-                <th class="px-2.5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/7">Status</th>
-                <th class="px-2.5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Actions</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Applicant</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">School</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Program</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Time</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-              <tr v-for="appointment in paginatedAppointments" :key="appointment.id" class="hover:bg-gray-50">
-                <td class="px-2.5 py-3">
+              <tr v-for="appointment in paginatedAppointments" 
+                  :key="appointment.id" 
+                  class="hover:bg-gray-50 transition-colors duration-200">
+                <td class="px-3 py-2">
                   <div class="flex items-center">
-                    <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-1.5">
-                      <i class="fas fa-user text-xs text-gray-500"></i>
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-r from-gray-100 to-gray-200 flex items-center justify-center mr-2">
+                      <i class="fas fa-user text-sm text-gray-600"></i>
                     </div>
-                    <div class="truncate">
-                      <div class="text-xs font-medium text-gray-900 truncate">{{ appointment.applicantName }}</div>
-                      <div class="text-xs text-gray-500 truncate">{{ appointment.email }}</div>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-2.5 py-3 max-w-[160px] hidden md:table-cell">
-                  <div class="w-full">
-                    <div v-if="appointment.expandSchool" class="text-xs font-medium text-gray-900 break-words">
-                      {{ appointment.school }}
-                      <button @click="toggleSchoolExpand(appointment)" 
-                              class="ml-1 text-xs text-crimson-500 hover:text-crimson-700" 
-                              title="Collapse">
-                        <i class="fas fa-compress-alt"></i>
-                      </button>
-                    </div>
-                    <div v-else class="flex items-center">
-                      <div class="text-xs font-medium text-gray-900 truncate" :title="appointment.school">
-                        {{ appointment.school }}
-                      </div>
-                      <button v-if="appointment.school.length > 20" 
-                              @click="toggleSchoolExpand(appointment)" 
-                              class="ml-1 text-xs text-crimson-500 hover:text-crimson-700" 
-                              title="Expand">
-                        <i class="fas fa-expand-alt"></i>
-                      </button>
+                    <div>
+                      <div class="text-xs font-medium text-gray-900">{{ appointment.applicantName }}</div>
+                      <div class="text-xs text-gray-500">{{ appointment.email }}</div>
                     </div>
                   </div>
                 </td>
-                <td class="px-2.5 py-3 text-xs text-gray-500 truncate">{{ appointment.contact }}</td>
-                <td class="px-2.5 py-3 text-xs text-gray-500 truncate">{{ appointment.program }}</td>
-                <td class="px-2.5 py-3">
-                  <div class="text-xs text-gray-900">{{ formatDate(appointment.date) }}</div>
-                  <div class="text-xs text-gray-500">{{ appointment.time.replace('Morning (', 'AM (').replace('Afternoon (', 'PM (') }}</div>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-900">{{ appointment.school }}</div>
                 </td>
-                <td class="px-2.5 py-3">
-                  <span class="px-1.5 py-0.5 text-xs font-semibold rounded-full" 
-                        :class="getStatusClass(appointment.status)">
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-600">{{ appointment.contact }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs font-medium text-gray-900">{{ appointment.program }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-600">{{ formatDate(appointment.date) }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-600">
+                    {{ appointment.time.replace('Morning (', 'AM (').replace('Afternoon (', 'PM (') }}
+                  </div>
+                </td>
+                <td class="px-3 py-2">
+                  <span :class="getStatusClass(appointment.status)" class="inline-flex items-center text-xs">
+                    <span class="w-1.5 h-1.5 rounded-full mr-1" :class="{
+                      'bg-yellow-400': appointment.status === 'pending' || appointment.status === 'waiting_for_submission',
+                      'bg-green-400': appointment.status === 'approved' || appointment.status === 'submitted',
+                      'bg-red-400': appointment.status === 'rejected',
+                      'bg-blue-400': appointment.status === 'claimed',
+                      'bg-purple-400': appointment.status === 'rescheduled',
+                      'bg-orange-400': appointment.status === 'waiting_for_test_details'
+                    }"></span>
                     {{ formatStatus(appointment.status) }}
                   </span>
                 </td>
-                <td class="px-2.5 py-3">
-                  <div class="relative">
-                    <button @click="toggleActionsMenu($event, appointment.id)" 
-                            class="p-1.5 rounded-full hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-crimson-500"
-                            title="Actions"
-                            ref="actionButton">
-                      <i class="fas fa-ellipsis-h text-gray-600"></i>
+                <td class="px-3 py-2">
+                  <div class="flex items-center space-x-2">
+                    <!-- View Button -->
+                    <button @click="openDetailsModal(appointment)" 
+                            class="px-3 py-1 bg-crimson-600 text-white text-xs rounded-md hover:bg-crimson-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-crimson-500"
+                            title="View Details">
+                      <i class="fas fa-eye mr-1"></i>
+                      View
                     </button>
+                    
+                    <!-- Actions Menu -->
+                    <div class="relative">
+                      <button @click="toggleActionsMenu($event, appointment.id)" 
+                              class="p-1.5 rounded-full hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-crimson-500"
+                              title="Actions">
+                        <i class="fas fa-ellipsis-h text-gray-600"></i>
+                      </button>
                     
                     <!-- Enhanced Dropdown menu with position awareness -->
                     <div v-if="activeActionMenu === appointment.id" 
@@ -214,6 +333,7 @@
                           <i class="fas fa-calendar-alt mr-3"></i> Reschedule
                         </button>
                       </div>
+                    </div>
                     </div>
                   </div>
                 </td>
@@ -468,6 +588,7 @@ export default {
       programFilter: 'all',
       statusFilter: 'all',
       dateFilter: '',
+      dateFilterTo: '',
       currentPage: 1,
       itemsPerPage: 10,
       appointments: [],
@@ -484,7 +605,9 @@ export default {
       dropdownPositions: {},
       rescheduleReason: '',
       isApproving: false,
-      isClaimProcessing: false
+      isClaimProcessing: false,
+      activeTab: 'all',
+      showFilters: false
     }
   },
   created() {
@@ -519,7 +642,25 @@ export default {
         const matchesProgram = this.programFilter === 'all' || appointment.program.toLowerCase().includes(this.programFilter)
         const matchesStatus = this.statusFilter === 'all' || appointment.status === this.statusFilter
         const matchesDate = !this.dateFilter || appointment.date === this.dateFilter
-        return matchesSearch && matchesProgram && matchesStatus && matchesDate
+        
+        // Tab filtering
+        let matchesTab = true
+        switch (this.activeTab) {
+          case 'waiting_for_submission':
+            matchesTab = appointment.status === 'waiting_for_submission'
+            break
+          case 'approved':
+            matchesTab = appointment.status === 'approved'
+            break
+          case 'claimed':
+            matchesTab = appointment.status === 'claimed'
+            break
+          case 'all':
+          default:
+            matchesTab = true
+        }
+        
+        return matchesSearch && matchesProgram && matchesStatus && matchesDate && matchesTab
       })
     },
     paginatedAppointments() {
@@ -564,10 +705,12 @@ export default {
           fullDetails: appointment // Store the full appointment details
         }))
 
-        // Extract unique status options
-        this.statusOptions = [...new Set(this.appointments.map(a => a.status))]
+        // Extract unique status options but filter out the standard ones
+        // Fix: Use a Set to ensure we only get unique status values
+        const uniqueStatuses = [...new Set(this.appointments.map(a => a.status))];
+        this.statusOptions = uniqueStatuses
           .filter(status => !['approved', 'pending', 'claimed', 'rejected'].includes(status))
-          .sort()
+          .sort();
         
         // Extract unique program options
         this.programOptions = [...new Set(this.appointments.map(a => a.program))].sort()
@@ -861,7 +1004,21 @@ export default {
       } else {
         appointment.expandSchool = !appointment.expandSchool;
       }
-    }
+    },
+    applyFilters() {
+      // Reset to first page when filters are applied
+      this.currentPage = 1;
+      // The filtering is handled by the computed property
+    },
+    
+    resetFilters() {
+      this.searchQuery = '';
+      this.programFilter = 'all';
+      this.statusFilter = 'all';
+      this.dateFilter = '';
+      this.dateFilterTo = '';
+      this.currentPage = 1;
+    },
   }
 }
 </script>
@@ -981,4 +1138,4 @@ export default {
 .status-badge:hover {
   transform: scale(1.05);
 }
-</style> 
+</style>

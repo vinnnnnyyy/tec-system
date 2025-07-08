@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import Program, Appointment, FAQ, ExamScore, ExamResult, TestCenter, TestRoom, TestSession, Announcement
+from django.utils import timezone
+import datetime
+from .models import Program, Appointment, FAQ, ExamScore, ExamResult, TestCenter, TestRoom, TestSession, Announcement, Notification
 
 class ProgramSerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,15 +19,15 @@ class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = [
-            'id', 'program', 'program_name', 'full_name', 'email', 'contact_number',
-            'school_name', 'college_level', 'preferred_date', 'time_slot', 'status',
+            'id', 'program', 'program_name', 'full_name', 'last_name', 'first_name', 'middle_name',
+            'email', 'contact_number', 'school_name', 'college_level', 'preferred_date', 'time_slot', 'status',
             'created_at', 'updated_at', 'birth_month', 'birth_day', 'birth_year',
             'gender', 'age', 'home_address', 'citizenship', 'is_first_time',
             'times_taken', 'applicant_type', 'high_school_code', 'school_graduation_date',
             'school_address', 'college_course', 'college_type', 'is_submitted',
             'test_session', 'test_center', 'test_room', 'test_center_name',
             'test_room_name', 'test_session_date', 'assigned_test_time_slot', 'is_time_slot_modified',
-            'exam_score',
+            'exam_date', 'exam_score',
             # Personal Information fields
             'birth_month', 'birth_day', 'birth_year', 'gender', 'age',
             'home_address', 'citizenship',
@@ -74,7 +76,7 @@ class ExamScoreDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExamScore
         fields = [
-            'id', 'app_no', 'name', 'school', 'exam_type', 'score',
+            'id', 'app_no', 'name', 'school', 'exam_type', 'score', 'year',
             'part1', 'part2', 'part3', 'part4', 'part5', 'oapr',
             'exam_date', 'created_at'
         ]
@@ -99,7 +101,50 @@ class TestSessionSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
 class AnnouncementSerializer(serializers.ModelSerializer):
+    image_display = serializers.SerializerMethodField()
+    
     class Meta:
         model = Announcement
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'created_by']
+    
+    def get_image_display(self, obj):
+        """Return the appropriate image URL - either uploaded file or external URL"""
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        elif obj.image_url:
+            return obj.image_url
+        return None
+
+class NotificationSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.username', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    time_ago = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'title', 'message', 'type', 'priority', 'user', 'user_name',
+            'is_read', 'is_global', 'icon', 'link', 'created_by', 'created_by_name',
+            'created_at', 'updated_at', 'time_ago'
+        ]
+        read_only_fields = ['created_at', 'updated_at', 'created_by']
+    
+    def get_time_ago(self, obj):
+        """Return a human-readable time difference"""
+        now = timezone.now()
+        diff = now - obj.created_at
+        
+        if diff.days > 0:
+            return f"{diff.days} day{'s' if diff.days > 1 else ''} ago"
+        elif diff.seconds >= 3600:
+            hours = diff.seconds // 3600
+            return f"{hours} hour{'s' if hours > 1 else ''} ago"
+        elif diff.seconds >= 60:
+            minutes = diff.seconds // 60
+            return f"{minutes} minute{'s' if minutes > 1 else ''} ago"
+        else:
+            return "Just now"

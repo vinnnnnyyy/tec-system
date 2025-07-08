@@ -1,8 +1,9 @@
 <template>
-  <!-- Modal/Popup Overlay with fixed positioning and improved alignment -->
+  <!-- Modal/Popup Overlay with frosted glass blur effect -->
   <div 
     v-if="show && !isGeneratingPdf" 
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 transition-opacity duration-300 overflow-y-auto"
+    class="fixed inset-0 bg-white/20 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300 overflow-y-auto"
+    style="backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);"
   >
     <div 
       class="bg-white rounded-xl shadow-2xl w-full max-w-3xl transform transition-all duration-300 scale-100 overflow-hidden my-4"
@@ -95,88 +96,215 @@
           </div>
           
           <!-- Appointment Details Grid - Improved responsiveness -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <!-- Schedule Information Card -->
-            <div class="bg-white rounded-xl p-5 shadow-md border border-gray-100 hover:border-crimson-200 transition-colors lg:col-span-2">
-              <div class="flex items-center mb-3">
-                <div class="w-10 h-10 bg-crimson-100 rounded-full flex items-center justify-center">
-                  <i class="fas fa-calendar-alt text-lg text-crimson-600"></i>
-                </div>
-                <h3 class="ml-3 font-semibold text-base text-gray-900">Schedule Information</h3>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">          <!-- Schedule Information Card -->
+          <div class="bg-white rounded-xl p-5 shadow-md border border-gray-100 hover:border-crimson-200 transition-colors lg:col-span-2">
+            <div class="flex items-center mb-3">
+              <div class="w-10 h-10 bg-crimson-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-calendar-alt text-lg text-crimson-600"></i>
               </div>
-              <div class="space-y-3">
-                <!-- Preferred Date Section -->
-                <div class="py-2 border-b border-gray-100">
-                  <h4 class="text-sm font-semibold text-crimson-600 mb-2">Your Requested Schedule</h4>
-                  <div class="flex items-center text-gray-700">
-                    <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                      <i class="fas fa-calendar-day text-sm text-crimson-500"></i>
+              <h3 class="ml-3 font-semibold text-base text-gray-900">Schedule Information</h3>
+            </div>
+            
+            <!-- For 'submitted' and 'waiting_for_submission' status, show both requested and official schedules side by side -->
+            <div v-if="appointment.status === 'submitted' || appointment.status === 'waiting_for_submission'" class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Requested Schedule Card -->
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <h4 class="text-sm font-semibold text-crimson-600 mb-3 flex items-center">
+                    <i class="fas fa-user-clock mr-2"></i>
+                    Your Requested Schedule
+                  </h4>
+                  <div class="space-y-2">
+                    <div class="flex items-center text-gray-700">
+                      <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-calendar-day text-xs text-crimson-500"></i>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500">Preferred Date</p>
+                        <p class="font-medium text-sm">{{ formatDate(appointment.preferred_date) }}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p class="text-xs text-gray-500">Preferred Date</p>
-                      <p class="font-medium text-sm">{{ formatDate(appointment.preferred_date) }}</p>
-                    </div>
-                  </div>
-                  <div class="flex items-center text-gray-700 mt-2">
-                    <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                      <i class="fas fa-clock text-sm text-crimson-500"></i>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-500">Preferred Time Slot</p>
-                      <p class="font-medium text-sm">{{ formatTimeSlot(appointment.time_slot) }}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- Assigned Date Section -->
-                <div class="py-2">
-                  <h4 class="text-sm font-semibold text-crimson-600 mb-2">Official Test Schedule</h4>
-                  <div class="flex items-center text-gray-700">
-                    <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                      <i class="fas fa-calendar-check text-sm text-crimson-500"></i>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-500">Assigned Test Date</p>
-                      <p class="font-medium text-sm">{{ formatDate(appointment.test_date || appointment.preferred_date) }}</p>
-                      <p 
-                        v-if="appointment.test_date && appointment.test_date !== appointment.preferred_date" 
-                        class="text-xs text-orange-500 mt-1"
-                      >
-                        <i class="fas fa-info-circle mr-1"></i>
-                        Your test date has been scheduled differently from your originally requested date.
-                      </p>
-                    </div>
-                  </div>
-                  <div class="flex items-center text-gray-700 mt-2">
-                    <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                      <i class="fas fa-clock text-sm text-crimson-500"></i>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-500">Assigned Time Slot</p>
-                      <p class="font-medium text-sm">{{ formatTimeSlot(appointment.assigned_test_time_slot || appointment.time_slot) }}</p>
-                      <p 
-                        v-if="appointment.assigned_test_time_slot && appointment.assigned_test_time_slot !== appointment.time_slot" 
-                        class="text-xs text-orange-500 mt-1"
-                      >
-                        <i class="fas fa-info-circle mr-1"></i>
-                        Your test time has been scheduled differently from your originally requested time.
-                      </p>
+                    <div class="flex items-center text-gray-700">
+                      <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-clock text-xs text-crimson-500"></i>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500">Preferred Time</p>
+                        <p class="font-medium text-sm">{{ formatTimeSlot(appointment.time_slot) }}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                <div class="flex items-center text-gray-700">
-                  <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                    <i class="fas fa-map-marker-alt text-sm text-crimson-500"></i>
+                <!-- Official Schedule Card -->
+                <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h4 class="text-sm font-semibold text-blue-600 mb-3 flex items-center">
+                    <i class="fas fa-calendar-check mr-2"></i>
+                    Official Exam Schedule
+                  </h4>
+                  <div v-if="loadingTestSessions" class="flex items-center justify-center py-4">
+                    <div class="animate-spin rounded-full h-6 w-6 border-2 border-blue-200 border-t-blue-600"></div>
+                    <span class="ml-2 text-sm text-blue-600">Loading...</span>
                   </div>
-                  <div>
-                    <p class="text-xs text-gray-500">Venue</p>
-                    <p class="font-medium text-sm">Testing and Evaluation Center</p>
-                    <p class="text-xs text-gray-500">Campus B, Old high school building</p>
+                  <div v-else-if="getMatchingTestSession()" class="space-y-2">
+                    <div class="flex items-center text-gray-700">
+                      <div class="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-calendar-day text-xs text-blue-600"></i>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500">Exam Date</p>
+                        <p class="font-medium text-sm">{{ formatDate(getMatchingTestSession().exam_date) }}</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center text-gray-700">
+                      <div class="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-list-alt text-xs text-blue-600"></i>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500">Exam Type</p>
+                        <p class="font-medium text-sm">{{ getMatchingTestSession().exam_type }}</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center text-gray-700">
+                      <div class="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-info-circle text-xs text-blue-600"></i>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500">Status</p>
+                        <p class="font-medium text-sm">{{ getMatchingTestSession().status }}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else class="text-center py-4">
+                    <i class="fas fa-calendar-times text-gray-400 text-lg mb-2"></i>
+                    <p class="text-sm text-gray-500">No official schedule available yet</p>
                   </div>
                 </div>
               </div>
             </div>
+            
+            <!-- For other statuses, show the original single schedule layout -->
+            <div v-else class="space-y-3">
+              <!-- Preferred Date Section -->
+              <div class="py-2 border-b border-gray-100">
+                <h4 class="text-sm font-semibold text-crimson-600 mb-2">Your Requested Schedule</h4>
+                <div class="flex items-center text-gray-700">
+                  <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                    <i class="fas fa-calendar-day text-sm text-crimson-500"></i>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500">Preferred Date</p>
+                    <p class="font-medium text-sm">{{ formatDate(appointment.preferred_date) }}</p>
+                  </div>
+                </div>
+                <div class="flex items-center text-gray-700 mt-2">
+                  <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                    <i class="fas fa-clock text-sm text-crimson-500"></i>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500">Preferred Time Slot</p>
+                    <p class="font-medium text-sm">{{ formatTimeSlot(appointment.time_slot) }}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Assigned Date Section -->
+              <div class="py-2">
+                <h4 class="text-sm font-semibold text-crimson-600 mb-2">Official Test Schedule</h4>
+                <div class="flex items-center text-gray-700">
+                  <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                    <i class="fas fa-calendar-check text-sm text-crimson-500"></i>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500">Assigned Test Date</p>
+                    <p class="font-medium text-sm">{{ formatDate(appointment.test_date || appointment.preferred_date) }}</p>
+                    <p 
+                      v-if="appointment.test_date && appointment.test_date !== appointment.preferred_date" 
+                      class="text-xs text-orange-500 mt-1"
+                    >
+                      <i class="fas fa-info-circle mr-1"></i>
+                      Your test date has been scheduled differently from your originally requested date.
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center text-gray-700 mt-2">
+                  <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                    <i class="fas fa-clock text-sm text-crimson-500"></i>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500">Assigned Time Slot</p>
+                    <p class="font-medium text-sm">{{ formatTimeSlot(appointment.assigned_test_time_slot || appointment.time_slot) }}</p>
+                    <p 
+                      v-if="appointment.assigned_test_time_slot && appointment.assigned_test_time_slot !== appointment.time_slot" 
+                      class="text-xs text-orange-500 mt-1"
+                    >
+                      <i class="fas fa-info-circle mr-1"></i>
+                      Your test time has been scheduled differently from your originally requested time.
+                    </p>
+                  </div>
+                </div>
+                
+                <!-- Test Center and Room Info (shown for approved status) -->
+                <div v-if="appointment.status === 'approved' && (appointment.test_center || appointment.room_number)" class="space-y-2 mt-3 bg-green-50 p-3 rounded-lg">
+                  <h5 class="text-sm font-semibold text-green-700">Your Test Location</h5>
+                  
+                  <div v-if="appointment.test_center" class="flex items-center text-gray-700">
+                    <div class="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                      <i class="fas fa-building text-sm text-green-600"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-500">Test Center</p>
+                      <p class="font-medium text-sm">
+                        {{ appointment.test_center }}
+                        <span v-if="appointment.test_center_code && !String(appointment.test_center).includes(appointment.test_center_code)" 
+                              class="text-gray-500 text-xs ml-1">
+                          (ID: {{ appointment.test_center_code }})
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div v-if="appointment.room_number || appointment.room_code" class="flex items-center text-gray-700">
+                    <div class="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                      <i class="fas fa-door-open text-sm text-green-600"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-500">Test Room</p>
+                      <p class="font-medium text-sm">
+                        {{ appointment.room_number }}
+                        <span v-if="appointment.room_code && !String(appointment.room_number).includes(appointment.room_code)" 
+                              class="text-gray-500 text-xs ml-1">
+                          (Code: {{ appointment.room_code }})
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div v-if="appointment.test_center_address" class="flex items-center text-gray-700">
+                    <div class="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                      <i class="fas fa-map-marker-alt text-sm text-green-600"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-500">Address</p>
+                      <p class="font-medium text-sm">{{ appointment.test_center_address }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Default Venue Information (shown if no specific test center is assigned) -->
+            <div v-if="!(appointment.status === 'approved' && appointment.test_center)" class="flex items-center text-gray-700 mt-4 pt-3 border-t border-gray-100">
+              <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                <i class="fas fa-map-marker-alt text-sm text-crimson-500"></i>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Venue</p>
+                <p class="font-medium text-sm">Testing and Evaluation Center</p>
+                <p class="text-xs text-gray-500">Campus B, Old high school building</p>
+              </div>
+            </div>
+          </div>
           </div>
           
           <!-- Action Buttons - More compact and responsive -->
@@ -272,6 +400,8 @@ const loading = ref(true)
 const error = ref(null)
 const isGeneratingPdf = ref(false)
 const pdfFormData = ref(null)
+const testSessions = ref([])
+const loadingTestSessions = ref(false)
 
 // Methods (moved before watchers and onMounted)
 const formatDate = (date) => {
@@ -300,6 +430,7 @@ const formatStatus = (status) => {
     'rescheduled': 'Rescheduled',
     'waiting_for_test_details': 'Waiting for Test Details',
     'waiting_for_submission': 'Waiting for Submission',
+    'submitted': 'Waiting for Test Details',
     'claimed': 'Claimed'
   }
   return statuses[status] || status || 'Not set'
@@ -307,7 +438,7 @@ const formatStatus = (status) => {
 
 const getStatusBadgeClass = (status) => {
   return {
-    'bg-yellow-100': status === 'pending' || status === 'waiting_for_test_details',
+    'bg-yellow-100': status === 'pending' || status === 'waiting_for_test_details' || status === 'submitted',
     'bg-green-100': status === 'approved',
     'bg-blue-100': status === 'completed' || status === 'claimed',
     'bg-red-100': status === 'cancelled' || status === 'rejected',
@@ -318,7 +449,7 @@ const getStatusBadgeClass = (status) => {
 
 const getStatusIconClass = (status) => {
   return {
-    'fa-clock text-yellow-500': status === 'pending' || status === 'waiting_for_test_details',
+    'fa-clock text-yellow-500': status === 'pending' || status === 'waiting_for_test_details' || status === 'submitted',
     'fa-check text-green-500': status === 'approved',
     'fa-check-double text-blue-500': status === 'completed' || status === 'claimed',
     'fa-times text-red-500': status === 'cancelled' || status === 'rejected',
@@ -329,7 +460,7 @@ const getStatusIconClass = (status) => {
 
 const getStatusTextClass = (status) => {
   return {
-    'bg-yellow-100 text-yellow-800': status === 'pending' || status === 'waiting_for_test_details',
+    'bg-yellow-100 text-yellow-800': status === 'pending' || status === 'waiting_for_test_details' || status === 'submitted',
     'bg-green-100 text-green-800': status === 'approved',
     'bg-blue-100 text-blue-800': status === 'completed' || status === 'claimed',
     'bg-red-100 text-red-800': status === 'cancelled' || status === 'rejected',
@@ -370,6 +501,125 @@ const fetchProgramDetails = async (programId) => {
 
 const getEffectiveTimeSlot = () => {
   return appointment.value.assigned_test_time_slot || appointment.value.time_slot
+}
+
+const fetchTestDetailsForAppointment = async (appointmentId) => {
+  try {
+    console.log('Fetching test details for appointment:', appointmentId)
+    const testDetailsResponse = await axios.get(`/api/appointments/${String(appointmentId)}/test-details/`)
+    const testData = testDetailsResponse.data
+    
+    if (!appointment.value) return
+    
+    // Log the test details data
+    console.log('Test details retrieved:', JSON.stringify(testData, null, 2))
+    
+    // Process test details - handle both direct fields and nested test_details structure
+    const testSession = testData.test_session || (testData.test_details && testData.test_details.session)
+    const testCenter = testData.test_center || (testData.test_details && testData.test_details.center)
+    const testRoom = testData.test_room || (testData.test_details && testData.test_details.room)
+    
+    console.log('Processed test data:', { testSession, testCenter, testRoom })
+    
+    if (testSession) {
+      appointment.value.test_date = testSession.exam_date || testSession.date
+    }
+    
+    if (testCenter) {
+      appointment.value.test_center = testCenter.name || testCenter.center_name
+      appointment.value.test_center_code = testCenter.code || testCenter.id
+      appointment.value.test_center_address = testCenter.address || testCenter.location || ''
+      
+      console.log('Test center data:', {
+        name: appointment.value.test_center,
+        code: appointment.value.test_center_code,
+        address: appointment.value.test_center_address
+      })
+    }
+    
+    if (testRoom) {
+      // Store the raw room data for debugging
+      appointment.value.raw_room_data = testRoom
+      
+      // Set room name, ensuring we have a proper name
+      if (testRoom.name && testRoom.name !== testRoom.room_code && !testRoom.name.includes(`Room ${testRoom.room_code}`)) {
+        // If name exists and is different from code, use it
+        appointment.value.room_number = testRoom.name
+      } else if (testRoom.name && testRoom.name === testRoom.room_code) {
+        // If name is same as code, make it more descriptive
+        appointment.value.room_number = `Room ${testRoom.room_code}`
+      } else if (testRoom.room_code) {
+        // Just use room code with prefix
+        appointment.value.room_number = `Room ${testRoom.room_code}`
+      } else {
+        // Fallback to just saying "Room"
+        appointment.value.room_number = "Room"
+      }
+      
+      // Store room code separately
+      appointment.value.room_code = testRoom.room_code
+      
+      // Log the room details for debugging
+      console.log('Room details:', {
+        room_number: appointment.value.room_number,
+        room_code: appointment.value.room_code,
+        raw_room_data: testRoom
+      })
+    }
+    
+    // Log the updated appointment
+    console.log('Updated appointment with test details:', {
+      test_center: appointment.value.test_center,
+      room_number: appointment.value.room_number,
+      status: appointment.value.status
+    })
+  } catch (err) {
+    console.error('Failed to fetch test details but continuing:', err)
+  }
+}
+
+const fetchTestSessions = async () => {
+  try {
+    loadingTestSessions.value = true
+    const response = await axios.get('/api/public/test-sessions/')
+    testSessions.value = response.data
+    console.log('Test sessions loaded:', testSessions.value)
+  } catch (error) {
+    console.error('Error fetching test sessions:', error)
+    testSessions.value = []
+  } finally {
+    loadingTestSessions.value = false
+  }
+}
+
+const getMatchingTestSession = () => {
+  if (!appointment.value || !testSessions.value.length) return null
+  
+  // Try to match based on program code or exam type
+  const programCode = programDetails.value?.code || appointment.value.program_code
+  
+  // Look for exact match first
+  let matchingSession = testSessions.value.find(session => {
+    return session.exam_type === programCode || 
+           session.exam_type.toLowerCase() === programCode?.toLowerCase()
+  })
+  
+  // If no exact match, try partial matches
+  if (!matchingSession && programCode) {
+    matchingSession = testSessions.value.find(session => {
+      return session.exam_type.includes(programCode) || 
+             programCode.includes(session.exam_type)
+    })
+  }
+  
+  // If still no match, return the first available session
+  if (!matchingSession && testSessions.value.length > 0) {
+    matchingSession = testSessions.value.find(session => 
+      session.status === 'SCHEDULED' || session.status === 'ONGOING'
+    )
+  }
+  
+  return matchingSession
 }
 
 const fetchAppointmentStatus = async () => {
@@ -419,25 +669,19 @@ const fetchAppointmentStatus = async () => {
       })
     }
     
-    try {
-      const testDetailsResponse = await axios.get(`/api/appointments/${String(props.id)}/test-details/`)
-      const testData = testDetailsResponse.data
-      
-      if (testData.test_session) {
-        appointment.value.test_date = testData.test_session.exam_date || testData.test_session.date
-        appointment.value.test_center = testData.test_center?.name || testData.test_center?.center_name
-        appointment.value.test_center_code = testData.test_center?.code || testData.test_center?.center_code
-        appointment.value.room_number = testData.test_room?.name || testData.test_room?.room_name || testData.test_room?.number
-        appointment.value.room_code = testData.test_room?.room_code || testData.test_room?.code
-      } else if (testData.test_details) {
-        appointment.value.test_date = testData.test_details.session?.exam_date || testData.test_details.session?.date
-        appointment.value.test_center = testData.test_details.center?.name || testData.test_details.center?.center_name
-        appointment.value.test_center_code = testData.test_details.center?.code || testData.test_details.center?.center_code
-        appointment.value.room_number = testData.test_details.room?.name || testData.test_details.room?.room_name || testData.test_details.room?.number
-        appointment.value.room_code = testData.test_details.room?.room_code || testData.test_details.room?.code
-      }
-    } catch (err) {
-      console.error('Failed to fetch test details but continuing:', err)
+    // Fetch test sessions for status 'submitted', 'waiting_for_submission', 'approved' or when we need to show official schedule
+    if (appointment.value.status === 'submitted' || appointment.value.status === 'waiting_for_test_details' || 
+        appointment.value.status === 'waiting_for_submission' || appointment.value.status === 'approved') {
+      await fetchTestSessions()
+    }
+    
+    // Always fetch test details, but prioritize it for approved appointments
+    if (appointment.value.status === 'approved') {
+      console.log('Appointment is approved, prioritizing fetching test details...')
+      await fetchTestDetailsForAppointment(props.id)
+    } else {
+      // For other statuses, fetch test details normally
+      await fetchTestDetailsForAppointment(props.id)
     }
     
     const loadingElapsed = Date.now() - loadingStartTime
@@ -621,12 +865,24 @@ watch(() => props.id, (newVal) => {
   }
 }, { immediate: true })
 
-watch(() => appointment.value, (newVal) => {
+watch(() => appointment.value, (newVal, oldVal) => {
   if (newVal && newVal.status === 'claimed') {
     setTimeout(() => {
       emit('close')
       router.push({ name: 'Schedule' })
     }, 1500)
+  }
+  
+  // If status changes to approved or if component loads with an approved status, fetch test details
+  if (newVal && newVal.status === 'approved') {
+    if (!oldVal || oldVal.status !== 'approved') {
+      console.log('Status is approved, fetching test details...')
+      fetchTestDetailsForAppointment(props.id)
+    } else if (!newVal.test_center || !newVal.room_number) {
+      // Also fetch if test details seem to be missing
+      console.log('Approved status but missing test details, fetching again...')
+      fetchTestDetailsForAppointment(props.id)
+    }
   }
 }, { deep: true })
 
@@ -646,5 +902,18 @@ onMounted(() => {
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* Blur effect fallback for older browsers */
+.backdrop-blur-md {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Fallback for browsers that don't support backdrop-filter */
+@supports not (backdrop-filter: blur(10px)) {
+  .backdrop-blur-md {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
 }
 </style> 

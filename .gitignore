@@ -21,3 +21,5 @@ frontend/.env
 frontend/dist/
 frontend/.cache/
 .DS_Store
+.github
+*.gitignore

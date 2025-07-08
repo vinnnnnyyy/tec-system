@@ -122,10 +122,36 @@
               <span>Add User</span>
             </button>
           </div>
+
+          <!-- Search Bar -->
+          <div v-if="users.length > 0" class="mb-6 bg-white p-4 rounded-lg border border-gray-200">
+            <div class="relative max-w-md">
+              <input 
+                v-model="userSearchQuery" 
+                type="text" 
+                placeholder="Search users by name, email, or role..." 
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+              >
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+              <button 
+                v-if="userSearchQuery" 
+                @click="userSearchQuery = ''" 
+                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-crimson-600"
+              >
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
           
           <!-- Users Table -->
           <div class="overflow-x-auto">
-            <table class="w-full">
+            <!-- Loading state -->
+            <div v-if="isLoadingUsers" class="flex justify-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-crimson-600"></div>
+            </div>
+            
+            <!-- Users table -->
+            <table v-else-if="filteredUsers.length > 0" class="w-full">
               <thead class="bg-gray-50">
                 <tr>
                   <th v-for="header in userTableHeaders" 
@@ -137,7 +163,7 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
-                <tr v-for="user in users" :key="user.id">
+                <tr v-for="user in filteredUsers" :key="user.id">
                   <td class="px-4 py-3">
                     <div class="flex items-center">
                       <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
@@ -169,6 +195,24 @@
                 </tr>
               </tbody>
             </table>
+            
+            <!-- Empty state -->
+            <div v-else class="text-center py-8">
+              <div class="text-gray-500">
+                <i class="fas fa-users text-4xl mb-2"></i>
+                <p class="text-lg" v-if="userSearchQuery">No users found matching "{{ userSearchQuery }}"</p>
+                <p class="text-lg" v-else>No users found</p>
+                <p class="text-sm" v-if="userSearchQuery">Try adjusting your search criteria</p>
+                <p class="text-sm" v-else>Click "Add User" to create the first user</p>
+                <button 
+                  v-if="userSearchQuery" 
+                  @click="userSearchQuery = ''" 
+                  class="mt-3 inline-flex items-center px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm"
+                >
+                  <i class="fas fa-times mr-2"></i> Clear Search
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -401,17 +445,24 @@
                       
                       <!-- Question -->
                       <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Question</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                          Question
+                          <span v-if="!faq.question || !faq.question.trim()" class="text-red-500 text-xs ml-1">*Required</span>
+                        </label>
                         <input type="text" 
                                v-model="faq.question" 
                                placeholder="Enter question"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500">
+                               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+                               :class="!faq.question || !faq.question.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'">
                       </div>
                       
                       <!-- Answer -->
                       <div class="mb-4">
                         <div class="flex justify-between items-center mb-1">
-                          <label class="block text-sm font-medium text-gray-700">Answer</label>
+                          <label class="block text-sm font-medium text-gray-700">
+                            Answer
+                            <span v-if="!faq.answer || !faq.answer.trim()" class="text-red-500 text-xs ml-1">*Required</span>
+                          </label>
                           <span class="text-xs text-gray-500" :class="{ 'text-amber-500': isAnswerNearLimit(faq.answer), 'text-red-500': isAnswerOverLimit(faq.answer) }">
                             {{ faq.answer ? faq.answer.length : 0 }}/1000 characters
                           </span>
@@ -420,8 +471,13 @@
                                  rows="3" 
                                  placeholder="Enter answer"
                                  @input="autoResizeTextarea($event)"
-                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
-                                 :class="{ 'border-amber-400': isAnswerNearLimit(faq.answer), 'border-red-500': isAnswerOverLimit(faq.answer) }"></textarea>
+                                 class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+                                 :class="{ 
+                                   'border-amber-400': isAnswerNearLimit(faq.answer), 
+                                   'border-red-500': isAnswerOverLimit(faq.answer),
+                                   'border-red-300 bg-red-50': !faq.answer || !faq.answer.trim(),
+                                   'border-gray-300': faq.answer && faq.answer.trim() && !isAnswerNearLimit(faq.answer) && !isAnswerOverLimit(faq.answer)
+                                 }"></textarea>
                       </div>
                     </div>
                   </div>
@@ -670,6 +726,57 @@
                                  :class="{ 'border-amber-400': isContentNearLimit(announcement.content), 'border-red-500': isContentOverLimit(announcement.content) }"></textarea>
                       </div>
                       
+                      <!-- Image URL or Upload -->
+                      <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Announcement Image</label>
+                        <div class="space-y-3">
+                          <!-- URL Input -->
+                          <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Image URL</label>
+                            <input type="url" 
+                                  v-model="announcement.image" 
+                                  placeholder="https://example.com/image.jpg"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 text-sm">
+                          </div>
+                          
+                          <!-- File Upload Alternative -->
+                          <div class="text-center">
+                            <div class="text-xs text-gray-500 mb-2">OR</div>
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-crimson-400 transition-colors">
+                              <div class="space-y-2">
+                                <i class="fas fa-cloud-upload-alt text-2xl text-gray-400"></i>
+                                <div>
+                                  <label class="cursor-pointer text-crimson-600 hover:text-crimson-700 font-medium text-sm">
+                                    <span>Upload an image</span>
+                                    <input type="file" 
+                                           accept="image/*" 
+                                           class="hidden" 
+                                           @change="handleImageUpload($event, getCurrentIndex(index))">
+                                  </label>
+                                </div>
+                                <p class="text-xs text-gray-500">JPG, PNG, GIF up to 5MB</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <!-- Image Preview -->
+                          <div v-if="announcement.image && announcement.image.trim()" class="mt-3">
+                            <div class="relative inline-block">
+                              <img :src="announcement.image" 
+                                   alt="Announcement image preview" 
+                                   class="max-w-xs h-32 object-cover rounded-lg border border-gray-200 shadow-sm"
+                                   @error="$event.target.style.display = 'none'"
+                                   @load="$event.target.style.display = 'block'">
+                              <button type="button" 
+                                      @click="announcement.image = ''"
+                                      class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors">
+                                <i class="fas fa-times"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
                       <!-- Author and Link -->
                       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -866,6 +973,17 @@
                 {{ previewData.title || 'Untitled Announcement' }}
               </h3>
               
+              <!-- Preview Image Display -->
+              <div v-if="previewData.image" class="mb-4">
+                <div class="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm">
+                  <img :src="previewData.image" 
+                       :alt="previewData.title || 'Announcement image'" 
+                       class="w-full max-h-64 object-cover"
+                       @error="$event.target.parentElement.style.display = 'none'"
+                       @load="$event.target.parentElement.classList.remove('bg-gray-100')">
+                </div>
+              </div>
+              
               <p class="text-gray-600 mb-5 whitespace-pre-wrap">{{ previewData.content || 'No content provided.' }}</p>
               
               <div class="flex justify-between items-center pt-4 border-t border-gray-100">
@@ -942,8 +1060,8 @@ import axiosInstance from '../../../services/axios.interceptor'
 import { useAnnouncementStore } from '../../../stores/announcement'
 import AdminPagination from '../components/AdminPagination.vue'
 
-const API_URL = import.meta.env.VITE_API_URL;
-const API_ENDPOINT = `${API_URL}api/`; 
+// Define the API endpoint without duplicating base URL since axios interceptor handles it
+const API_ENDPOINT = '/api/';  
 
 export default {
   name: 'Settings',
@@ -989,21 +1107,29 @@ export default {
     const userTableHeaders = ['User', 'Role', 'Status', 'Last Login', 'Actions']
 
     const users = ref([])
+    const isLoadingUsers = ref(false)
 
     // Fetch users from the API
     const fetchUsers = async () => {
+      isLoadingUsers.value = true
       try {
+        console.log('Fetching users from:', API_ENDPOINT + 'admin/users/')
         const response = await axiosInstance.get(API_ENDPOINT + 'admin/users/');
+        console.log('Users response:', response.data)
         users.value = response.data;
       } catch (error) {
         console.error('Failed to fetch users:', error);
+        console.error('Error details:', error.response?.data);
+        if (error.response?.status === 403) {
+          console.error('Access denied - user may not have admin privileges');
+        }
+      } finally {
+        isLoadingUsers.value = false
       }
     }
 
     // Call fetchUsers when the component is mounted
-    onMounted(() => {
-      fetchUsers();
-    });
+    // (Consolidated onMounted hook - see bottom of setup function)
 
     const getStatusClass = (status) => {
       return 'px-2 py-1 text-xs font-semibold rounded-full ' + 
@@ -1012,18 +1138,40 @@ export default {
 
     const saveChanges = async () => {
       try {
-        // Save general settings
-        await axiosInstance.put(API_ENDPOINT + 'settings/', settings)
+        // Save general settings (if in general section)
+        if (activeSection.value === 'general') {
+          await axiosInstance.put(API_ENDPOINT + 'settings/', settings)
+        }
         
-        // Save FAQ changes
-        if (activeSection.value === 'content') {
+        // Save FAQ changes (if in content section and FAQ tab)
+        if (activeSection.value === 'content' && activeContentCategory.value === 'faq') {
+          // Check for validation errors before saving
+          const invalidFaqs = faqs.value.filter(faq => {
+            const errors = validateFaq(faq)
+            return errors.length > 0
+          })
+          
+          if (invalidFaqs.length > 0) {
+            // Show a more detailed validation message
+            const errorDetails = invalidFaqs.map((faq, index) => {
+              const errors = validateFaq(faq)
+              const faqNumber = faqs.value.indexOf(faq) + 1
+              return `FAQ ${faqNumber}: ${errors.join(', ')}`
+            }).join('\n')
+            
+            alert(`Please fix the following validation errors:\n\n${errorDetails}\n\nAll fields marked with * are required.`)
+            return
+          }
+          
           await saveFaqChanges()
+          return // Don't show the generic success message, saveFaqChanges has its own
         }
         
         alert('Changes saved successfully')
       } catch (error) {
         console.error('Failed to save changes:', error)
-        alert('Failed to save changes')
+        const errorMessage = error.response?.data?.detail || error.message || 'Failed to save changes'
+        alert(`Error: ${errorMessage}`)
       }
     }
 
@@ -1136,65 +1284,121 @@ export default {
       isLoadingFaqs.value = true
       try {
         const response = await axiosInstance.get(API_ENDPOINT + 'admin/faqs/')
-        faqs.value = response.data.map(faq => ({
+        // Handle both array and object responses
+        const faqData = Array.isArray(response.data) ? response.data : (response.data.results || []);
+        faqs.value = faqData.map((faq, index) => ({
           ...faq,
-          is_active: faq.is_active || false,
-          icon: faq.icon || 'fas fa-question'
-        }))
+          is_active: faq.is_active !== undefined ? faq.is_active : false,
+          icon: faq.icon || 'fas fa-question',
+          order: faq.order !== undefined ? faq.order : index,
+          category: faq.category || 'General'
+        }));
       } catch (error) {
-        console.error('Failed to fetch FAQs:', error)
-        alert('Failed to fetch FAQs')
+        console.error('Failed to fetch FAQs:', error);
+        // Use toast for more user-friendly error messages
+        if (error.response?.status === 403) {
+          alert('You do not have permission to view FAQs');
+        } else {
+          alert('Failed to fetch FAQs. Please try again later.');
+        }
       } finally {
-        isLoadingFaqs.value = false
+        isLoadingFaqs.value = false;
       }
     }
 
     // Save FAQ changes
     const saveFaqChanges = async () => {
       try {
-        const promises = faqs.value.map(async (faq) => {
+        // Validate all FAQs first
+        const validationResults = faqs.value.map((faq, index) => ({
+          index,
+          faq,
+          errors: validateFaq(faq)
+        }))
+
+        // Filter out FAQs with validation errors
+        const validFaqs = validationResults.filter(result => result.errors.length === 0)
+        const invalidFaqs = validationResults.filter(result => result.errors.length > 0)
+
+        // Show validation errors if any
+        if (invalidFaqs.length > 0) {
+          const errorMessages = invalidFaqs.map(result => 
+            `FAQ ${result.index + 1}: ${result.errors.join(', ')}`
+          ).join('\n')
+          alert(`Please fix the following errors before saving:\n\n${errorMessages}`)
+          return
+        }
+
+        // Filter out empty FAQs (no question and no answer)
+        const faqsToSave = validFaqs.filter(result => 
+          result.faq.question && result.faq.question.trim() && 
+          result.faq.answer && result.faq.answer.trim()
+        )
+
+        if (faqsToSave.length === 0) {
+          alert('No valid FAQs to save. Please add some content.')
+          return
+        }
+
+        const promises = faqsToSave.map(async (result) => {
+          const faq = result.faq
           const faqData = {
-            question: faq.question,
-            answer: faq.answer,
-            category: faq.category,
-            icon: faq.icon,
-            is_active: faq.is_active,
-            order: faq.order
+            question: faq.question.trim(),
+            answer: faq.answer.trim(),
+            category: (faq.category || 'General').trim(),
+            icon: (faq.icon || 'fas fa-question').trim(),
+            is_active: Boolean(faq.is_active),
+            order: parseInt(faq.order) || 0
           }
 
-          if (faq.id) {
-            // Update existing FAQ
-            return axiosInstance.put(API_ENDPOINT + `admin/faqs/${faq.id}/`, faqData)
-          } else {
-            // Create new FAQ
-            return axiosInstance.post(API_ENDPOINT + 'admin/faqs/', faqData)
+          try {
+            if (faq.id) {
+              // Update existing FAQ
+              return await axiosInstance.put(API_ENDPOINT + `admin/faqs/${faq.id}/`, faqData)
+            } else {
+              // Create new FAQ
+              return await axiosInstance.post(API_ENDPOINT + 'admin/faqs/', faqData)
+            }
+          } catch (error) {
+            console.error(`Failed to save FAQ "${faq.question}":`, error.response?.data || error)
+            throw new Error(`Failed to save FAQ "${faq.question}": ${error.response?.data?.detail || error.message}`)
           }
         })
 
         await Promise.all(promises)
         await fetchFaqs() // Refresh the FAQ list
-        alert('FAQ changes saved successfully')
+        alert(`Successfully saved ${faqsToSave.length} FAQ(s)`)
       } catch (error) {
         console.error('Failed to save FAQ changes:', error)
-        alert('Failed to save FAQ changes')
+        const errorMessage = error.message || 
+                           error.response?.data?.detail || 
+                           error.response?.data?.question?.[0] || 
+                           error.response?.data?.answer?.[0] || 
+                           'Failed to save FAQ changes. Please check all fields are filled correctly.'
+        alert(errorMessage)
         throw error
       }
     }
 
     // Add new FAQ
     const addNewFAQ = () => {
+      const newOrder = Math.max(...faqs.value.map(faq => faq.order || 0), -1) + 1
       faqs.value.push({
         category: faqCategories.value[0] || 'General',
         is_active: true,
         question: '',
         answer: '',
         icon: 'fas fa-question',
-        order: faqs.value.length
+        order: newOrder
       })
     }
 
     // Remove FAQ
     const removeFAQ = async (index) => {
+      if (!confirm('Are you sure you want to delete this FAQ?')) {
+        return
+      }
+
       const faq = faqs.value[index]
       if (faq.id) {
         try {
@@ -1204,9 +1408,11 @@ export default {
           faqs.value.forEach((f, i) => {
             f.order = i
           })
+          alert('FAQ deleted successfully')
         } catch (error) {
           console.error('Failed to delete FAQ:', error)
-          alert('Failed to delete FAQ')
+          const errorMessage = error.response?.data?.detail || 'Failed to delete FAQ'
+          alert(errorMessage)
         }
       } else {
         faqs.value.splice(index, 1)
@@ -1259,10 +1465,7 @@ export default {
     }
 
     // Call fetchFaqs when the component is mounted
-    onMounted(() => {
-      fetchUsers()
-      fetchFaqs()
-    })
+    // (Consolidated onMounted hook - see bottom of setup function)
 
     const announcements = computed(() => {
       return announcementStore.announcements.map(announcement => ({
@@ -1339,34 +1542,73 @@ export default {
 
       announcementStore.loading = true
       try {
-        const promises = announcements.value.map(async (announcement) => {
+        // Validate announcements before saving
+        const validAnnouncements = announcements.value.filter(announcement => {
+          return announcement.title && announcement.title.trim() && 
+                 announcement.content && announcement.content.trim()
+        })
+
+        if (validAnnouncements.length === 0) {
+          alert('Please add title and content to the announcements before saving.')
+          return
+        }
+
+        const promises = validAnnouncements.map(async (announcement) => {
           const announcementData = {
-            title: announcement.title,
-            content: announcement.content,
+            title: announcement.title.trim(),
+            content: announcement.content.trim(),
             type: announcement.type || 'New',
-            is_active: announcement.active,
+            is_active: announcement.active || announcement.is_active,
             icon: announcement.icon || 'fas fa-bell',
-            date: announcement.date,
             author: announcement.author || 'Admin Team',
-            link: announcement.link || null
+            link: announcement.link || null,
+            image_url: announcement.image || null  // Send image URL in image_url field
           }
 
+          // Don't send date field for new announcements - let the backend set it with auto_now_add
           if (announcement.id) {
-            // Update existing announcement
+            // Update existing announcement - include date if it exists
+            if (announcement.date) {
+              announcementData.date = announcement.date
+            }
             return axiosInstance.put(API_ENDPOINT + `announcements/${announcement.id}/`, announcementData)
           } else {
-            // Create new announcement
+            // Create new announcement - don't send date field
             return axiosInstance.post(API_ENDPOINT + 'announcements/', announcementData)
           }
         })
 
         await Promise.all(promises)
+        
+        // Remove announcements that don't have title or content from the local array
+        announcementStore.announcements = announcementStore.announcements.filter(announcement => {
+          return announcement.title && announcement.title.trim() && 
+                 announcement.content && announcement.content.trim()
+        })
+        
         await fetchAnnouncements() // Refresh the announcements list
         hasAnnouncementChanges.value = false
         alert('Announcement changes saved successfully')
       } catch (error) {
         console.error('Failed to save announcement changes:', error)
-        alert('Failed to save announcement changes')
+        console.error('Error response:', error.response?.data)
+        console.error('Error status:', error.response?.status)
+        
+        let errorMessage = 'Failed to save announcement changes'
+        if (error.response?.data) {
+          if (typeof error.response.data === 'string') {
+            errorMessage += ': ' + error.response.data
+          } else if (error.response.data.detail) {
+            errorMessage += ': ' + error.response.data.detail
+          } else if (error.response.data.title) {
+            errorMessage += ': Title - ' + error.response.data.title[0]
+          } else if (error.response.data.content) {
+            errorMessage += ': Content - ' + error.response.data.content[0]
+          } else {
+            errorMessage += ': ' + JSON.stringify(error.response.data)
+          }
+        }
+        alert(errorMessage)
         throw error
       } finally {
         announcementStore.loading = false
@@ -1389,10 +1631,11 @@ export default {
         is_active: true,
         type: 'New',
         icon: 'fas fa-bell',
-        date: new Date().toISOString().split('T')[0],
         title: '',
         content: '',
-        author: 'Admin Team'
+        author: 'Admin Team',
+        link: null,
+        image: null
       }
       announcementStore.announcements.push(newAnnouncement)
       hasAnnouncementChanges.value = true
@@ -1416,6 +1659,51 @@ export default {
         type: 'New',
         date: new Date().toISOString().split('T')[0]
       })
+    }
+
+    // Handle image file upload
+    const handleImageUpload = async (event, announcementIndex) => {
+      const file = event.target.files[0]
+      if (!file) return
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select a valid image file (JPG, PNG, GIF)')
+        return
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024 // 5MB
+      if (file.size > maxSize) {
+        alert('Image file size must be less than 5MB')
+        return
+      }
+
+      try {
+        // Upload file to backend
+        const formData = new FormData()
+        formData.append('image', file)
+
+        const response = await axiosInstance.post(API_ENDPOINT + 'announcements/upload-image/', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+
+        // Use the returned image URL
+        const announcement = announcements.value[announcementIndex]
+        if (announcement) {
+          announcement.image = response.data.image_url
+          hasAnnouncementChanges.value = true
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error)
+        const errorMessage = error.response?.data?.detail || error.response?.data?.error || 'Failed to upload image. Please try again.'
+        alert(errorMessage)
+      }
+
+      // Clear the file input
+      event.target.value = ''
     }
 
     const showDeleteAnnouncementModal = ref(false)
@@ -1487,6 +1775,11 @@ export default {
       console.log('Switching to section:', sectionId)
       activeSection.value = sectionId
       
+      // Fetch data when switching to users section
+      if (sectionId === 'users') {
+        fetchUsers()
+      }
+      
       // Fetch data when switching to content section
       if (sectionId === 'content') {
         // Initialize the content tab based on which tab was previously selected,
@@ -1505,6 +1798,7 @@ export default {
     }
 
     const searchQuery = ref('')
+    const userSearchQuery = ref('')
     const typeFilter = ref('all')
     const statusFilter = ref('all')
     const activeContentCategory = ref('faq')
@@ -1533,6 +1827,23 @@ export default {
       typeFilter.value = 'all'
       statusFilter.value = 'all'
     }
+
+    // Filter users based on search query
+    const filteredUsers = computed(() => {
+      let filtered = [...users.value]
+      
+      // Apply search filter
+      if (userSearchQuery.value.trim()) {
+        const query = userSearchQuery.value.toLowerCase().trim()
+        filtered = filtered.filter(user => 
+          user.name?.toLowerCase().includes(query) ||
+          user.email?.toLowerCase().includes(query) ||
+          user.role?.toLowerCase().includes(query)
+        )
+      }
+      
+      return filtered
+    })
 
     // Filter announcements based on search and filters
     const filteredAnnouncements = computed(() => {
@@ -1693,7 +2004,42 @@ export default {
       return answer && answer.length >= 1000
     }
 
+    // Validate FAQ data before saving
+    const validateFaq = (faq) => {
+      const errors = []
+      
+      if (!faq.question || !faq.question.trim()) {
+        errors.push('Question is required')
+      }
+      
+      if (!faq.answer || !faq.answer.trim()) {
+        errors.push('Answer is required')
+      }
+      
+      if (!faq.category || !faq.category.trim()) {
+        errors.push('Category is required')
+      } else if (faq.category.length > 100) {
+        errors.push('Category must be 100 characters or less')
+      }
+      
+      if (faq.icon && faq.icon.length > 50) {
+        errors.push('Icon class must be 50 characters or less')
+      }
+      
+      return errors
+    }
+
+    // Check if there are any validation errors before saving
+    const hasValidationErrors = computed(() => {
+      return faqs.value.some(faq => {
+        const errors = validateFaq(faq)
+        return errors.length > 0
+      })
+    })
+
+    // Consolidated onMounted hook - fetch all initial data
     onMounted(() => {
+      console.log('Settings component mounted, fetching initial data...')
       fetchUsers()
       fetchFaqs()
       fetchAnnouncements()
@@ -1707,6 +2053,9 @@ export default {
       dateFormats,
       userTableHeaders,
       users,
+      userSearchQuery,
+      filteredUsers,
+      isLoadingUsers,
       getStatusClass,
       saveChanges,
       showUserModal,
@@ -1741,6 +2090,7 @@ export default {
       previewData,
       previewAnnouncement,
       duplicateAnnouncement,
+      handleImageUpload,
       showDeleteAnnouncementModal,
       isDeleting,
       deleteAnnouncement,
@@ -1782,7 +2132,9 @@ export default {
       confirmDeleteFAQ,
       deleteFAQ,
       isAnswerNearLimit,
-      isAnswerOverLimit
+      isAnswerOverLimit,
+      validateFaq,
+      hasValidationErrors
     }
   }
 }
@@ -1843,4 +2195,4 @@ export default {
   transform: translateY(-2px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
-</style> 
+</style>

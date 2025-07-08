@@ -9,10 +9,13 @@
     </transition>
 
     <!-- Modal Content with transition -->
-    <transition name="modal">
+    <transition name="modal"> 
       <div v-if="modelValue"
            class="fixed inset-0 items-center justify-center z-50 flex">
-        <div class="bg-white p-6 md:p-8 rounded-xl shadow-xl w-full max-w-md md:max-w-3xl lg:max-w-4xl mx-2 md:mx-auto my-4 md:my-0 overflow-y-auto max-h-[90vh]">
+        <div :class="[
+          'bg-white p-6 md:p-8 lg:p-10 rounded-xl shadow-xl w-full mx-2 md:mx-auto my-2 md:my-4 overflow-y-auto',
+          currentStep === 3 ? 'max-w-sm md:max-w-5xl lg:max-w-6xl xl:max-w-7xl max-h-[95vh]' : 'max-w-sm md:max-w-4xl lg:max-w-5xl max-h-[92vh]'
+        ]">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-crimson-100 flex items-center justify-center">
@@ -46,6 +49,21 @@
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10">
                 <!-- STEP 1: PERSONAL INFO (Column 1 on LG) -->
                 <div v-if="currentStep === 1">
+                  <!-- Duplicate Registration Warning -->
+                  <div v-if="!checkDuplicateRegistration()" class="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-md shadow-sm">
+                    <div class="flex">
+                      <div class="flex-shrink-0">
+                        <i class="fas fa-ban text-yellow-600 mr-3"></i>
+                      </div>
+                      <div>
+                        <h5 class="font-semibold text-yellow-800">Registration Not Allowed</h5>
+                        <p class="text-sm text-yellow-700 mt-1">
+                          You already have an existing appointment for <strong>{{ props.program?.name || 'this program' }}</strong>. Each student can only register once per exam program. If you need to make changes, please cancel your existing appointment first.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <!-- Personal Information Section Card -->
                   <div class="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                     <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
@@ -63,6 +81,7 @@
                           <input 
                             id="lastName"
                             v-model="formData.lastName"
+                            @input="handleTextInput('lastName')"
                             @blur="markAsTouched('lastName'); validateLastName()"
                             type="text"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('lastName')]"
@@ -84,6 +103,7 @@
                           <input 
                             id="firstName"
                             v-model="formData.firstName"
+                            @input="handleTextInput('firstName')"
                             @blur="markAsTouched('firstName'); validateFirstName()"
                             type="text"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('firstName')]"
@@ -105,6 +125,7 @@
                           <input 
                             id="middleName"
                             v-model="formData.middleName"
+                            @input="handleTextInput('middleName')"
                             @blur="markAsTouched('middleName'); validateMiddleName()"
                             type="text"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('middleName')]"
@@ -126,6 +147,7 @@
                           <input 
                             id="contactNumber"
                             v-model="formData.contactNumber"
+                            @input="markAsTouched('contactNumber'); validateContactNumber()"
                             @blur="markAsTouched('contactNumber'); validateContactNumber()"
                             type="tel"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('contactNumber')]"
@@ -147,6 +169,7 @@
                           <input 
                             id="email"
                             v-model="formData.email"
+                            @input="markAsTouched('email'); validateEmail()"
                             @blur="markAsTouched('email'); validateEmail()"
                             type="email"
                             :class="['w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('email')]"
@@ -275,6 +298,7 @@
                           <input 
                             id="streetPurok"
                             v-model="formData.streetPurok"
+                            @input="handleTextInput('streetPurok')"
                             @blur="markAsTouched('streetPurok'); validateStreetPurok()"
                             type="text"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('streetPurok')]"
@@ -289,46 +313,13 @@
                         </p>
                       </div>
 
-                      <!-- Barangay -->
-                      <div class="space-y-2">
-                        <label for="barangay" class="block text-sm font-medium text-gray-700 mb-1.5">Barangay</label>
-                        <div class="relative">
-                          <input 
-                            id="barangay"
-                            v-model="formData.barangay"
-                            @blur="markAsTouched('barangay'); validateBarangay()"
-                            type="text"
-                            :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('barangay')]"
-                            placeholder="Enter your Barangay"
-                          />
-                          <div v-if="isFieldValid('barangay')" class="absolute inset-y-0 right-3 flex items-center text-green-500 animate-fadeIn">
-                            <i class="fas fa-check-circle"></i>
-                          </div>
-                        </div>
-                        <p v-if="isFieldInvalid('barangay')" class="text-sm text-red-600 mt-1 error-text">
-                          {{ validationErrors.barangay }}
-                        </p>
-                      </div>
-
-                      <!-- City -->
-                      <div class="space-y-2">
-                        <label for="city" class="block text-sm font-medium text-gray-700 mb-1.5">City/Municipality</label>
-                        <div class="relative">
-                          <input 
-                            id="city"
-                            v-model="formData.city"
-                            @blur="markAsTouched('city'); validateCity()"
-                            type="text"
-                            :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('city')]"
-                            placeholder="Enter your City/Municipality"
-                          />
-                          <div v-if="isFieldValid('city')" class="absolute inset-y-0 right-3 flex items-center text-green-500 animate-fadeIn">
-                            <i class="fas fa-check-circle"></i>
-                          </div>
-                        </div>
-                        <p v-if="isFieldInvalid('city')" class="text-sm text-red-600 mt-1 error-text">
-                          {{ validationErrors.city }}
-                        </p>
+                      <!-- Location Dropdowns Component -->
+                      <div class="md:col-span-2">
+                        <LocationDropdowns 
+                          v-model="locationData"
+                          @change="onLocationChange"
+                          :show-debug="false"
+                        />
                       </div>
                       
                       <!-- Citizenship -->
@@ -338,15 +329,21 @@
                           <input 
                             id="citizenship"
                             v-model="formData.citizenship"
+                            @input="handleTextInput('citizenship')"
                             @blur="markAsTouched('citizenship'); validateCitizenship()"
                             type="text"
+                            list="citizenship-list"
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('citizenship')]"
                             placeholder="e.g., Filipino"
+                            autocomplete="off"
                           />
                           <div v-if="isFieldValid('citizenship')" class="absolute inset-y-0 right-3 flex items-center text-green-500 animate-fadeIn">
                             <i class="fas fa-check-circle"></i>
                           </div>
                         </div>
+                        <datalist id="citizenship-list">
+                          <option v-for="citizenship in citizenshipOptions" :key="citizenship" :value="citizenship">{{ citizenship }}</option>
+                        </datalist>
                         <p v-if="isFieldInvalid('citizenship')" class="text-sm text-red-600 mt-1 error-text">
                           {{ validationErrors.citizenship }}
                         </p>
@@ -468,11 +465,16 @@
                               <input 
                                 id="seniorGraduatingSchoolName"
                                 v-model="formData.seniorGraduating.schoolName"
+                                @input="handleTextInput('seniorGraduatingSchoolName', 'seniorGraduating.schoolName')"
                                 @blur="validateApplicantType()"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
                                 placeholder="Enter your school name"
+                                list="zamboanga-schools-list"
                               />
+                              <datalist id="zamboanga-schools-list">
+                                <option v-for="school in zamboanganSchools" :key="school" :value="school">{{ school }}</option>
+                              </datalist>
                             </div>
                           </div>
                           
@@ -482,11 +484,30 @@
                               <input 
                                 id="seniorGraduatingSchoolAddress"
                                 v-model="formData.seniorGraduating.schoolAddress"
-                                @blur="validateApplicantType()"
+                                @input="handleAddressInput('seniorGraduatingSchoolAddress', 'seniorGraduating.schoolAddress')"
+                                @focus="showAddressSuggestions('seniorGraduatingSchoolAddress')"
+                                @blur="hideAddressSuggestions('seniorGraduatingSchoolAddress')"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
                                 placeholder="Enter your school address"
+                                autocomplete="off"
                               />
+                              <!-- Address Suggestions Dropdown -->
+                              <div v-if="addressSuggestions.seniorGraduatingSchoolAddress.show && addressSuggestions.seniorGraduatingSchoolAddress.results.length > 0"
+                                   class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                <div v-for="(suggestion, index) in addressSuggestions.seniorGraduatingSchoolAddress.results" 
+                                     :key="index"
+                                     @mousedown="selectAddressSuggestion('seniorGraduatingSchoolAddress', suggestion)"
+                                     class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0">
+                                  <div class="text-sm font-medium text-gray-900">{{ suggestion.display_name }}</div>
+                                  <div class="text-xs text-gray-500">{{ suggestion.type }}</div>
+                                </div>
+                              </div>
+                              <!-- Loading indicator -->
+                              <div v-if="addressSuggestions.seniorGraduatingSchoolAddress.loading"
+                                   class="absolute inset-y-0 right-3 flex items-center">
+                                <div class="w-4 h-4 border-2 border-gray-300 border-t-crimson-500 rounded-full animate-spin"></div>
+                              </div>
                             </div>
                           </div>
                           
@@ -513,11 +534,16 @@
                               <input 
                                 id="seniorGraduateSchoolName"
                                 v-model="formData.seniorGraduate.schoolName"
+                                @input="handleTextInput('seniorGraduateSchoolName', 'seniorGraduate.schoolName')"
                                 @blur="validateApplicantType()"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
                                 placeholder="Enter your school name"
+                                list="zamboanga-schools-list-graduate"
                               />
+                              <datalist id="zamboanga-schools-list-graduate">
+                                <option v-for="school in zamboanganSchools" :key="school" :value="school">{{ school }}</option>
+                              </datalist>
                             </div>
                           </div>
                           
@@ -527,11 +553,30 @@
                               <input 
                                 id="seniorGraduateSchoolAddress"
                                 v-model="formData.seniorGraduate.schoolAddress"
-                                @blur="validateApplicantType()"
+                                @input="handleAddressInput('seniorGraduateSchoolAddress', 'seniorGraduate.schoolAddress')"
+                                @focus="showAddressSuggestions('seniorGraduateSchoolAddress')"
+                                @blur="hideAddressSuggestions('seniorGraduateSchoolAddress')"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
                                 placeholder="Enter your school address"
+                                autocomplete="off"
                               />
+                              <!-- Address Suggestions Dropdown -->
+                              <div v-if="addressSuggestions.seniorGraduateSchoolAddress.show && addressSuggestions.seniorGraduateSchoolAddress.results.length > 0"
+                                   class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                <div v-for="(suggestion, index) in addressSuggestions.seniorGraduateSchoolAddress.results" 
+                                     :key="index"
+                                     @mousedown="selectAddressSuggestion('seniorGraduateSchoolAddress', suggestion)"
+                                     class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0">
+                                  <div class="text-sm font-medium text-gray-900">{{ suggestion.display_name }}</div>
+                                  <div class="text-xs text-gray-500">{{ suggestion.type }}</div>
+                                </div>
+                              </div>
+                              <!-- Loading indicator -->
+                              <div v-if="addressSuggestions.seniorGraduateSchoolAddress.loading"
+                                   class="absolute inset-y-0 right-3 flex items-center">
+                                <div class="w-4 h-4 border-2 border-gray-300 border-t-crimson-500 rounded-full animate-spin"></div>
+                              </div>
                             </div>
                           </div>
                           
@@ -558,11 +603,16 @@
                               <input 
                                 id="collegeSchoolName"
                                 v-model="formData.college.schoolName"
+                                @input="handleTextInput('collegeSchoolName', 'college.schoolName')"
                                 @blur="validateApplicantType()"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
                                 placeholder="Enter your college/university name"
+                                list="zamboanga-schools-list-college"
                               />
+                              <datalist id="zamboanga-schools-list-college">
+                                <option v-for="school in zamboanganSchools" :key="school" :value="school">{{ school }}</option>
+                              </datalist>
                             </div>
                           </div>
                           
@@ -572,11 +622,30 @@
                               <input 
                                 id="collegeSchoolAddress"
                                 v-model="formData.college.schoolAddress"
-                                @blur="validateApplicantType()"
+                                @input="handleAddressInput('collegeSchoolAddress', 'college.schoolAddress')"
+                                @focus="showAddressSuggestions('collegeSchoolAddress')"
+                                @blur="hideAddressSuggestions('collegeSchoolAddress')"
                                 type="text"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
                                 placeholder="Enter your college/university address"
+                                autocomplete="off"
                               />
+                              <!-- Address Suggestions Dropdown -->
+                              <div v-if="addressSuggestions.collegeSchoolAddress.show && addressSuggestions.collegeSchoolAddress.results.length > 0"
+                                   class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                <div v-for="(suggestion, index) in addressSuggestions.collegeSchoolAddress.results" 
+                                     :key="index"
+                                     @mousedown="selectAddressSuggestion('collegeSchoolAddress', suggestion)"
+                                     class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0">
+                                  <div class="text-sm font-medium text-gray-900">{{ suggestion.display_name }}</div>
+                                  <div class="text-xs text-gray-500">{{ suggestion.type }}</div>
+                                </div>
+                              </div>
+                              <!-- Loading indicator -->
+                              <div v-if="addressSuggestions.collegeSchoolAddress.loading"
+                                   class="absolute inset-y-0 right-3 flex items-center">
+                                <div class="w-4 h-4 border-2 border-gray-300 border-t-crimson-500 rounded-full animate-spin"></div>
+                              </div>
                             </div>
                           </div>
                           
@@ -637,7 +706,7 @@
 
                 <!-- STEP 3: Schedule Details Section (Spans 2 columns on LG) -->
                 <div v-if="currentStep === 3" class="lg:col-span-2">
-                  <div class="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm md:max-w-3xl md:mx-auto">
+                  <div class="space-y-6 bg-white rounded-xl p-6 md:p-8 border border-gray-200 shadow-sm">
                     <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
                       <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
                         <i class="fas fa-calendar-alt text-crimson-500"></i>
@@ -645,65 +714,68 @@
                       <h4>Schedule Details</h4>
                     </div>
                     
-                    <div class="grid grid-cols-1 gap-x-6 gap-y-5">
+                    <div class="grid grid-cols-1 gap-x-6 gap-y-6">
                       <!-- Preferred Date -->
-                      <div class="space-y-2">
+                      <div class="space-y-3">
                         <label class="block text-sm font-medium text-gray-700">Preferred Date</label>
                         <div class="relative">
-                          <!-- Calendar container -->
-                          <div v-if="showCalendar" class="absolute top-full left-0 right-0 mt-1 bg-white shadow-xl rounded-xl z-10 p-3 md:p-4 border border-gray-200" @click.stop>
+                          <!-- Calendar container with increased height -->
+                          <div v-if="showCalendar" class="absolute top-full left-0 right-0 mt-2 bg-white shadow-2xl rounded-xl z-10 p-4 md:p-6 border border-gray-200 min-h-[500px] md:min-h-[600px]" @click.stop>
                             <CustomCalendar 
                               v-model="formData.preferredDate"
                               v-model:timeSlotValue="formData.timeSlot"
                               :dateAvailability="dateAvailability"
+                              :testSessions="testSessions"
                               @time-slot-selected="closeCalendarWithDelay"
                             />
                           </div>
                           
-                          <!-- Date display field -->
+                          <!-- Date display field with larger size -->
                           <div 
                             @click="showCalendar = !showCalendar; markAsTouched('preferredDate')"
                             :class="[
-                              'w-full px-4 py-2.5 border rounded-lg flex justify-between items-center cursor-pointer transition-all',
-                              touchedFields.preferredDate && dateError ? 'border-red-500' : 'border-gray-300 hover:border-crimson-500'
+                              'w-full px-5 py-4 border rounded-xl flex justify-between items-center cursor-pointer transition-all text-lg font-medium',
+                              touchedFields.preferredDate && dateError ? 'border-red-500' : 'border-gray-300 hover:border-crimson-500 hover:shadow-md'
                             ]"
                             data-calendar-trigger
                           >
                             <span v-if="formData.preferredDate" class="text-gray-900">{{ formatDate(formData.preferredDate) }}</span>
                             <span v-else class="text-gray-400">Select a date</span>
-                            <i class="fas fa-calendar-alt text-gray-400"></i>
+                            <i class="fas fa-calendar-alt text-gray-400 text-xl"></i>
                           </div>
                         </div>
-                        <p v-if="touchedFields.preferredDate && dateError" class="text-sm text-red-600 mt-1 error-text">
+                        <p v-if="touchedFields.preferredDate && dateError" class="text-sm text-red-600 mt-2 error-text">
                           {{ dateError }}
                         </p>
-                        <p class="text-xs text-gray-500 mt-1">
+                        <p class="text-sm text-gray-500 mt-2">
                           Note: Today's date, past dates, and Sundays are not available for scheduling.
                         </p>
                       </div>
                       
-                      <!-- Time Slot Selection -->
-                      <div v-if="formData.preferredDate" class="space-y-2">
+                      <!-- Time Slot Selection with larger buttons -->
+                      <div v-if="formData.preferredDate" class="space-y-3">
                         <label class="block text-sm font-medium text-gray-700">Time Slot</label>
                         
-                        <div class="flex flex-col sm:flex-row gap-3 mt-3">
+                        <div class="flex flex-col sm:flex-row gap-4 mt-4">
                           <button 
                             type="button"
                             @click="selectTimeSlot('morning'); markAsTouched('timeSlot')"
                             :disabled="!isMorningAvailable"
                             :class="[
-                              'px-5 py-2.5 rounded-xl flex items-center justify-center transition-all flex-1',
+                              'px-6 py-4 rounded-xl flex items-center justify-center transition-all flex-1 text-lg font-medium',
                               formData.timeSlot === 'morning' 
-                                ? 'bg-gradient-to-r from-crimson-500 to-crimson-600 text-white shadow-md' 
-                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm',
+                                ? 'bg-gradient-to-r from-crimson-500 to-crimson-600 text-white shadow-lg transform scale-105' 
+                                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-crimson-300 shadow-md',
                               !isMorningAvailable ? 'opacity-50 cursor-not-allowed' : '',
                               touchedFields.timeSlot && dateError && !formData.timeSlot ? 'border-red-500' : ''
                             ]"
                           >
-                            <i class="fas fa-sun mr-2 text-yellow-500"></i>
-                            <span class="font-medium">Morning</span>
-                            <span class="hidden sm:inline ml-1">(8:00 AM - 12:00 PM)</span>
-                            <span v-if="!isMorningAvailable" class="ml-2 text-xs">(Full)</span>
+                            <i class="fas fa-sun mr-3 text-yellow-500 text-xl"></i>
+                            <div class="text-center">
+                              <div class="font-semibold">Morning</div>
+                              <div class="text-sm opacity-80">(8:00 AM - 12:00 PM)</div>
+                              <div v-if="!isMorningAvailable" class="text-xs mt-1 text-red-400">(Full)</div>
+                            </div>
                           </button>
                           
                           <button 
@@ -711,18 +783,20 @@
                             @click="selectTimeSlot('afternoon'); markAsTouched('timeSlot')"
                             :disabled="!isAfternoonAvailable"
                             :class="[
-                              'px-5 py-2.5 rounded-xl flex items-center justify-center transition-all flex-1',
+                              'px-6 py-4 rounded-xl flex items-center justify-center transition-all flex-1 text-lg font-medium',
                               formData.timeSlot === 'afternoon' 
-                                ? 'bg-gradient-to-r from-crimson-500 to-crimson-600 text-white shadow-md' 
-                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm',
+                                ? 'bg-gradient-to-r from-crimson-500 to-crimson-600 text-white shadow-lg transform scale-105' 
+                                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-crimson-300 shadow-md',
                               !isAfternoonAvailable ? 'opacity-50 cursor-not-allowed' : '',
                               touchedFields.timeSlot && dateError && !formData.timeSlot ? 'border-red-500' : ''
                             ]"
                           >
-                            <i class="fas fa-moon mr-2 text-blue-400"></i>
-                            <span class="font-medium">Afternoon</span>
-                            <span class="hidden sm:inline ml-1">(1:00 PM - 5:00 PM)</span>
-                            <span v-if="!isAfternoonAvailable" class="ml-2 text-xs">(Full)</span>
+                            <i class="fas fa-moon mr-3 text-blue-400 text-xl"></i>
+                            <div class="text-center">
+                              <div class="font-semibold">Afternoon</div>
+                              <div class="text-sm opacity-80">(1:00 PM - 5:00 PM)</div>
+                              <div v-if="!isAfternoonAvailable" class="text-xs mt-1 text-red-400">(Full)</div>
+                            </div>
                           </button>
                         </div>
                       </div>
@@ -756,7 +830,13 @@
                   type="button" 
                   v-if="currentStep < 3"
                   @click="nextStep"
-                  class="flex-1 bg-crimson-500 text-white px-6 py-3 rounded-lg hover:bg-crimson-600 transition-all text-base font-medium flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto"
+                  :disabled="currentStep === 1 && !checkDuplicateRegistration()"
+                  :class="[
+                    'flex-1 text-white px-6 py-3 rounded-lg transition-all text-base font-medium flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto',
+                    (currentStep === 1 && !checkDuplicateRegistration()) 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-crimson-500 hover:bg-crimson-600'
+                  ]"
                 >
                   Next
                   <i class="fas fa-arrow-right"></i>
@@ -783,14 +863,19 @@
 <script>
 import axios from '../../plugins/axios'
 import CustomCalendar from './CustomCalendar.vue'
+import LocationDropdowns from '../common/LocationDropdowns.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import ApplicationFormStore from '../../services/ApplicationFormStore'
 import AuthService from '../../services/auth.service'
+import { useToast } from '../../composables/useToast'
+import { philippineBarangays as barangaysData, philippineCities as citiesData, citizenshipOptions as citizenshipsData } from '../../data/philippineData'
+import { allZamboanganSchoolsFull } from '../../data/schoolData'
 
 export default {
   name: 'ScheduleModal',
   components: {
-    CustomCalendar
+    CustomCalendar,
+    LocationDropdowns
   },
   props: {
     modelValue: {
@@ -811,8 +896,10 @@ export default {
     const loading = ref(false);
     const error = ref(null);
     const apiData = ref(null);
+    const testSessions = ref([]);
     const showCalendar = ref(false);
     const dateError = ref('');
+    const userAppointments = ref([]);
     const currentStep = ref(1); // To manage the current step of the form
 
     const validationErrors = ref({
@@ -869,6 +956,8 @@ export default {
       gender: '',
       age: '',
       streetPurok: '',
+      region: '',
+      province: '',
       barangay: '',
       city: '',
       citizenship: '',
@@ -897,6 +986,42 @@ export default {
       }
     });
     
+    // Convert imported arrays to reactive refs
+    const philippineBarangays = ref(barangaysData);
+    const philippineCities = ref(citiesData);
+    const citizenshipOptions = ref(citizenshipsData);
+    const zamboanganSchools = ref(allZamboanganSchoolsFull);
+    
+    // Location data for the new LocationDropdowns component
+    const locationData = ref({
+      region: '',
+      province: '',
+      city: '',
+      barangay: ''
+    });
+    
+    // Address autocomplete state
+    const addressSuggestions = ref({
+      seniorGraduatingSchoolAddress: {
+        show: false,
+        loading: false,
+        results: []
+      },
+      seniorGraduateSchoolAddress: {
+        show: false,
+        loading: false,
+        results: []
+      },
+      collegeSchoolAddress: {
+        show: false,
+        loading: false,
+        results: []
+      }
+    });
+    
+    // Debounce timer for address search
+    let addressSearchTimeout = null;
+    
     // Function to mark field as touched
     const markAsTouched = (fieldName) => {
       touchedFields.value[fieldName] = true;
@@ -919,6 +1044,271 @@ export default {
         'border-red-500 focus:border-red-500 focus:ring-red-500/50': isFieldInvalid(fieldName),
         'border-gray-300 focus:ring-crimson-500/50 focus:border-crimson-500': !touchedFields.value[fieldName]
       };
+    };
+    
+    // Handle text input with real-time validation and auto-uppercase for key fields
+    const handleTextInput = (fieldName, modelPath = null) => {
+      const actualPath = modelPath || fieldName;
+      const keys = actualPath.split('.');
+      let target = formData.value;
+      
+      // Navigate to the correct nested object
+      for (let i = 0; i < keys.length - 1; i++) {
+        target = target[keys[i]];
+      }
+      
+      const finalKey = keys[keys.length - 1];
+      const currentValue = target[finalKey];
+      
+      // Convert to uppercase for key fields used in CSV score import matching
+      // This ensures consistent data format for score import/matching
+      const fieldsToUppercase = [
+        'lastName', 'firstName', 'middleName',  // Name fields for score matching
+        'streetPurok', 'barangay', 'city', 'citizenship',  // Address fields
+        'seniorGraduatingSchoolName', 'seniorGraduateSchoolName', 'collegeSchoolName',  // School name fields for score matching
+        'seniorGraduatingSchoolAddress', 'seniorGraduateSchoolAddress', 'collegeSchoolAddress'  // School address fields
+      ];
+      
+      if (fieldsToUppercase.includes(fieldName)) {
+        target[finalKey] = currentValue.toUpperCase();
+      }
+      // For other fields, keep the original case
+      
+      // Mark field as touched for real-time validation
+      markAsTouched(fieldName);
+      
+      // Perform real-time validation based on field type
+      switch(fieldName) {
+        case 'lastName':
+          validateLastName();
+          break;
+        case 'firstName':
+          validateFirstName();
+          break;
+        case 'middleName':
+          validateMiddleName();
+          break;
+        case 'contactNumber':
+          validateContactNumber();
+          break;
+        case 'email':
+          validateEmail();
+          break;
+        case 'streetPurok':
+          validateStreetPurok();
+          break;
+        case 'barangay':
+          validateBarangay();
+          break;
+        case 'city':
+          validateCity();
+          break;
+        case 'citizenship':
+          validateCitizenship();
+          break;
+        default:
+          // For nested fields, trigger parent validation
+          if (fieldName.includes('seniorGraduating') || fieldName.includes('seniorGraduate') || fieldName.includes('college')) {
+            validateApplicantType();
+          }
+          break;
+      }
+    };
+    
+    // Address autocomplete functions
+    const handleAddressInput = (fieldName, modelPath) => {
+      // Get the current input value
+      const keys = modelPath.split('.');
+      let target = formData.value;
+      for (let i = 0; i < keys.length - 1; i++) {
+        target = target[keys[i]];
+      }
+      const finalKey = keys[keys.length - 1];
+      const currentValue = target[finalKey];
+      
+      // Apply auto-capitalization for school address fields
+      const fieldsToUppercase = [
+        'seniorGraduatingSchoolAddress', 'seniorGraduateSchoolAddress', 'collegeSchoolAddress'
+      ];
+      
+      if (fieldsToUppercase.includes(fieldName)) {
+        target[finalKey] = currentValue.toUpperCase();
+      }
+      
+      // Mark field as touched for validation
+      markAsTouched(fieldName);
+      
+      // Trigger validation
+      validateApplicantType();
+      
+      // Get the updated input value after capitalization
+      const inputValue = target[finalKey];
+      
+      // Debounce the address search
+      if (addressSearchTimeout) {
+        clearTimeout(addressSearchTimeout);
+      }
+      
+      // Don't search for very short queries
+      if (!inputValue || inputValue.length < 3) {
+        addressSuggestions.value[fieldName].results = [];
+        addressSuggestions.value[fieldName].show = false;
+        return;
+      }
+      
+      addressSearchTimeout = setTimeout(() => {
+        searchAddresses(fieldName, inputValue);
+      }, 300); // 300ms debounce
+    };
+    
+    const searchAddresses = async (fieldName, query) => {
+      if (!query || query.length < 3) return;
+      
+      addressSuggestions.value[fieldName].loading = true;
+      
+      try {
+        // Use OpenStreetMap Nominatim API
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?` +
+          `q=${encodeURIComponent(query)}&` +
+          `format=json&` +
+          `addressdetails=1&` +
+          `limit=8&` +
+          `countrycodes=ph&` + // Limit to Philippines
+          `accept-language=en`
+        );
+        
+        if (!response.ok) throw new Error('Address search failed');
+        
+        const results = await response.json();
+        
+        // Filter and format results for better relevance
+        const filteredResults = results
+          .filter(result => {
+            // Prefer results that are likely to be educational institutions or their addresses
+            const displayName = result.display_name.toLowerCase();
+            const type = result.type?.toLowerCase() || '';
+            const categoryClass = result.class?.toLowerCase() || '';
+            
+            // Include educational institutions, addresses, and places
+            return (
+              displayName.includes('school') ||
+              displayName.includes('university') ||
+              displayName.includes('college') ||
+              displayName.includes('institute') ||
+              type.includes('education') ||
+              categoryClass.includes('amenity') ||
+              type.includes('house') ||
+              type.includes('road') ||
+              type.includes('suburb') ||
+              type.includes('city') ||
+              type.includes('town') ||
+              type.includes('village') ||
+              type.includes('administrative')
+            );
+          })
+          .map(result => ({
+            display_name: result.display_name,
+            type: result.type || 'address',
+            importance: result.importance || 0
+          }))
+          .sort((a, b) => {
+            // Prioritize educational institutions
+            const aIsSchool = a.display_name.toLowerCase().includes('school') ||
+                            a.display_name.toLowerCase().includes('university') ||
+                            a.display_name.toLowerCase().includes('college');
+            const bIsSchool = b.display_name.toLowerCase().includes('school') ||
+                            b.display_name.toLowerCase().includes('university') ||
+                            b.display_name.toLowerCase().includes('college');
+            
+            if (aIsSchool && !bIsSchool) return -1;
+            if (!aIsSchool && bIsSchool) return 1;
+            
+            // Then sort by importance
+            return (b.importance || 0) - (a.importance || 0);
+          });
+        
+        addressSuggestions.value[fieldName].results = filteredResults;
+        addressSuggestions.value[fieldName].show = filteredResults.length > 0;
+        
+      } catch (error) {
+        console.error('Address search error:', error);
+        addressSuggestions.value[fieldName].results = [];
+        addressSuggestions.value[fieldName].show = false;
+      } finally {
+        addressSuggestions.value[fieldName].loading = false;
+      }
+    };
+    
+    const selectAddressSuggestion = (fieldName, suggestion) => {
+      // Determine the model path based on field name
+      let modelPath;
+      if (fieldName === 'seniorGraduatingSchoolAddress') {
+        modelPath = 'seniorGraduating.schoolAddress';
+      } else if (fieldName === 'seniorGraduateSchoolAddress') {
+        modelPath = 'seniorGraduate.schoolAddress';
+      } else if (fieldName === 'collegeSchoolAddress') {
+        modelPath = 'college.schoolAddress';
+      }
+      
+      // Set the selected address with auto-capitalization
+      const keys = modelPath.split('.');
+      let target = formData.value;
+      for (let i = 0; i < keys.length - 1; i++) {
+        target = target[keys[i]];
+      }
+      const finalKey = keys[keys.length - 1];
+      
+      // Apply auto-capitalization to the selected suggestion
+      const fieldsToUppercase = [
+        'seniorGraduatingSchoolAddress', 'seniorGraduateSchoolAddress', 'collegeSchoolAddress'
+      ];
+      
+      if (fieldsToUppercase.includes(fieldName)) {
+        target[finalKey] = suggestion.display_name.toUpperCase();
+      } else {
+        target[finalKey] = suggestion.display_name;
+      }
+      
+      // Hide suggestions
+      addressSuggestions.value[fieldName].show = false;
+      addressSuggestions.value[fieldName].results = [];
+      
+      // Trigger validation
+      validateApplicantType();
+    };
+    
+    const showAddressSuggestions = (fieldName) => {
+      // Show suggestions if we have results
+      if (addressSuggestions.value[fieldName].results.length > 0) {
+        addressSuggestions.value[fieldName].show = true;
+      }
+    };
+    
+    const hideAddressSuggestions = (fieldName) => {
+      // Delay hiding to allow for selection
+      setTimeout(() => {
+        addressSuggestions.value[fieldName].show = false;
+      }, 150);
+    };
+    
+    // Handle location changes from LocationDropdowns component
+    const onLocationChange = (locationData) => {
+      // Update the formData with the new location data
+      formData.value.region = locationData.region;
+      formData.value.province = locationData.province;
+      formData.value.city = locationData.city;
+      formData.value.barangay = locationData.barangay;
+      
+      // Mark location fields as touched for validation
+      markAsTouched('region');
+      markAsTouched('province');
+      markAsTouched('city');
+      markAsTouched('barangay');
+      
+      // Trigger validation for location fields
+      validateBarangay();
+      validateCity();
     };
     
     // Computed property for birth years (100 years back from current year)
@@ -1267,6 +1657,10 @@ export default {
       if (touchedFields.value.contactNumber) validateContactNumber();
     });
     
+    watch(() => formData.value.email, () => {
+      if (touchedFields.value.email) validateEmail();
+    });
+    
     watch(() => formData.value.streetPurok, () => {
       if (touchedFields.value.streetPurok) validateStreetPurok();
     });
@@ -1336,10 +1730,25 @@ export default {
       validateDateTime();
     });
     
+    // fetchData is now moved above the watch statement
+    
+    // Fetch user appointments to check for duplicates
+    const fetchUserAppointments = async () => {
+      try {
+        const response = await axios.get('/api/appointments/');
+        userAppointments.value = response.data;
+        console.log('User appointments loaded:', userAppointments.value);
+      } catch (err) {
+        console.error('Error fetching user appointments:', err);
+        // Don't set error.value here to avoid blocking the main flow
+      }
+    };
+    
     // Watch for modal open/close
     watch(() => props.modelValue, (newVal) => {
       if (newVal && props.program?.id) {
         fetchData();
+        fetchUserAppointments(); // Fetch user appointments to check for duplicates
       }
       
       // Reset the form data when modal is opened
@@ -1397,7 +1806,6 @@ export default {
           middleName: '',
           contactNumber: '',
           email: '',
-          schoolName: '',
           birthDate: '',
           gender: '',
           age: '',
@@ -1444,6 +1852,19 @@ export default {
     // Clean up event listeners when component is unmounted or modal closes
     onUnmounted(() => {
       document.removeEventListener('click', handleClickOutside);
+    });
+    
+    // Add debugging on mount
+    onMounted(() => {
+      console.log('ScheduleModal mounted');
+      console.log('philippineBarangays length:', philippineBarangays.value.length);
+      console.log('philippineCities length:', philippineCities.value.length);
+      console.log('citizenshipOptions length:', citizenshipOptions.value.length);
+      console.log('zamboanganSchools length:', zamboanganSchools.value.length);
+      console.log('First 5 barangays:', philippineBarangays.value.slice(0, 5));
+      console.log('First 5 cities:', philippineCities.value.slice(0, 5));
+      console.log('First 5 citizenships:', citizenshipOptions.value.slice(0, 5));
+      console.log('First 5 Zamboangan schools:', zamboanganSchools.value.slice(0, 5));
     });
     
     // Add cleanup for when the modal is closed
@@ -1612,6 +2033,12 @@ export default {
         // Process your data
         apiData.value = response.data;
         
+        // Also fetch test sessions for highlighting exam dates
+        await fetchTestSessions();
+        
+        // Fetch user's existing appointments
+        await fetchUserAppointments();
+        
       } catch (err) {
         // Check if modal was closed during API call
         if (!props.modelValue) return;
@@ -1629,6 +2056,111 @@ export default {
       } finally {
         loading.value = false;
       }
+    };
+    
+    // fetchUserAppointments is now defined above the watch statement
+
+    // Fetch test sessions for highlighting exam dates
+    const fetchTestSessions = async () => {
+      try {
+        console.log('🔄 Fetching test sessions...');
+        
+        // Try different endpoints to find the working one
+        const endpoints = [
+          '/api/public/test-sessions/',  // New public endpoint (no auth required)
+          '/api/public/test-sessions',   // Without trailing slash
+          '/api/admin/test-sessions/',   // Admin endpoint (auth required)
+          '/api/test-sessions/',         // Generic endpoint
+          '/admin/test-sessions/',       // Admin endpoint alt
+          '/test-sessions/'             // Basic endpoint
+        ];
+        
+        let response = null;
+        let workingEndpoint = null;
+        
+        for (const endpoint of endpoints) {
+          try {
+            console.log(`🔍 Trying endpoint: ${endpoint}`);
+            response = await axios.get(endpoint);
+            workingEndpoint = endpoint;
+            console.log(`✅ Success with endpoint: ${endpoint}`);
+            break;
+          } catch (err) {
+            console.log(`❌ Failed endpoint: ${endpoint}`, err.response?.status || err.message);
+            continue;
+          }
+        }
+        
+        if (!response) {
+          console.warn('⚠️ No test sessions endpoint available - calendar highlighting will be disabled');
+          testSessions.value = [];
+          return;
+        }
+        
+        testSessions.value = response.data;
+        console.log('✅ Test sessions loaded:', testSessions.value);
+        console.log('📊 Test sessions count:', testSessions.value.length);
+        console.log('🌐 Working endpoint:', workingEndpoint);
+        
+        // Log individual test sessions for debugging
+        testSessions.value.forEach((session, index) => {
+          console.log(`📋 Session ${index + 1}:`, {
+            id: session.id,
+            exam_type: session.exam_type,
+            exam_date: session.exam_date,
+            registration_start: session.registration_start_date,
+            registration_end: session.registration_end_date,
+            status: session.status,
+            raw: session
+          });
+        });
+        
+        // Test the date formatting
+        const today = new Date();
+        const todayStr = formatDateForApi(today);
+        console.log('🗓️ Today formatted:', todayStr);
+        
+        // Check if today matches any exam dates
+        const todayExams = testSessions.value.filter(session => session.exam_date === todayStr);
+        console.log('📅 Exams today:', todayExams);
+        
+        // Check if today is in any registration period
+        const todayRegistrations = testSessions.value.filter(session => {
+          const regStart = new Date(session.registration_start_date);
+          const regEnd = new Date(session.registration_end_date);
+          const currentDate = new Date(todayStr);
+          return currentDate >= regStart && currentDate <= regEnd;
+        });
+        console.log('🟢 Registration periods active today:', todayRegistrations);
+        
+        // Test specific dates from your test sessions
+        const testDates = ['2025-06-29', '2025-07-29', '2025-07-21', '2025-06-27'];
+        testDates.forEach(dateStr => {
+          const exams = testSessions.value.filter(session => session.exam_date === dateStr);
+          const registrations = testSessions.value.filter(session => {
+            const regStart = new Date(session.registration_start_date);
+            const regEnd = new Date(session.registration_end_date);
+            const currentDate = new Date(dateStr);
+            return currentDate >= regStart && currentDate <= regEnd;
+          });
+          console.log(`🎯 ${dateStr} - Exams: ${exams.length}, Registrations: ${registrations.length}`);
+        });
+        
+      } catch (err) {
+        console.error('❌ Error fetching test sessions:', err);
+        console.error('📝 Error details:', err.response?.data || err.message);
+        console.error('🔍 Full error:', err);
+        // Don't throw error, just set empty array so calendar still works
+        testSessions.value = [];
+      }
+    };
+
+    // Helper function to format dates for API (moved up for use in fetchTestSessions)
+    const formatDateForApi = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     };
     
     // Form submission
@@ -1653,7 +2185,7 @@ export default {
         
         // Show a notification about missing fields
         const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md z-[100] animate-fade-in'; // Increased z-index
+        notification.className = 'fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md z-[100] animate-fade-in';
         notification.innerHTML = `
           <div class="flex items-center">
             <div class="flex-shrink-0">
@@ -1680,7 +2212,10 @@ export default {
         const homeAddressString = `${formData.value.streetPurok}, ${formData.value.barangay}, ${formData.value.city}`.trim();
         const applicationData = {
           // Personal info
-          full_name: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName}`,
+          full_name: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName}`.trim(),
+          last_name: formData.value.lastName.trim(),
+          first_name: formData.value.firstName.trim(),
+          middle_name: formData.value.middleName.trim(),
           contact_number: formData.value.contactNumber,
           email: formData.value.email,
           birth_month: formData.value.birthMonth,
@@ -1855,10 +2390,43 @@ export default {
       }
     };
 
+    // Check if user already has an appointment for this program
+    const checkDuplicateRegistration = () => {
+      if (!props.program?.id) return true; // No program selected, no need to validate
+      
+      // Check if the user already has an appointment for this program
+      const programId = props.program.id;
+      const hasExistingAppointment = userAppointments.value.some(appointment => {
+        // Check if appointment is for the current program and not cancelled or claimed
+        return (
+          appointment.program === programId && 
+          appointment.status !== 'cancelled' &&
+          appointment.status !== 'claimed'
+        );
+      });
+      
+      if (hasExistingAppointment) {
+        error.value = `duplicate_registration`;
+        return false;
+      }
+      
+      // Clear any duplicate registration error if there's no conflict
+      if (error.value === 'duplicate_registration') {
+        error.value = null;
+      }
+      
+      return true;
+    };
+
     const validateCurrentStep = () => {
       let isValid = true;
       // Mark relevant fields as touched for current step
       if (currentStep.value === 1) {
+        // First check if the user already has an appointment for this program
+        if (!checkDuplicateRegistration()) {
+          return false;
+        }
+        
         touchedFields.value.lastName = true;
         touchedFields.value.firstName = true;
         touchedFields.value.middleName = true; // Mark as touched even if optional
@@ -1901,27 +2469,22 @@ export default {
         if (firstErrorElement) {
           firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-         // Show a notification about missing fields for the current step
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md z-[100] animate-fade-in'; // Increased z-index
-        notification.innerHTML = `
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <i class="fas fa-exclamation-circle text-red-500 mr-2"></i>
-            </div>
-            <div>Please complete all required fields for this step.</div>
-            <button class="ml-4 text-red-500 hover:text-red-700" onclick="this.parentElement.parentElement.remove()">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-        `;
-        document.body.appendChild(notification);
         
-        setTimeout(() => {
-          if (document.body.contains(notification)) {
-            notification.remove();
-          }
-        }, 5000);
+        // Use the toast composable for notifications
+        const { showToast } = useToast();
+        
+        // Customize message based on the error type
+        let notificationMessage = 'Please complete all required fields for this step.';
+        let notificationType = 'error';
+        
+        // Check if it's a duplicate registration error
+        if (error.value === 'duplicate_registration') {
+          notificationMessage = `Registration Not Allowed: You already have an existing appointment for ${props.program?.name || 'this program'}. Each student can only register once per exam program.`;
+          // Use 'warning' type for the duplicate registration to make it stand out differently
+          notificationType = 'warning';
+        }
+        
+        showToast(notificationMessage, notificationType, 6000);
       }
       return isValid;
     };
@@ -1938,6 +2501,12 @@ export default {
       isAfternoonAvailable,
       validationErrors,
       birthYears,
+      philippineBarangays,
+      philippineCities,
+      citizenshipOptions,
+      zamboanganSchools,
+      testSessions,
+      userAppointments,
       fetchData,
       formatDate,
       selectTimeSlot,
@@ -1946,15 +2515,41 @@ export default {
       close,
       closeCalendarWithDelay,
       markAsTouched,
+      checkDuplicateRegistration,
       touchedFields,
       isFieldValid,
       isFieldInvalid,
       getInputClasses,
+      handleTextInput,
+      handleAddressInput,
+      searchAddresses,
+      selectAddressSuggestion,
+      showAddressSuggestions,
+      hideAddressSuggestions,
+      addressSuggestions,
       calculateAndSetAge,
       currentStep,
       nextStep,
       prevStep,
-      validateCurrentStep
+      validateCurrentStep,
+      // Add all validation functions
+      validateLastName,
+      validateFirstName,
+      validateMiddleName,
+      validateContactNumber,
+      validateEmail,
+      validateBirthDate,
+      validateAge,
+      validateGender,
+      validateStreetPurok,
+      validateBarangay,
+      validateCity,
+      validateCitizenship,
+      validateWmsucetExperience,
+      validateApplicantType,
+      validateDateTime,
+      locationData,
+      onLocationChange
     };
   }
 }

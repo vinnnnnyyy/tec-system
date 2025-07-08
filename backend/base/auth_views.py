@@ -333,3 +333,40 @@ def get_user_profile(request):
             {'detail': f'An error occurred: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def verify_password(request):
+    """
+    Verify user's password for secure access to features
+    """
+    try:
+        password = request.data.get('password')
+        
+        if not password:
+            return Response(
+                {'detail': 'Password is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Authenticate user with provided password
+        user = authenticate(username=request.user.username, password=password)
+        
+        if user is None:
+            return Response(
+                {'valid': False, 'detail': 'Invalid password'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Password is valid
+        return Response(
+            {'valid': True},
+            status=status.HTTP_200_OK
+        )
+        
+    except Exception as e:
+        return Response(
+            {'detail': f'An error occurred: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

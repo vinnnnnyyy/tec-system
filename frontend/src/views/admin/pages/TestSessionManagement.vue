@@ -79,12 +79,22 @@
           <div v-if="activeTab === 'sessions'" class="animate-fadeIn">
             <div class="flex justify-between mb-6">
               <h2 class="text-lg font-semibold text-gray-900">Test Sessions</h2>
-              <button 
-                @click="showCreateSessionModal = true"
-                class="px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition flex items-center"
-              >
-                <i class="fas fa-plus mr-2"></i> New Session
-              </button>
+              <div class="flex space-x-3">
+                <button 
+                  @click="updateSessionStatus"
+                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center"
+                  :disabled="loading.updateStatus"
+                >
+                  <i class="fas fa-sync mr-2" :class="{ 'animate-spin': loading.updateStatus }"></i> 
+                  Update Status
+                </button>
+                <button 
+                  @click="showCreateSessionModal = true"
+                  class="px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition flex items-center"
+                >
+                  <i class="fas fa-plus mr-2"></i> New Session
+                </button>
+              </div>
             </div>
             
             <!-- Sessions Table -->
@@ -907,8 +917,7 @@
                 @click="confirmAction" 
                 class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 flex items-center justify-center"
                 :disabled="loading.confirmation"
-              >
-                <i v-if="loading.confirmation" class="fas fa-spinner fa-spin mr-2"></i>
+              >                <i v-if="loading.confirmation" class="fas fa-spinner fa-spin mr-2"></i>
                 <i v-else class="fas fa-trash mr-2"></i>
                 {{ confirmationData.confirmButtonText }}
               </button>
@@ -916,6 +925,19 @@
           </div>
         </div>
       </div>
+      
+      <!-- Room Allocations Modal -->
+      <RoomAllocationsModal
+        :show="showRoomAllocationsModal"
+        :session="selectedSession"
+        :rooms="roomAllocations.data"
+        :loading="roomAllocations.loading"
+        :error="roomAllocations.error"
+        @close="showRoomAllocationsModal = false"
+        @retry="checkRoomAllocations"
+        @success="showToast($event, 'success')"
+        @error="showToast($event, 'error')"
+      />
     </div>
   </div>
 </template>
@@ -926,11 +948,13 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replac
 import AuthService from '../../../services/auth.service';
 import axiosInstance from '../../../services/axios.interceptor';
 import AdminPagination from '../components/AdminPagination.vue';
+import RoomAllocationsModal from './room-allocations-modal.vue';
 import { useToast } from '../../../composables/useToast';
 
 export default {
   components: {
-    AdminPagination
+    AdminPagination,
+    RoomAllocationsModal
   },
   setup() {
     const { showToast } = useToast();
@@ -951,7 +975,8 @@ export default {
         createSession: false,
         createCenter: false,
         createRoom: false,
-        confirmation: false
+        confirmation: false,
+        updateStatus: false
       },
       stats: {
         upcomingSessions: 0,
@@ -962,7 +987,15 @@ export default {
       showCreateSessionModal: false,
       showCreateCenterModal: false,
       showCreateRoomModal: false,
+      showRoomAllocationsModal: false, // New modal state
       createBothSlots: false,
+      // Store the selected session for room allocations
+      selectedSession: null,
+      roomAllocations: {
+        loading: false,
+        data: [],
+        error: null
+      },
       autoAssign: {
         testSessionId: '',
         groupBySchool: true,
@@ -1111,6 +1144,25 @@ export default {
         // Show error notification
       } finally {
         this.loading.sessions = false;
+      }
+    },
+    
+    async updateSessionStatus() {
+      this.loading.updateStatus = true;
+      try {
+        const response = await axiosInstance.post('/api/admin/test-sessions/update-status/');
+        
+        // Show success message
+        this.showToast(response.data.message, 'success');
+        
+        // Refresh the test sessions list to reflect any status changes
+        await this.fetchTestSessions();
+        
+      } catch (error) {
+        console.error('Error updating session status:', error);
+        this.showToast('Failed to update session status', 'error');
+      } finally {
+        this.loading.updateStatus = false;
       }
     },
     
@@ -1275,12 +1327,59 @@ export default {
       
       // Store the session ID for the update operation
       this.editingSessionId = session.id;
-    },
-    
-    checkRoomAllocations(session) {
-      // View room allocations for a session
-      console.log('Check room allocations for session:', session);
-      // This could navigate to a detailed view of allocations
+    },      async checkRoomAllocations(session) {
+      // Store the selected session and show the modal
+      this.selectedSession = session;
+      this.roomAllocations.loading = true;
+      this.roomAllocations.error = null;
+      this.roomAllocations.data = [];
+      
+      try {
+        // First try using the new API endpoint which provides allocations for a specific session
+        try {
+          // This will use the new endpoint we just created
+          const response = await axiosInstance.get(`/api/admin/test-sessions/${session.id}/allocations/`);
+          if (response.data && Array.isArray(response.data)) {
+            this.roomAllocations.data = response.data;
+            console.log('Room allocations fetched from specific endpoint:', this.roomAllocations.data);
+          }
+        } catch (specificError) {
+          console.warn('Specific allocations endpoint failed, falling back to generic approach:', specificError);
+          
+          // Fallback approach: Fetch test rooms data and centers data separately
+          const roomsResponse = await axiosInstance.get('/api/admin/test-rooms/');
+          const centersResponse = await axiosInstance.get('/api/admin/test-centers/');
+          
+          const centers = centersResponse.data || [];
+          const allRooms = roomsResponse.data || [];
+          
+          // Process and format room data for display
+          const roomsWithCenterNames = allRooms.map(room => {
+            // Find the center this room belongs to
+            const center = centers.find(c => c.id === room.test_center);
+            
+            return {
+              ...room,
+              center_name: center ? center.name : 'Unknown Center',
+              test_center_name: center ? center.name : 'Unknown Center',
+              test_session_id: session.id
+            };
+          });
+          
+          // Assign these rooms to the modal data
+          this.roomAllocations.data = roomsWithCenterNames;
+          console.log('Room allocations prepared via fallback:', this.roomAllocations.data);
+        }
+      } catch (error) {
+        console.error('Error fetching room allocations:', error);
+        this.roomAllocations.error = 'Failed to load room allocations. Please try again.';
+        this.showToast('Failed to load room allocations', 'error');
+      } finally {
+        this.roomAllocations.loading = false;
+      }
+      
+      // Show the modal
+      this.showRoomAllocationsModal = true;
     },
     
     showDeleteConfirmation(session) {
@@ -1292,6 +1391,14 @@ export default {
         item: session
       };
       this.showConfirmationModal = true;
+    },
+    
+    showAutoAssignConfirmation() {
+      if (this.stats.pendingAssignments === 0) {
+        this.showToast('No pending assignments to auto-assign', 'info');
+        return;
+      }
+      this.showAutoAssignConfirmModal = true;
     },
     
     async deleteSession(session) {
@@ -1615,314 +1722,53 @@ export default {
       this.loading.autoAssign = true;
       
       try {
-        // First, check if rooms with selected time slot exist and have capacity
+        // Check if rooms with selected time slot exist and have capacity
         const timeSlotToCheck = this.autoAssign.timeSlot === 'both' ? null : this.autoAssign.timeSlot;
         await this.checkRoomAvailability(timeSlotToCheck);
 
-        // Direct approach - try to assign to rooms directly without using student preferences
-        if (this.autoAssign.timeSlot !== 'both') {
-          try {
-            console.log('Trying direct assignment approach...');
-            
-            // First get pending applications
-            const pendingResponse = await axiosInstance.get('/api/admin/applications/pending/');
-            const pendingApplications = pendingResponse.data;
-            
-            if (Array.isArray(pendingApplications) && pendingApplications.length > 0) {
-              // Get available rooms for the selected time slot
-              const availableRooms = this.testRooms.filter(room => 
-                room.is_active && 
-                room.available_capacity > 0 && 
-                room.time_slot === this.autoAssign.timeSlot
-              );
-              
-              if (availableRooms.length > 0) {
-                console.log(`Direct approach: ${pendingApplications.length} applications, ${availableRooms.length} available rooms`);
-                
-                // Create a basic assignment directly
-                try {
-                  // Try the first endpoint format
-                  const directResponse = await axiosInstance.post('/api/admin/test-details/create-bulk/', {
-                    test_session_id: this.autoAssign.testSessionId,
-                    applications: pendingApplications.map(app => app.id),
-                    time_slot: this.autoAssign.timeSlot,
-                    force_time_slot: true,  // Tell the backend to ignore student preferences and use admin-selected time slot
-                    ignore_student_preferences: true
-                  });
-                  
-                  if (directResponse.data.success) {
-                    console.log('Direct assignment successful!');
-                    const count = directResponse.data.assigned_count || pendingApplications.length;
-                    
-                    this.showToast(`${count} students assigned successfully`, 'success');
-                    
-                    // Update UI and close modal
-                    await this.fetchRoomAssignmentCounts();
-                    await this.fetchPendingAssignments();
-                    this.showAutoAssignModal = false;
-                    this.loading.autoAssign = false;
-                    return;
-                  }
-                } catch (error1) {
-                  console.error('First endpoint format failed:', error1);
-                  
-                  // Try alternative endpoint format
-                  try {
-                    const altDirectResponse = await axiosInstance.post('/api/admin/applications/assign-rooms/', {
-                      session_id: this.autoAssign.testSessionId,
-                      application_ids: pendingApplications.map(app => app.id),
-                      time_slot: this.autoAssign.timeSlot,
-                      force_time_slot: true,
-                      ignore_student_preferences: true,
-                      override_preferences: true
-                    });
-                    
-                    if (altDirectResponse.data.success) {
-                      console.log('Alternative direct assignment successful!');
-                      const count = altDirectResponse.data.assigned_count || pendingApplications.length;
-                      
-                      this.showToast(`${count} students assigned successfully`, 'success');
-                      
-                      // Update UI and close modal
-                      await this.fetchRoomAssignmentCounts();
-                      await this.fetchPendingAssignments();
-                      this.showAutoAssignModal = false;
-                      this.loading.autoAssign = false;
-                      return;
-                    }
-                  } catch (error2) {
-                    console.error('Alternative endpoint format failed:', error2);
-                    
-                    // Last resort: Assign rooms one by one manually
-                    try {
-                      console.log('Attempting individual assignments as final fallback...');
-                      let successCount = 0;
-                      
-                      // Choose a simpler distribution algorithm for the final fallback
-                      // Just distribute students evenly among the rooms
-                      const roomIds = availableRooms.map(room => room.id);
-                      
-                      // Limit to maximum 20 applications to prevent too many API calls
-                      const applicationsToAssign = pendingApplications.slice(0, 20);
-                      
-                      for (let i = 0; i < applicationsToAssign.length; i++) {
-                        const application = applicationsToAssign[i];
-                        const roomId = roomIds[i % roomIds.length]; // Simple round-robin assignment
-                        
-                        try {
-                          // Try to assign this specific application to a room
-                          const assignResponse = await axiosInstance.post('/api/admin/test-details/', {
-                            application_id: application.id,
-                            test_session_id: this.autoAssign.testSessionId,
-                            room_id: roomId,
-                            time_slot: this.autoAssign.timeSlot,
-                            force_time_slot: true,
-                            ignore_student_preferences: true
-                          });
-                          
-                          if (assignResponse.data && assignResponse.data.id) {
-                            successCount++;
-                          }
-                        } catch (singleError) {
-                          console.error(`Error assigning application ${application.id}:`, singleError);
-                          // Continue with next application
-                        }
-                      }
-
-                      if (successCount > 0) {
-                        console.log(`Successfully assigned ${successCount} applications individually`);
-                        
-                        this.showToast(`${successCount} students assigned successfully`, 'success');
-                        
-                        // Update UI and close modal
-                        await this.fetchRoomAssignmentCounts();
-                        await this.fetchPendingAssignments();
-                        this.showAutoAssignModal = false;
-                        this.loading.autoAssign = false;
-                        return;
-                      }
-                    } catch (error3) {
-                      console.error('Individual assignment approach failed:', error3);
-                    }
-                    
-                    // If all direct approaches failed, continue to standard approach
-                  }
-                }
-              }
-            }
-          } catch (directError) {
-            console.error('Direct assignment approach failed:', directError);
-            // Fall back to standard approach
-          }
-        }
-
-        // Standard approach with original parameters
-        const sessionId = this.autoAssign.testSessionId;
+        // Prepare request data for auto-assignment
         const requestData = {
-          session_id: sessionId,
-          test_session_id: sessionId,
+          session_id: this.autoAssign.testSessionId,
+          test_session_id: this.autoAssign.testSessionId,
           group_by_school: this.autoAssign.groupBySchool,
           balance_rooms: this.autoAssign.balanceRooms,
           time_slot: this.autoAssign.timeSlot,
           respect_capacity: true,
-          ignore_student_preferences: true,
+          ignore_student_preferences: this.autoAssign.ignorePreferences,
           force_time_slot: this.autoAssign.timeSlot !== 'both'
         };
 
         console.log('Auto-assign request:', requestData);
         
-        // WORKAROUND: Since the backend might not recognize ignore_student_preferences,
-        // we'll also include some other parameters that might help
-        if (this.autoAssign.timeSlot !== 'both') {
-          // Add alternate parameter names the backend might recognize
-          requestData.force_time_slot = true;
-          requestData.override_preferences = true;
+        // Try the main auto-assign endpoint
+        const response = await axiosInstance.post('/api/admin/auto-assign-test-details/', requestData);
+        
+        if (response.data.success) {
+          console.log('Auto-assignment successful:', response.data);
+          const assignedCount = response.data.assigned_count || response.data.assignments_made || 0;
           
-          // Set student_preferences_ignored flag in case backend uses this name
-          requestData.student_preferences_ignored = true;
-          
-          // Try alternative parameter: temporarily set all student preferences to "all"
-          // This is another workaround in case the backend doesn't support ignoring preferences
-          requestData.set_all_preferences = "all";
+          if (assignedCount > 0) {
+            this.showToast(`Successfully assigned ${assignedCount} students to test rooms`, 'success');
+            
+            // Update room capacities based on the assignment results
+            if (response.data.room_assignments) {
+              await this.updateRoomCapacities(response.data.room_assignments);
+            }
+            
+            // Refresh data and close modal
+            await this.fetchRoomAssignmentCounts();  
+            await this.fetchPendingAssignments();
+            this.showAutoAssignModal = false;
+          } else {
+            this.showToast('No students were assigned. Check if there are available rooms and pending applications.', 'warning');
+          }
+        } else {
+          const message = response.data.message || 'Auto-assignment completed but no students were assigned';
+          this.showToast(message, 'warning');
         }
         
-        // Use the endpoint that we know works
-        const response = await axiosInstance.post('/api/admin/auto-assign/', requestData);
-        const result = response.data;
-        console.log('Auto-assign result:', result);
-
-        // If we get the specific error about no students with time slot preference,
-        // and the user wants to ignore preferences, try a fallback approach
-        if (!result.success && 
-            (result.error === 'No students with morning time slot preference found' || 
-             result.error === 'No students with afternoon time slot preference found')) {
-          
-          console.log('Received time slot error. Trying fallback approach...');
-          
-          // Try with 'both' time slots as a workaround
-          const fallbackRequest = {
-            ...requestData,
-            time_slot: 'both',  // Switch to 'both' as a workaround
-            force_assign_any_slot: true  // Add another parameter that might help
-          };
-          
-          try {
-            console.log('Trying fallback request:', fallbackRequest);
-            const fallbackResponse = await axiosInstance.post('/api/admin/auto-assign/', fallbackRequest);
-            const fallbackResult = fallbackResponse.data;
-            console.log('Fallback auto-assign result:', fallbackResult);
-            
-            // If the fallback was successful, use its result instead
-            if (fallbackResult.success) {
-              console.log('Fallback approach succeeded!');
-              result.success = true;
-              result.assigned_applications = fallbackResult.assigned_applications || 
-                                            fallbackResult.assigned_ids || 
-                                            fallbackResult.details?.map(d => d.application_id || d.student_id) || 
-                                            [];
-              result.room_assignments = fallbackResult.room_assignments;
-              result.details = fallbackResult.details;
-            }
-          } catch (fallbackError) {
-            console.error('Fallback auto-assign error:', fallbackError);
-            // Continue with original result if fallback fails
-          }
-        }
-
-        if (result.success) {
-          // Get the assigned application IDs
-          const assignedIds = result.assigned_applications || 
-                              result.assigned_ids || 
-                              result.details?.map(d => d.application_id || d.student_id) || 
-                              [];
-          
-          if (assignedIds.length > 0) {
-            // Update appointment statuses to waiting_for_submission
-            try {
-              const statusUpdateResponse = await axiosInstance.post('/api/admin/update-appointment-status/', {
-                appointment_ids: assignedIds,
-                new_status: 'waiting_for_submission'
-              });
-              
-              console.log('Status update result:', statusUpdateResponse.data);
-            } catch (statusError) {
-              console.error('Error updating appointment statuses:', statusError);
-            }
-          }
-
-          this.showToast(`${assignedIds.length} students auto-assigned successfully`, 'success');
-          
-          // Always refresh room assignment counts to get latest data
-          await this.fetchRoomAssignmentCounts();
-          
-          // If room assignments data is provided, update local state
-          if (result.room_assignments && Array.isArray(result.room_assignments)) {
-            this.updateRoomCapacities(result.room_assignments);
-          } else if (result.details && Array.isArray(result.details)) {
-            // Adapt the format if the API uses 'details' instead of 'room_assignments'
-            const adaptedAssignments = result.details.map(detail => ({
-              room_id: detail.room_id,
-              student_id: detail.student_id || detail.application_id
-            }));
-            this.updateRoomCapacities(adaptedAssignments);
-          }
-          
-          // Refresh the student list to show new assignments
-          this.getStudents();
-          
-          // Close the modal after successful assignment
-          this.showAutoAssignModal = false;
-        } else {
-          // Enhanced error handling for specific failure cases
-          let errorMessage = result.message || result.error || 'Failed to auto-assign students';
-          let detailedMessage = '';
-          
-          // If we have detailed information in result.details
-          if (result.details && typeof result.details === 'object') {
-            if (result.error === 'No students with morning time slot preference found' || 
-                result.error === 'No students with afternoon time slot preference found') {
-              
-              // Backend is trying to use time slot preferences that we don't want to use
-              errorMessage = `There are no students that can be assigned to ${this.autoAssign.timeSlot} sessions.`;
-              
-              detailedMessage = `\n\nPossible solutions:\n` +
-                              `1. Try using 'both' time slots option instead\n` +
-                              `2. The backend API may need to be updated to support admin time slot assignments`;
-              
-              // Keep the rest of the detailed message for debugging purposes
-              if (result.details) {
-                const timeSlot = result.details.requested_time_slot || this.autoAssign.timeSlot;
-                const availableRooms = result.details.available_room_count || 0;
-                const totalApplications = result.details.total_application_count || 0;
-                
-                detailedMessage += `\n\nDebug info:\n- Available ${timeSlot} rooms: ${availableRooms}` +
-                                  `\n- Total applications: ${totalApplications}`;
-              }
-            }
-          }
-          
-          // Check for specific error cases
-          if (result.errors && result.errors.length > 0) {
-            errorMessage = result.errors.join('. ');
-          } else if (result.assigned_count === 0 && result.unassigned_count === 0) {
-            // Special case for the morning/afternoon time slot issue
-            if (this.autoAssign.timeSlot === 'morning' || this.autoAssign.timeSlot === 'afternoon') {
-              if (!detailedMessage) {
-                errorMessage = `No students could be assigned to ${this.autoAssign.timeSlot} sessions. Check if:` +
-                             `\n1. There are unassigned students waiting for assignment` +
-                             `\n2. Rooms with ${this.autoAssign.timeSlot} time slots exist and have capacity`;
-              } else {
-                errorMessage += detailedMessage;
-              }
-            } else {
-              errorMessage = 'No eligible students found for assignment. Check verification status of applications.';
-            }
-          }
-          
-          this.showToast(errorMessage, 'error');
-        }
       } catch (error) {
-        console.error('Auto-assign error:', error);
+        console.error('Auto-assignment error:', error);
         
         const errorMessage = error?.response?.data?.message || 
                              error?.response?.data?.error ||
@@ -1983,139 +1829,64 @@ export default {
      * This method is just for immediate UI feedback until the next data refresh
      * @param {Array} roomAssignments - Array of room assignment data 
      */
-    updateRoomCapacities(roomAssignments) {
+    async updateRoomCapacities(roomAssignments) {
       if (!roomAssignments || !Array.isArray(roomAssignments)) {
-        console.warn('Invalid room assignments data received');
-        return;
-      }
-      
-      console.log('Processing room assignments:', roomAssignments);
-      
-      // Group assignments by room ID
-      const assignmentsByRoom = {};
-      roomAssignments.forEach(assignment => {
-        // Ensure we have a valid room_id
-        const roomId = assignment.room_id || assignment.room || assignment.roomId;
-        if (!roomId) {
-          console.warn('Assignment missing room ID:', assignment);
-          return;
-        }
-        
-        if (!assignmentsByRoom[roomId]) {
-          assignmentsByRoom[roomId] = 0;
-        }
-        assignmentsByRoom[roomId]++;
-      });
-      
-      console.log('Assignments grouped by room:', assignmentsByRoom);
-      
-      // Update UI with new assignment counts
-      // The actual database update happens on the backend
-      this.testRooms = this.testRooms.map(room => {
-        const newAssignments = assignmentsByRoom[room.id] || 0;
-        if (newAssignments === 0) return room; // No change
-        
-        const currentAssignments = room.assigned_count || 0;
-        const newAssignedCount = currentAssignments + newAssignments;
-        const newAvailableCapacity = room.capacity - newAssignedCount;
-        
-        console.log(`Updating room ${room.id} in UI: capacity=${room.capacity}, old assigned=${currentAssignments}, new assigned=${newAssignedCount}, new available=${newAvailableCapacity}`);
-        
-        return {
-          ...room,
-          assigned_count: newAssignedCount,
-          available_capacity: newAvailableCapacity
-        };
-      });
-      
-      console.log('Updated room capacities in UI:', this.testRooms);
-      
-      // Fetch the updated counts from the server to ensure consistency
-      // We'll do this with a shorter delay to quickly get the correct counts
-      setTimeout(() => {
-        this.fetchRoomAssignmentCounts();
-      }, 500);
-    },
-    
-    /**
-     * Fetches the student list with their assignments
-     * Used to refresh the UI after auto-assignment
-     */
-    async getStudents() {
-      if (!this.autoAssign.testSessionId) {
-        console.warn('No test session ID provided for getStudents');
+        console.log('No room assignments provided to update capacities');
         return;
       }
       
       try {
-        // Try to get assigned students without making an API call that might not exist
-        // Instead, we'll just refresh the assignments count which is what we need
-        await this.fetchPendingAssignments();
+        // Update local room capacities based on assignment results
+        roomAssignments.forEach(assignment => {
+          const room = this.testRooms.find(r => r.id === assignment.room_id);
+          if (room) {
+            // Update assigned count if provided
+            if (assignment.assigned_count !== undefined) {
+              room.assigned_count = assignment.assigned_count;
+              room.available_capacity = room.capacity - assignment.assigned_count;
+            }
+            // Or increment by 1 if this is a single assignment
+            else if (assignment.student_id || assignment.application_id) {
+              room.assigned_count = (room.assigned_count || 0) + 1;
+              room.available_capacity = room.capacity - room.assigned_count;
+            }
+          }
+        });
         
-        console.log('Updated pending assignments count');
+        console.log('Updated room capacities locally');
         
-        // Close the auto-assign modal after successful refresh
-        // (This is already done in runAutoAssign, so it's redundant here)
-        // this.showAutoAssignModal = false;
+        // Also refresh from the server to ensure accuracy
+        await this.fetchRoomAssignmentCounts();
+        
       } catch (error) {
-        console.error('Error refreshing assignment data:', error);
-        this.showToast('Could not refresh assignment data', 'error');
+        console.error('Error updating room capacities:', error);
       }
     },
     
     // Pagination methods
-    changeSessionsPage(newPage) {
-      this.pagination.sessions.currentPage = newPage;
+    changeSessionsPage(page) {
+      this.pagination.sessions.currentPage = page;
     },
     
-    changeCentersPage(newPage) {
-      this.pagination.centers.currentPage = newPage;
+    changeCentersPage(page) {
+      this.pagination.centers.currentPage = page;
     },
     
-    changeRoomsPage(newPage) {
-      this.pagination.rooms.currentPage = newPage;
+    changeRoomsPage(page) {
+      this.pagination.rooms.currentPage = page;
     },
     
-    // Function to update pagination when filtered rooms change
     updateRoomsPagination() {
       this.pagination.rooms.totalItems = this.filteredRooms.length;
-      // Reset to first page when filter changes
-      this.pagination.rooms.currentPage = 1;
-    },
-    
-    // Helper methods
-    formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    },
-    
-    // Add new methods for canceling the modals
-    cancelSessionModal() {
-      // Reset form data
-      this.newSession = {
-        exam_type: '',
-        registration_start_date: '',
-        registration_end_date: '',
-        exam_date: '',
-        status: 'SCHEDULED'
-      };
-      this.editingSessionId = null;
-      this.showCreateSessionModal = false;
-      
-      // Reset button text
-      const createButton = document.querySelector("#createSessionBtn");
-      if (createButton) {
-        createButton.textContent = "Create Session";
+      // Reset to page 1 if current page is beyond available pages
+      const totalPages = Math.ceil(this.pagination.rooms.totalItems / this.pagination.rooms.itemsPerPage);
+      if (this.pagination.rooms.currentPage > totalPages && totalPages > 0) {
+        this.pagination.rooms.currentPage = 1;
       }
     },
     
     cancelCenterModal() {
-      // Reset form data
+      this.showCreateCenterModal = false;
       this.newCenter = {
         name: '',
         code: '',
@@ -2123,7 +1894,6 @@ export default {
         is_active: true
       };
       this.editingCenterId = null;
-      this.showCreateCenterModal = false;
       
       // Reset button text
       const createButton = document.querySelector("#createCenterBtn");
@@ -2132,8 +1902,26 @@ export default {
       }
     },
     
+    cancelSessionModal() {
+      this.showCreateSessionModal = false;
+      this.newSession = {
+        exam_type: '',
+        registration_start_date: '',
+        registration_end_date: '',
+        exam_date: '',
+        status: 'SCHEDULED'
+      };
+      this.editingSessionId = null;
+      
+      // Reset button text
+      const createButton = document.querySelector("#createSessionBtn");
+      if (createButton) {
+        createButton.textContent = "Create Session";
+      }
+    },
+    
     cancelRoomModal() {
-      // Reset form data
+      this.showCreateRoomModal = false;
       this.newRoom = {
         test_center: '',
         name: '',
@@ -2144,7 +1932,6 @@ export default {
       };
       this.createBothSlots = false;
       this.editingRoomId = null;
-      this.showCreateRoomModal = false;
       
       // Reset button text
       const createButton = document.querySelector("#createRoomBtn");
@@ -2153,174 +1940,15 @@ export default {
       }
     },
     
-    clearRoomFilters() {
-      this.roomFilters.centerId = '';
-      this.roomFilters.timeSlot = '';
-      this.updateRoomsPagination();
+    // Utility methods for formatting
+    formatDate(dateString) {
+      if (!dateString) return 'N/A';
+      return new Date(dateString).toLocaleDateString();
     },
     
-    getCenterName(centerId) {
-      const center = this.testCenters.find(c => c.id == centerId);
-      return center ? center.name : 'Unknown';
-    },
-    
-    // Updated confirmation methods
-    showDeleteCenterConfirmation(center) {
-      this.confirmationData = {
-        title: 'Delete Test Center',
-        message: `Are you sure you want to delete ${center.name}? This will also delete all rooms in this center.`,
-        confirmButtonText: 'Delete',
-        action: this.deleteCenter,
-        item: center
-      };
-      this.showConfirmationModal = true;
-    },
-    
-    // Method to handle the confirmation action
-    async confirmAction() {
-      this.loading.confirmation = true;
-      try {
-        await this.confirmationData.action(this.confirmationData.item);
-        this.showConfirmationModal = false;
-      } catch (error) {
-        console.error('Error in confirmation action:', error);
-        this.showToast('Error performing the operation', 'error');
-      } finally {
-        this.loading.confirmation = false;
-      }
-    },
-    
-    // New method to delete center
-    async deleteCenter(center) {
-      try {
-        await axiosInstance.delete(`/api/admin/test-centers/${center.id}/`);
-        
-        // Remove from local array
-        this.testCenters = this.testCenters.filter(c => c.id !== center.id);
-        
-        // Update stats
-        this.stats.availableCenters = this.testCenters.filter(c => c.is_active).length;
-        
-        // Show success message
-        this.showToast('Center deleted successfully', 'success');
-      } catch (error) {
-        console.error('Error deleting center:', error);
-        throw error;
-      }
-    },
-    
-    // Add the new method to display the item text
-    getItemDisplayText(item) {
-      if (!item) return '';
-      
-      // For session items
-      if (item.exam_type && item.exam_date) {
-        return `${item.exam_type} - ${this.formatDate(item.exam_date)}`;
-      }
-      // For center items
-      else if (item.name && item.code) {
-        return `${item.name} (${item.code})`;
-      }
-      // For room items
-      else if (item.name && item.room_code) {
-        return `${item.name} - ${item.center_name || 'Unknown Center'}`;
-      }
-      
-      return item.name || 'Unknown Item';
-    },
-    
-    // Add these new methods toward the top of the methods section
-    showAutoAssignConfirmation() {
-      // Show the confirmation modal before proceeding to settings
-      this.showAutoAssignConfirmModal = true;
-    },
-    
-    openAutoAssignSettings() {
-      // Close confirmation modal and open the settings modal
-      this.showAutoAssignConfirmModal = false;
-      this.showAutoAssignModal = true;
-    },
-    
-    resetRoomAvailability(session) {
-      this.showToast('Resetting room availability...', 'info');
-      
-      // Call the API to reset room availability
-      axiosInstance.post('/api/admin/test-session/reset-rooms/', {
-        test_session_id: session.id
-      })
-      .then(response => {
-        console.log('Reset room availability response:', response.data);
-        
-        // Update the room counts in the UI
-        if (response.data.updated_rooms && response.data.updated_rooms.length > 0) {
-          // Update each room's counts in the UI
-          response.data.updated_rooms.forEach(updatedRoom => {
-            const roomIndex = this.testRooms.findIndex(r => r.id === updatedRoom.id);
-            if (roomIndex !== -1) {
-              this.testRooms[roomIndex].assigned_count = updatedRoom.new_assigned_count;
-              this.testRooms[roomIndex].available_capacity = updatedRoom.new_available_capacity;
-            }
-          });
-          
-          // Show success message
-          this.showToast(`Successfully reset availability for ${response.data.updated_rooms.length} rooms`, 'success');
-          
-          // If we're on the rooms tab, refresh the rooms data
-          if (this.activeTab === 'rooms') {
-            this.fetchTestRooms();
-          }
-        } else {
-          this.showToast('No rooms needed resetting for this session', 'info');
-        }
-      })
-      .catch(error => {
-        console.error('Error resetting room availability:', error);
-        this.showToast('Failed to reset room availability', 'error');
-      });
-    },
-    filterAppointmentsByTimeSlot(appointments, timeSlot) {
-      return appointments.filter(appointment => 
-        (appointment.assigned_test_time_slot || appointment.time_slot) === timeSlot
-      );
-    },
-    getMatchingTimes(appointment, testDetail) {
-      return appointment && testDetail && 
-             (appointment.assigned_test_time_slot || appointment.time_slot) === testDetail.time_slot;
-    },
-    findAvailableRooms(appointmentTimeSlot, testDate) {
-      // Filter rooms based on time slot and test date
-      return this.rooms.filter(room => {
-        // Check if the room is available for the given time slot and test date
-        return !this.testDetails.some(
-          detail =>
-            detail.room_id === room.id &&
-            detail.test_date === testDate &&
-            detail.time_slot === appointmentTimeSlot
-        );
-      });
-    },
-    autoAssignRooms() {
-      this.loading = true;
-      // Group appointments by date and time slot
-      const groupedAppointments = {};
-      
-      this.appointments.forEach(appointment => {
-        if (appointment.status !== 'scheduled') return;
-        
-        const date = appointment.preferred_date;
-        const timeSlot = appointment.assigned_test_time_slot || appointment.time_slot;
-        
-        if (!groupedAppointments[date]) {
-          groupedAppointments[date] = {};
-        }
-        
-        if (!groupedAppointments[date][timeSlot]) {
-          groupedAppointments[date][timeSlot] = [];
-        }
-        
-        groupedAppointments[date][timeSlot].push(appointment);
-      });
-      // ... existing code ...
+    formatDateTime(dateString) {
+      if (!dateString) return 'N/A';
+      return new Date(dateString).toLocaleString();
     }
   },
   watch: {
@@ -2332,4 +1960,4 @@ export default {
     }
   }
 };
-</script> 
+</script>

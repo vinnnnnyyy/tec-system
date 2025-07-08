@@ -9,7 +9,7 @@
           </div>
           <div>
             <h1 class="text-2xl font-bold text-gray-900">Admin: Import Exam Results</h1>
-            <p class="text-sm text-gray-600">Upload and import examination results for different exam types. Results will be available to all users.</p>
+            <p class="text-sm text-gray-600">Upload and import examination results for public release. Results will be available for public search by application number.</p>
           </div>
         </div>
       </div>
@@ -98,6 +98,16 @@
                   <option v-for="exam in examTypes" :key="exam.value" :value="exam.value">{{ exam.label }}</option>
                 </select>
               </div>
+              
+              <!-- Exam Year Selection -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Exam Year</label>
+                <select v-model="selectedExamYear" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 transition-colors duration-200 text-sm">
+                  <option value="">Choose an exam year</option>
+                  <option v-for="year in sortedAvailableYears" :key="year" :value="year">{{ year }}</option>
+                </select>
+              </div>
 
               <!-- Import Button -->
               <div class="pt-2">
@@ -131,21 +141,27 @@
             <div class="space-y-3">
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <i class="fas fa-info text-crimson-600 text-sm"></i>
+                  <i class="fas fa-list text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">Your file should include Serial Number, Application Number, Full Name, and School in that order</p>
+                <p class="text-sm text-gray-600">CSV columns must be in this exact order: NO, APP_NO, NAME, SCHOOL</p>
               </div>
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <i class="fas fa-table text-crimson-600 text-sm"></i>
+                  <i class="fas fa-user text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">The CSV should have the format: NO, APP_NO, NAME, SCHOOL</p>
+                <p class="text-sm text-gray-600">Use the simple format: NO (serial number), APP_NO (application number), NAME (full name), SCHOOL (school name)</p>
               </div>
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <i class="fas fa-file-alt text-crimson-600 text-sm"></i>
+                  <i class="fas fa-check-circle text-crimson-600 text-sm"></i>
                 </div>
-                <p class="text-sm text-gray-600">File should be in CSV or Excel format (.xlsx, .xls)</p>
+                <p class="text-sm text-gray-600">Results will be stored for public viewing and lookup by application number</p>
+              </div>
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <i class="fas fa-calendar text-crimson-600 text-sm"></i>
+                </div>
+                <p class="text-sm text-gray-600">This is for importing exam results (pass/fail status) for public release, not detailed scores with test parts and OAPR</p>
               </div>
               <div class="flex items-start space-x-3">
                 <div class="w-6 h-6 rounded-full bg-crimson-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -208,12 +224,12 @@ export default {
   setup() {
     const { showToast } = useToast();
     return { showToast };
-  },
-  data() {
+  },  data() {
     return {
       dragover: false,
       selectedFile: null,
       selectedExamType: '',
+      selectedExamYear: new Date().getFullYear().toString(), // Default to current year
       examTypes: [], // Will be populated from backend
       loading: false,
       error: null,
@@ -238,10 +254,17 @@ export default {
         }
       ]
     }
-  },
-  computed: {
+  },  computed: {
     isReadyToImport() {
-      return this.selectedFile && this.selectedExamType;
+      return this.selectedFile && this.selectedExamType && this.selectedExamYear;
+    },
+    
+    // Static year range from 2015 to 2035
+    sortedAvailableYears() {
+      return [
+        '2035', '2034', '2033', '2032', '2031', '2030', '2029', '2028', '2027', '2026',
+        '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015'
+      ];
     }
   },
   methods: {
@@ -257,12 +280,9 @@ export default {
       
       try {
         // Try to access a protected endpoint to verify token is valid
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        await axios.get(`${apiUrl}api/profile/`, {
-          headers: {
-            'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
-          }
-        });
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        // Simplified auth check - just verify we have a token
+        return true;
         return true;
       } catch (error) {
         console.error('Auth error:', error);
@@ -321,7 +341,11 @@ export default {
         }
       } finally {
         this.loading = false;
-      }
+      }    },    
+    // Dummy implementation to prevent errors from old references
+    fetchAvailableYears() {
+      console.log('Using static year range instead of API call');
+      return Promise.resolve([]);
     },
     onFileSelect(event) {
       const file = event.target.files[0];
@@ -364,6 +388,7 @@ export default {
         return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
       }
     },
+    
     async startImport() {
       if (!this.isReadyToImport) {
         return;
@@ -379,107 +404,70 @@ export default {
         return;
       }
       
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const text = e.target.result;
-          const lines = text.split('\n');
-          
-          // Skip header row and empty lines
-          const dataRows = lines.filter(line => line.trim() !== '').slice(1);
-          
-          if (dataRows.length === 0) {
-            this.error = 'No data found in the CSV file';
-            this.loading = false;
-            return;
-          }
-          
-          const parsedData = [];
-          
-          for (let i = 0; i < dataRows.length; i++) {
-            const columns = dataRows[i].split(',');
-            
-            // Ensure we have at least 4 columns (No, app no, name, school)
-            if (columns.length >= 4) {
-              parsedData.push({
-                no: parseInt(columns[0].trim()) || null,
-                appNo: columns[1].trim(),
-                name: columns[2].trim(),
-                school: columns[3].trim(),
-                examType: this.selectedExamType
-              });
+      try {
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('file', this.selectedFile);
+        formData.append('examType', this.selectedExamType);
+        formData.append('year', this.selectedExamYear);
+        
+        // Debug logging
+        console.log('Sending import request with:');
+        console.log('- File:', this.selectedFile.name);
+        console.log('- Exam Type:', this.selectedExamType);
+        console.log('- Year:', this.selectedExamYear);
+        
+        // Send to the exam results import API endpoint (NOT scores import)
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const token = localStorage.getItem('token') || 
+                     localStorage.getItem('access_token') || 
+                     localStorage.getItem('authToken');
+        
+        const response = await axios.post(
+          `${apiUrl}/api/admin/results/import/`,
+          formData,
+          {
+            headers: {
+              'Authorization': token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '',
+              'Content-Type': 'multipart/form-data'
             }
           }
+        );
+        
+        console.log('Import response:', response.data);
+        
+        if (response.data.success) {
+          // Add to recent imports
+          const newImport = {
+            examType: `${this.selectedExamType} (${this.selectedExamYear})`,
+            date: new Date().toLocaleString(),
+            successful: response.data.created_count || response.data.count,
+            failed: 0
+          };
           
-          if (parsedData.length === 0) {
-            this.error = 'Could not parse data from CSV file';
-            this.loading = false;
-            return;
-          }
+          this.recentImports.unshift(newImport);
           
-          console.log('Parsed data from CSV:', parsedData);
+          this.showToast(`Successfully imported ${response.data.created_count || response.data.count} records.`, 'success');
           
-          // Send data to backend API only
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-          const token = localStorage.getItem('token') || 
-                       localStorage.getItem('access_token') || 
-                       localStorage.getItem('authToken');
-          
-          try {
-            const response = await axios.post(
-              `${apiUrl}/api/admin/results/import/`, 
-              {
-                examType: this.selectedExamType,
-                results: parsedData,
-                overwrite: true
-              },
-              {
-                headers: {
-                  'Authorization': token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '',
-                  'Content-Type': 'application/json'
-                }
-              }
-            );
-            console.log('Data successfully sent to API:', response.data);
-            
-            // Add to recent imports
-            const newImport = {
-              examType: this.selectedExamType,
-              date: new Date().toLocaleString(),
-              successful: parsedData.length,
-              failed: 0
-            };
-            
-            this.recentImports.unshift(newImport);
-            
-            this.showToast(`Successfully imported ${parsedData.length} records.`, 'success');
-            
-            // Optional: Navigate to the results page
-            // this.$router.push('/exam-results');
-            
-          } catch (apiError) {
-            console.error('API storage failed:', apiError);
-            this.showToast('Failed to save data to the server.', 'error');
-          }
-        } catch (error) {
-          console.error('Error during import:', error);
-          this.error = error.response?.data?.error || 'Error processing or sending data';
+          // Reset form
+          this.selectedFile = null;
+          this.selectedExamType = '';
+          this.selectedExamYear = new Date().getFullYear().toString();
+        } else {
+          this.error = response.data.error || 'Import failed';
           this.showToast(this.error, 'error');
-        } finally {
-          this.loading = false;
         }
-      };
-      
-      reader.onerror = () => {
-        this.error = 'Error reading file';
+        
+      } catch (error) {
+        console.error('Error during import:', error);
+        this.error = error.response?.data?.error || 'Error processing file';
+        this.showToast(this.error, 'error');
+      } finally {
         this.loading = false;
-        this.showToast('Error reading file', 'error');
-      };
-      
-      reader.readAsText(this.selectedFile);
+      }
     }
-  },
-  created() {
+  },  created() {
+    // Fetch program codes
     this.fetchProgramCodes();
   },
   mounted() {
@@ -504,4 +492,4 @@ export default {
     transform: translateY(0);
   }
 }
-</style> 
+</style>

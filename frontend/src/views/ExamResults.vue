@@ -79,10 +79,9 @@
         <!-- Header with stats -->
         <div class="px-6 py-6 bg-gradient-to-r from-crimson-600 to-crimson-700">
           <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
-              <h2 class="text-2xl font-bold text-white flex items-center">
+            <div>              <h2 class="text-2xl font-bold text-white flex items-center">
                 <i :class="[getExamTypeIcon(selectedExamType), 'mr-3 text-crimson-200']"></i>
-                {{ selectedExamType }} Examination Passers
+                {{ selectedExamType }} Examination Passers {{ selectedYear ? '(' + selectedYear + ')' : '' }}
               </h2>
               <p class="text-crimson-100 mt-1">Congratulations to all successful examinees!</p>
             </div>
@@ -120,9 +119,20 @@
                 <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
               </div>
             </div>
-            
-            <!-- Filters Group -->
+              <!-- Filters Group -->
             <div class="flex flex-col sm:flex-row gap-4 lg:w-auto">
+              <!-- Year Filter -->
+              <div class="min-w-[140px]">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Year</label>
+                <select
+                  v-model="selectedYear"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 shadow-sm"
+                >
+                  <option value="">All Years</option>
+                  <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
+                </select>
+              </div>
+              
               <!-- Records per page -->
               <div class="min-w-[140px]">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Records per page</label>
@@ -302,9 +312,10 @@ export default {
       currentPage: 1,
       itemsPerPage: 25,
       sortColumn: 'appNo',
-      sortDirection: 'asc',
-      selectedLetter: null,
+      sortDirection: 'asc',      selectedLetter: null,
       selectedExamType: '',
+      selectedYear: '',
+      availableYears: [], // Will be populated from API
       loading: false,
       error: null,
       alphabet: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
@@ -321,8 +332,7 @@ export default {
       },
       examPassers: [] // This will be populated from the API
     }
-  },
-  computed: {
+  },  computed: {
     filteredPassers() {
       let filtered = [...this.examPassers];
       
@@ -330,6 +340,11 @@ export default {
       if (this.selectedExamType) {
         filtered = filtered.filter(passer => 
           passer.examType === this.selectedExamType
+        );
+      }      // Apply year filter
+      if (this.selectedYear) {
+        filtered = filtered.filter(passer => 
+          passer.year === this.selectedYear
         );
       }
       
@@ -415,18 +430,31 @@ export default {
       };
     }
   },
-  methods: {
-    // Add method to load exam results from API
+  methods: {    // Add method to load exam results from API
     async fetchExamResults(examType = null, forceRefresh = false) {
       this.loading = true;
       this.error = null;
       
       try {
         // Use the API URL from environment variables or fallback to localhost
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const url = examType 
-          ? `${apiUrl}api/admin/results/?exam_type=${examType}`
-          : `${apiUrl}api/admin/results/`;
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        
+        // Build the URL with query parameters
+        let url = `${apiUrl}/api/admin/results/`;
+        const params = new URLSearchParams();
+        
+        if (examType) {
+          params.append('exam_type', examType);
+        }
+        
+        if (this.selectedYear) {
+          params.append('exam_year', this.selectedYear);
+        }
+        
+        // Add the parameters to the URL if there are any
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
           
         const response = await axios.get(url);
         
@@ -456,12 +484,15 @@ export default {
       this.error = null;
       try {
         // Use the API URL from environment variables or fallback to localhost
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const response = await axios.get(`${apiUrl}api/programs/`);
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        const response = await axios.get(`${apiUrl}/api/programs/`);
         console.log('API Response:', response.data); // Debug log
         
         if (response.data && Array.isArray(response.data)) {
-          this.examTypes = response.data.map(program => ({
+          // Filter out SPECIAL-CET from the display
+          const filteredPrograms = response.data.filter(program => program.code !== 'SPECIAL-CET');
+          
+          this.examTypes = filteredPrograms.map(program => ({
             value: program.code,
             label: `${program.code} - ${program.name}`,
             icon: this.getProgramIcon(program.code),
@@ -500,6 +531,34 @@ export default {
       }
     },
     
+    // Fetch available exam years from API
+    async fetchAvailableYears() {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        const response = await axios.get(`${apiUrl}/api/api/exam-years/`);
+        
+        if (response.data && Array.isArray(response.data)) {
+          this.availableYears = response.data;
+          
+          // If no years are returned, generate some default ones
+          if (this.availableYears.length === 0) {
+            const currentYear = new Date().getFullYear();
+            for (let year = currentYear; year >= currentYear - 5; year--) {
+              this.availableYears.push(year.toString());
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching available years:', error);
+        // Fallback to generating years if API fails
+        const currentYear = new Date().getFullYear();
+        this.availableYears = [];
+        for (let year = currentYear; year >= currentYear - 5; year--) {
+          this.availableYears.push(year.toString());
+        }
+      }
+    },
+    
     getProgramIcon(code) {
       return this.defaultIcons[code] || 'fas fa-file-alt';
     },
@@ -535,23 +594,29 @@ export default {
       // Force refresh from API rather than using localStorage
       this.fetchExamResults(this.selectedExamType, true);
     }
-  },
-  created() {
+  },  created() {
     // Fetch results from the API
     this.fetchExamResults();
     
     // Then fetch program codes
     this.fetchProgramCodes();
-  },
-  watch: {
+      // Fetch available exam years from the API
+    this.fetchAvailableYears();
+  },watch: {
     searchQuery() {
       this.currentPage = 1;
     },
     itemsPerPage() {
       this.currentPage = 1;
-    },
-    selectedLetter() {
+    },    selectedLetter() {
       this.currentPage = 1;
+    },
+    selectedYear() {
+      this.currentPage = 1;
+      // Fetch new results when the year filter changes
+      this.fetchExamResults(this.selectedExamType);
+      // Fetch new results when the year filter changes
+      this.fetchExamResults(this.selectedExamType);
     },
     selectedExamType(newValue, oldValue) {
       if (newValue !== oldValue) {
@@ -603,4 +668,4 @@ tr:hover td {
   transform: translateY(-2px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
-</style> 
+</style>

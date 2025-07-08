@@ -55,6 +55,24 @@
             {{ announcement.title }}
           </h3>
           
+          <!-- Announcement Image -->
+          <div v-if="announcement.image_display || announcement.image_url || announcement.image" class="mb-3">
+            <div class="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100 aspect-video cursor-pointer group-image" 
+                 @click="openModal(announcement)">
+              <img :src="announcement.image_display || announcement.image_url || announcement.image" 
+                   :alt="announcement.title" 
+                   class="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                   @error="handleImageError($event, announcement)"
+                   @load="handleImageLoad($event, announcement)">
+              <!-- Zoom Icon Overlay -->
+              <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/30">
+                <div class="bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg">
+                  <i class="fas fa-search-plus text-gray-800 text-lg"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div>
             <p class="text-gray-600 text-sm mb-4 line-clamp-3">
               {{ announcement.content }}
@@ -129,6 +147,17 @@
                 <i :class="[selectedAnnouncement.icon, 'mr-3 text-crimson-600']"></i>
                 {{ selectedAnnouncement.title }}
               </h3>
+              
+              <!-- Modal Image Display -->
+              <div v-if="selectedAnnouncement.image_display || selectedAnnouncement.image_url || selectedAnnouncement.image" class="mb-4">
+                <div class="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+                  <img :src="selectedAnnouncement.image_display || selectedAnnouncement.image_url || selectedAnnouncement.image" 
+                       :alt="selectedAnnouncement.title" 
+                       class="w-full h-auto max-h-[60vh] object-contain object-center"
+                       @error="handleImageError($event, selectedAnnouncement)"
+                       @load="handleImageLoad($event, selectedAnnouncement)">
+                </div>
+              </div>
               
               <div class="prose prose-crimson max-w-none mb-4">
                 <p class="text-gray-600 whitespace-pre-wrap">{{ selectedAnnouncement.content }}</p>
@@ -256,12 +285,25 @@ export default {
       return classes[type] || 'bg-gray-500'
     }
     
+    const handleImageError = (event, announcement) => {
+      console.log('Image failed to load for announcement:', announcement.title, 'URL:', event.target.src)
+      event.target.style.display = 'none'
+    }
+    
+    const handleImageLoad = (event, announcement) => {
+      console.log('Image loaded successfully for announcement:', announcement.title, 'URL:', event.target.src)
+      event.target.style.display = 'block'
+    }
+    
     onMounted(() => {
       // Only fetch if we're not passed an announcement prop
       // and announcements aren't already loaded
       if (!props.announcement && announcementStore.announcements.length === 0) {
         announcementStore.fetchAnnouncements()
       }
+      
+      // Debug: Log announcements data
+      console.log('Announcements component mounted. Current announcements:', announcementStore.announcements)
     })
     
     return {
@@ -277,7 +319,9 @@ export default {
       selectedAnnouncement,
       openModal,
       closeModal,
-      getModalAccentClass
+      getModalAccentClass,
+      handleImageError,
+      handleImageLoad
     }
   }
 }
@@ -323,6 +367,7 @@ export default {
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -365,5 +410,63 @@ export default {
 .announcement-content {
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Responsive image aspect ratios */
+.aspect-video {
+  aspect-ratio: 16 / 9;
+}
+
+/* Responsive breakpoints for image containers */
+@media (max-width: 640px) {
+  .aspect-video {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+@media (min-width: 1024px) {
+  .aspect-video {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+/* Ensure images scale properly within their containers */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Responsive modal adjustments */
+@media (max-width: 640px) {
+  .max-h-\[60vh\] {
+    max-height: 50vh;
+  }
+}
+
+/* Image hover effects for clickable images */
+.group-image {
+  transition: all 0.3s ease;
+}
+
+.group-image:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.group-image img {
+  transition: transform 0.3s ease;
+}
+
+.group-image:hover img {
+  transform: scale(1.05);
+}
+
+/* Enhanced zoom icon styling */
+.group-image .fa-search-plus {
+  transition: transform 0.2s ease;
+}
+
+.group-image:hover .fa-search-plus {
+  transform: scale(1.1);
 }
 </style> 

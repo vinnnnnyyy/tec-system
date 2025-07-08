@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import date
 
 ## program model
 class Program(models.Model):
@@ -48,12 +50,15 @@ class Appointment(models.Model):
     ]
     
     STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
         ('waiting_for_test_details', 'Waiting for Test Details'),
         ('waiting_for_submission', 'Waiting for Submission'),
         ('rejected', 'Rejected'),
         ('claimed', 'Claimed'),
         ('rescheduled', 'Rescheduled'),
         ('submitted', 'Submitted'),
+        ('waiting_for_claiming', 'Waiting to be Claimed'),
     ]
     
     COLLEGE_LEVEL_CHOICES = [
@@ -76,13 +81,19 @@ class Appointment(models.Model):
     # Base appointment fields
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='appointments')
     full_name = models.CharField(max_length=255)
+    
+    # Individual name components for CSV import matching
+    last_name = models.CharField(max_length=100, blank=True, null=True)
+    first_name = models.CharField(max_length=100, blank=True, null=True)
+    middle_name = models.CharField(max_length=100, blank=True, null=True)
+    
     email = models.EmailField()
     contact_number = models.CharField(max_length=20)
     school_name = models.CharField(max_length=255, blank=True, null=True)
     college_level = models.CharField(max_length=20, choices=COLLEGE_LEVEL_CHOICES, default='', blank=True)
     preferred_date = models.DateField()
     time_slot = models.CharField(max_length=20, choices=TIME_SLOT_CHOICES)
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='waiting_for_test_details')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='waiting_for_submission')
     
     # New field for admin-assigned test time slot
     assigned_test_time_slot = models.CharField(max_length=20, choices=TIME_SLOT_CHOICES, blank=True, null=True)
@@ -122,6 +133,9 @@ class Appointment(models.Model):
     test_center = models.ForeignKey('TestCenter', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
     test_room = models.ForeignKey('TestRoom', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
     
+    # Store the exam date directly on the appointment for easy access
+    exam_date = models.DateField(null=True, blank=True, help_text="The actual exam date assigned to this appointment")
+    
     # Add a field to track if this is an officially submitted application
     is_submitted = models.BooleanField(default=False)
     
@@ -133,14 +147,25 @@ class Appointment(models.Model):
         # Only prevent duplicate bookings for the same program, date, and time slot
         unique_together = ['email', 'program', 'preferred_date', 'time_slot']
 
+    def save(self, *args, **kwargs):
+        # Auto-update status based on current date and registration dates
+        current_date = date.today()
+        if self.status == 'pending':
+            if self.program.availability_date <= current_date:
+                self.status = 'waiting_for_test_details'
+        
+        super().save(*args, **kwargs)
+
 # Exam Score Model
 class ExamScore(models.Model):
     appointment = models.OneToOneField(Appointment, on_delete=models.CASCADE, related_name='exam_score', null=True, blank=True)
+    program = models.ForeignKey(Program, on_delete=models.SET_NULL, related_name='exam_scores', null=True, blank=True)
     app_no = models.CharField(max_length=50, null=True, blank=True)
     name = models.CharField(max_length=255, null=True, blank=True)
     school = models.CharField(max_length=255, null=True, blank=True)
     exam_type = models.CharField(max_length=50, null=True, blank=True, default='')
     score = models.CharField(max_length=20, null=True, blank=True)
+    year = models.CharField(max_length=4, null=True, blank=True)
     # Add fields for test parts
     part1 = models.CharField(max_length=20, null=True, blank=True, verbose_name="English Proficiency")
     part2 = models.CharField(max_length=20, null=True, blank=True, verbose_name="Reading Comprehension")
@@ -158,12 +183,13 @@ class ExamScore(models.Model):
             return f"{self.appointment.full_name} - Score: {self.score}"
         else:
             return f"{self.name} - {self.exam_type} - App No: {self.app_no}"
-    
+            
     class Meta:
         indexes = [
             models.Index(fields=['app_no']),
             models.Index(fields=['exam_type']),
             models.Index(fields=['name']),
+            models.Index(fields=['year']),
         ]
 
 # Exam Result Model - For storing imported exam results
@@ -173,6 +199,7 @@ class ExamResult(models.Model):
     name = models.CharField(max_length=255)
     school = models.CharField(max_length=255)
     exam_type = models.CharField(max_length=50)
+    year = models.CharField(max_length=4, null=True, blank=True)
     imported_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='imported_results')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -186,6 +213,7 @@ class ExamResult(models.Model):
             models.Index(fields=['app_no']),
             models.Index(fields=['exam_type']),
             models.Index(fields=['name']),
+            models.Index(fields=['year']),
         ]
 
 # Test Center Model
@@ -242,6 +270,21 @@ class TestSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    def check_and_update_status(self):
+        """
+        Check if the registration and exam dates have passed and update status to COMPLETED
+        """
+        today = date.today()
+        
+        # If both registration end date and exam date have passed, mark as completed
+        if (self.registration_end_date < today and 
+            self.exam_date < today and 
+            self.status not in ['COMPLETED', 'CANCELLED']):
+            self.status = 'COMPLETED'
+            self.save(update_fields=['status', 'updated_at'])
+            return True
+        return False
+    
     def __str__(self):
         return f"{self.exam_type} - {self.exam_date}"
 
@@ -262,6 +305,8 @@ class Announcement(models.Model):
     icon = models.CharField(max_length=50, default='fas fa-bell')
     author = models.CharField(max_length=100, default='Admin Team')
     link = models.CharField(max_length=255, blank=True, null=True)
+    image = models.ImageField(upload_to='announcements/', blank=True, null=True, help_text='Image file for announcement')
+    image_url = models.URLField(max_length=1000, blank=True, null=True, help_text='External URL for announcement image (alternative to file upload)')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -286,3 +331,53 @@ class OTPVerification(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+
+# Notification Model
+class Notification(models.Model):
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('normal', 'Normal'), 
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+    
+    TYPE_CHOICES = [
+        ('appointment', 'Appointment'),
+        ('exam', 'Exam'),
+        ('announcement', 'Announcement'),
+        ('system', 'System'),
+        ('reminder', 'Reminder'),
+    ]
+    
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='system')
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal')
+    
+    # User targeting
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
+    is_global = models.BooleanField(default=False, help_text="If true, notification will be shown to all users")
+    
+    # Status
+    is_read = models.BooleanField(default=False)
+    
+    # Optional fields
+    icon = models.CharField(max_length=50, blank=True, null=True, help_text="FontAwesome icon name")
+    link = models.CharField(max_length=255, blank=True, null=True, help_text="Optional link to redirect when clicked")
+    
+    # Meta fields
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_notifications')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        target = "Global" if self.is_global else f"User: {self.user.username if self.user else 'None'}"
+        return f"{self.title} ({target})"
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read']),
+            models.Index(fields=['is_global', 'created_at']),
+            models.Index(fields=['type', 'priority']),
+        ]

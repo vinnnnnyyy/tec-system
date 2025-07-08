@@ -62,17 +62,17 @@
             <p class="ml-1">Date of Birth:</p>
             <div class="border border-wmsu w-8 h-5 mx-0.5 text-center">
               <div class="pdf-friendly-input">
-                <span class="input-text">{{ form.birthMonth ? form.birthMonth.toUpperCase() : '' }}</span>
+                <span class="input-text">{{ form.birthMonth ? String(form.birthMonth).toUpperCase() : '' }}</span>
               </div>
             </div>
             <div class="border border-wmsu w-8 h-5 mx-0.5 text-center">
               <div class="pdf-friendly-input">
-                <span class="input-text">{{ form.birthDay ? form.birthDay.toUpperCase() : '' }}</span>
+                <span class="input-text">{{ form.birthDay ? String(form.birthDay).toUpperCase() : '' }}</span>
               </div>
             </div>
             <div class="border border-wmsu w-10 h-5 mx-0.5 text-center">
               <div class="pdf-friendly-input">
-                <span class="input-text">{{ form.birthYear ? form.birthYear.toUpperCase() : '' }}</span>
+                <span class="input-text">{{ form.birthYear ? String(form.birthYear).toUpperCase() : '' }}</span>
               </div>
             </div>
           </div>
@@ -122,7 +122,7 @@
             <p>Contact No.:</p>
             <div class="field-line w-28 mx-1">
               <div class="pdf-friendly-input">
-                <span class="input-text">{{ form.contactNumber ? form.contactNumber.toUpperCase() : '' }}</span>
+                <span class="input-text">{{ form.contactNumber ? String(form.contactNumber).toUpperCase() : '' }}</span>
               </div>
             </div>
             <p>Email Address:</p>
@@ -147,7 +147,7 @@
                 <td class="pl-4">
                   <div class="field-line w-full mt-1">
                     <div class="pdf-friendly-input">
-                      <span class="input-text">{{ form.timesTaken ? form.timesTaken.toUpperCase() : '' }}</span>
+                      <span class="input-text">{{ form.timesTaken ? String(form.timesTaken).toUpperCase() : '' }}</span>
                     </div>
                   </div>
                 </td>
@@ -244,7 +244,7 @@
               </td>
               <td class="table-cell border border-wmsu">
                 <div class="pdf-friendly-input">
-                  <span class="input-text">{{ (appointmentInfo.room_number ? (appointmentInfo.room_number + (appointmentInfo.room_code ? ' ' + appointmentInfo.room_code : '')).toUpperCase() : 'TO BE ASSIGNED') }}</span>
+                  <span class="input-text">{{ (appointmentInfo.room_number ? (String(appointmentInfo.room_number) + (appointmentInfo.room_code ? ' ' + String(appointmentInfo.room_code) : '')).toUpperCase() : 'TO BE ASSIGNED') }}</span>
                 </div>
               </td>
               <td class="table-cell border border-wmsu">
@@ -254,12 +254,12 @@
               </td>
               <td class="table-cell border border-wmsu">
                 <div class="pdf-friendly-input">
-                  <span class="input-text">{{ appointmentInfo.test_center_code ? appointmentInfo.test_center_code.toUpperCase() : 'TO BE ASSIGNED' }}</span>
+                  <span class="input-text">{{ appointmentInfo.test_center_code ? String(appointmentInfo.test_center_code).toUpperCase() : 'TO BE ASSIGNED' }}</span>
                 </div>
               </td>
               <td class="table-cell border border-wmsu">
                 <div class="pdf-friendly-input">
-                  <span class="input-text">{{ form.highSchoolCode ? form.highSchoolCode.toUpperCase() : 'NOT PROVIDED' }}</span>
+                  <span class="input-text">{{ form.highSchoolCode ? String(form.highSchoolCode).toUpperCase() : 'NOT PROVIDED' }}</span>
                 </div>
               </td>
             </tr>
@@ -372,7 +372,7 @@
                 </td>
                 <td class="table-cell border border-wmsu">
                   <div class="pdf-friendly-input">
-                    <span class="input-text">{{ (appointmentInfo.room_number ? (appointmentInfo.room_number + (appointmentInfo.room_code ? ' ' + appointmentInfo.room_code : '')).toUpperCase() : 'TO BE ASSIGNED') }}</span>
+                    <span class="input-text">{{ (appointmentInfo.room_number ? (String(appointmentInfo.room_number) + (appointmentInfo.room_code ? ' ' + String(appointmentInfo.room_code) : '')).toUpperCase() : 'TO BE ASSIGNED') }}</span>
                   </div>
                 </td>
                 <td class="table-cell border border-wmsu">
@@ -382,12 +382,12 @@
                 </td>
                 <td class="table-cell border border-wmsu">
                   <div class="pdf-friendly-input">
-                    <span class="input-text">{{ appointmentInfo.test_center_code ? appointmentInfo.test_center_code.toUpperCase() : 'TO BE ASSIGNED' }}</span>
+                    <span class="input-text">{{ appointmentInfo.test_center_code ? String(appointmentInfo.test_center_code).toUpperCase() : 'TO BE ASSIGNED' }}</span>
                   </div>
                 </td>
                 <td class="table-cell border border-wmsu">
                   <div class="pdf-friendly-input">
-                    <span class="input-text">{{ form.highSchoolCode ? form.highSchoolCode.toUpperCase() : 'NOT PROVIDED' }}</span>
+                    <span class="input-text">{{ form.highSchoolCode ? String(form.highSchoolCode).toUpperCase() : 'NOT PROVIDED' }}</span>
                   </div>
                 </td>
               </tr>

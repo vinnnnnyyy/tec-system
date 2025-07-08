@@ -15,7 +15,7 @@
         <!-- Brand Section -->
         <div class="md:col-span-2 lg:col-span-1">
           <div class="flex items-center mb-4 transform hover:scale-105 transition-transform duration-300">
-            <img src="/src/assets/images/wmsu-logo.png" alt="WMSU Logo" class="h-12 w-auto mr-3 filter brightness-0 invert">
+            <img src="/public/images/wmsu-logo.png" alt="WMSU Logo" class="h-12 w-auto mr-3 filter brightness-0 invert">
             <h3 class="text-2xl font-bold text-white">WMSU TEC</h3>
           </div>
           <p class="text-sm leading-relaxed mb-6 text-gray-300">
