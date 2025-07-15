@@ -855,34 +855,8 @@ export default {
       this.activeActionMenu = null;
     },
     openDetailsModal(appointment) {
-      this.selectedAppointment = appointment;
-      this.showDetailsModal = true;
-      this.activeActionMenu = null; // Close the dropdown when opening modal
-      
-      // Fetch the latest detailed data for this appointment
-      this.fetchAppointmentDetails(appointment.id);
-    },
-    async fetchAppointmentDetails(appointmentId) {
-      try {
-        const response = await axios.get(`/api/appointments/${appointmentId}/`);
-        
-        // Update the selected appointment with the full details
-        if (response.data) {
-          this.selectedAppointment = {
-            ...this.selectedAppointment,
-            fullDetails: response.data
-          };
-          
-          // Also update the appointment in the appointments list
-          const index = this.appointments.findIndex(a => a.id === appointmentId);
-          if (index !== -1) {
-            this.appointments[index].fullDetails = response.data;
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching appointment details:', error);
-        this.showToast('Failed to load complete appointment details', 'error');
-      }
+      // Navigate to appointment details page instead of opening modal
+      this.$router.push(`/admin/appointments/${appointment.id}`);
     },
     openRescheduleModal(appointment) {
       this.selectedAppointment = appointment;

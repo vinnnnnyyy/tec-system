@@ -93,6 +93,15 @@
               <i class="fas fa-calendar-alt mr-2"></i>
               Reschedule
             </button>
+            
+            <!-- PDF Export Button -->
+            <button @click="exportToPDF"
+                    :disabled="exportingPDF"
+                    class="button button-secondary">
+              <i class="fas fa-file-pdf mr-2"></i>
+              <span v-if="exportingPDF">Generating PDF...</span>
+              <span v-else>Export PDF</span>
+            </button>
           </div>
         </div>
       </div>
@@ -316,35 +325,369 @@
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
           <div class="p-4 border-b border-gray-100">
             <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-              <i class="fas fa-user-circle text-indigo-500 mr-2"></i>
-              Personal Information
+              <i class="fas fa-id-card text-blue-500 mr-2"></i>
+              Complete Personal Information
             </h3>
           </div>
-          <div class="p-4">
+          <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <!-- Basic Information -->
+              <div class="space-y-4">
+                <h4 class="font-medium text-gray-900 border-b pb-2">Basic Information</h4>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Last Name</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.last_name || 'N/A' }}</p>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">First Name</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.first_name || 'N/A' }}</p>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Middle Name</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.middle_name || 'N/A' }}</p>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Birth Date</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ formatBirthDate() }}</p>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Age</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.age || 'N/A' }}</p>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Gender</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ formatGender(appointment.gender) }}</p>
+                </div>
+              </div>
+
+              <!-- Contact & Address -->
+              <div class="space-y-4">
+                <h4 class="font-medium text-gray-900 border-b pb-2">Contact & Address</h4>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Home Address</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.home_address || 'N/A' }}</p>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Citizenship</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.citizenship || 'N/A' }}</p>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">High School Code</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.high_school_code || 'N/A' }}</p>
+                </div>
+              </div>
+
+              <!-- WMSUCET Experience -->
+              <div class="space-y-4">
+                <h4 class="font-medium text-gray-900 border-b pb-2">WMSUCET Experience</h4>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">First Time Taking WMSUCET</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.is_first_time ? 'Yes' : 'No' }}</p>
+                </div>
+                <div v-if="!appointment.is_first_time">
+                  <label class="text-xs font-medium text-gray-500">Times Previously Taken</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.times_taken || 'N/A' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Educational Background Section -->
+      <div class="mt-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div class="p-4 border-b border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+              <i class="fas fa-graduation-cap text-green-500 mr-2"></i>
+              Educational Background
+            </h3>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Applicant Type -->
+              <div class="space-y-4">
+                <h4 class="font-medium text-gray-900 border-b pb-2">Applicant Type</h4>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Type</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">
+                    {{ appointment.applicant_type === 'senior_high_graduating' ? 'Senior High School Graduating Student' :
+                       appointment.applicant_type === 'senior_high_graduate' ? 'Senior High School Graduate' :
+                       appointment.applicant_type === 'college' ? 'College Student' : 'N/A' }}
+                  </p>
+                </div>
+                <div v-if="appointment.school_graduation_date">
+                  <label class="text-xs font-medium text-gray-500">Graduation Date</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.school_graduation_date }}</p>
+                </div>
+              </div>
+
+              <!-- School Information -->
+              <div class="space-y-4">
+                <h4 class="font-medium text-gray-900 border-b pb-2">School Information</h4>
+                <div v-if="appointment.college_course">
+                  <label class="text-xs font-medium text-gray-500">College Course</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.college_course }}</p>
+                </div>
+                <div v-if="appointment.college_type">
+                  <label class="text-xs font-medium text-gray-500">College Type</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.college_type }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Course Choices Section -->
+      <div class="mt-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div class="p-4 border-b border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+              <i class="fas fa-list-ol text-purple-500 mr-2"></i>
+              Course Choices
+            </h3>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <!-- First Choice -->
+              <div class="space-y-3">
+                <h4 class="font-medium text-gray-900 border-b pb-2">1st Choice</h4>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Course</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.first_choice_course || 'N/A' }}</p>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Campus</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.first_choice_campus || 'N/A' }}</p>
+                </div>
+              </div>
+
+              <!-- Second Choice -->
+              <div class="space-y-3">
+                <h4 class="font-medium text-gray-900 border-b pb-2">2nd Choice</h4>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Course</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.second_choice_course || 'N/A' }}</p>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Campus</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.second_choice_campus || 'N/A' }}</p>
+                </div>
+              </div>
+
+              <!-- Third Choice -->
+              <div class="space-y-3">
+                <h4 class="font-medium text-gray-900 border-b pb-2">3rd Choice</h4>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Course</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.third_choice_course || 'N/A' }}</p>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Campus</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.third_choice_campus || 'N/A' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Socio-Economic Data Section -->
+      <div class="mt-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div class="p-4 border-b border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+              <i class="fas fa-users text-orange-500 mr-2"></i>
+              Socio-Economic Data
+            </h3>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <!-- Father's Information -->
+              <div class="space-y-4">
+                <h4 class="font-medium text-blue-800 border-b border-blue-200 pb-2 flex items-center">
+                  <i class="fas fa-male mr-2"></i>
+                  Father's Information
+                </h4>
+                <div class="space-y-3">
+                  <div>
+                    <label class="text-xs font-medium text-gray-500">Citizenship</label>
+                    <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.father_citizenship || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium text-gray-500">Highest Educational Attainment</label>
+                    <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.father_education || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium text-gray-500">Work/Occupation</label>
+                    <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.father_work_occupation || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium text-gray-500">Employer/Place of Work</label>
+                    <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.father_employer || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium text-gray-500">Monthly Income/Salary</label>
+                    <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.father_monthly_income || 'N/A' }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mother's Information -->
+              <div class="space-y-4">
+                <h4 class="font-medium text-pink-800 border-b border-pink-200 pb-2 flex items-center">
+                  <i class="fas fa-female mr-2"></i>
+                  Mother's Information
+                </h4>
+                <div class="space-y-3">
+                  <div>
+                    <label class="text-xs font-medium text-gray-500">Citizenship</label>
+                    <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.mother_citizenship || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium text-gray-500">Highest Educational Attainment</label>
+                    <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.mother_education || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium text-gray-500">Work/Occupation</label>
+                    <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.mother_work_occupation || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium text-gray-500">Employer/Place of Work</label>
+                    <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.mother_employer || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium text-gray-500">Monthly Income/Salary</label>
+                    <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.mother_monthly_income || 'N/A' }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Additional Information Section -->
+      <div class="mt-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div class="p-4 border-b border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+              <i class="fas fa-info-circle text-indigo-500 mr-2"></i>
+              Additional Information
+            </h3>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <!-- Disability Information -->
+              <div class="space-y-3">
+                <h4 class="font-medium text-gray-900 border-b pb-2">Disability & Special Needs</h4>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Has Physical Disability</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">
+                    {{ appointment.has_physical_disability ? 'Yes' : 'No' }}
+                  </p>
+                </div>
+                <div v-if="appointment.has_physical_disability && appointment.disability_description">
+                  <label class="text-xs font-medium text-gray-500">Disability Description</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.disability_description }}</p>
+                </div>
+              </div>
+
+              <!-- Computer Skills & Indigenous Group -->
+              <div class="space-y-3">
+                <h4 class="font-medium text-gray-900 border-b pb-2">Skills & Background</h4>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Computer Usage Knowledge</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">
+                    {{ appointment.knows_computer_usage ? 'Yes' : 'No' }}
+                  </p>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Indigenous Peoples Group Member</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">
+                    {{ appointment.is_indigenous_member ? 'Yes' : 'No' }}
+                  </p>
+                </div>
+                <div v-if="appointment.is_indigenous_member && appointment.indigenous_group_specify">
+                  <label class="text-xs font-medium text-gray-500">Indigenous Group</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.indigenous_group_specify }}</p>
+                </div>
+              </div>
+
+              <!-- Religious Affiliation -->
+              <div class="space-y-3">
+                <h4 class="font-medium text-gray-900 border-b pb-2">Religious Affiliation</h4>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">Religion</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">
+                    {{ appointment.religious_affiliation === 'roman_catholic' ? 'Roman Catholic' :
+                       appointment.religious_affiliation === 'protestant' ? 'Protestant' :
+                       appointment.religious_affiliation === 'islam' ? 'Islam' :
+                       appointment.religious_affiliation === 'others' ? 'Others' : 'N/A' }}
+                  </p>
+                </div>
+                <div v-if="appointment.religious_affiliation === 'others' && appointment.religious_affiliation_others">
+                  <label class="text-xs font-medium text-gray-500">Other Religion</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.religious_affiliation_others }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exam Score Section (if available) -->
+      <div v-if="appointment.exam_score" class="mt-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div class="p-4 border-b border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+              <i class="fas fa-chart-line text-green-500 mr-2"></i>
+              Exam Results
+            </h3>
+          </div>
+          <div class="p-6">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label class="text-xs font-medium text-gray-500">Date of Birth</label>
-                <p class="mt-1 text-sm font-medium text-gray-900">
-                  {{ formatBirthDate() }}
-                </p>
+                <label class="text-xs font-medium text-gray-500">Overall Score</label>
+                <p class="mt-1 text-lg font-bold text-green-600">{{ appointment.exam_score.score || 'N/A' }}</p>
               </div>
               <div>
-                <label class="text-xs font-medium text-gray-500">Gender</label>
-                <p class="mt-1 text-sm font-medium text-gray-900">
-                  {{ formatGender(appointment.gender) }}
-                </p>
+                <label class="text-xs font-medium text-gray-500">OAPR (Overall Ability Percentile Rank)</label>
+                <p class="mt-1 text-lg font-bold text-blue-600">{{ appointment.exam_score.oapr || 'N/A' }}</p>
               </div>
               <div>
-                <label class="text-xs font-medium text-gray-500">Age</label>
+                <label class="text-xs font-medium text-gray-500">Exam Date</label>
                 <p class="mt-1 text-sm font-medium text-gray-900">
-                  {{ appointment.age || 'N/A' }}
+                  {{ appointment.exam_score.exam_date ? formatDate(appointment.exam_score.exam_date) : 'N/A' }}
                 </p>
               </div>
-              <div class="md:col-span-2 lg:col-span-3">
-                <label class="text-xs font-medium text-gray-500">Home Address</label>
-                <p class="mt-1 text-sm font-medium text-gray-900">
-                  {{ appointment.home_address || 'N/A' }}
-                </p>
+            </div>
+            
+            <!-- Test Parts Breakdown -->
+            <div class="mt-6">
+              <h4 class="font-medium text-gray-900 border-b pb-2 mb-4">Test Parts Breakdown</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div v-if="appointment.exam_score.part1">
+                  <label class="text-xs font-medium text-gray-500">English Proficiency</label>
+                  <p class="mt-1 text-sm font-bold text-gray-900">{{ appointment.exam_score.part1 }}</p>
+                </div>
+                <div v-if="appointment.exam_score.part2">
+                  <label class="text-xs font-medium text-gray-500">Reading Comprehension</label>
+                  <p class="mt-1 text-sm font-bold text-gray-900">{{ appointment.exam_score.part2 }}</p>
+                </div>
+                <div v-if="appointment.exam_score.part3">
+                  <label class="text-xs font-medium text-gray-500">Science Process Skills</label>
+                  <p class="mt-1 text-sm font-bold text-gray-900">{{ appointment.exam_score.part3 }}</p>
+                </div>
+                <div v-if="appointment.exam_score.part4">
+                  <label class="text-xs font-medium text-gray-500">Quantitative Skills</label>
+                  <p class="mt-1 text-sm font-bold text-gray-900">{{ appointment.exam_score.part4 }}</p>
+                </div>
+                <div v-if="appointment.exam_score.part5">
+                  <label class="text-xs font-medium text-gray-500">Abstract Thinking Skills</label>
+                  <p class="mt-1 text-sm font-bold text-gray-900">{{ appointment.exam_score.part5 }}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -369,6 +712,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axiosInstance from '../../../services/axios.interceptor'
 import { useToast } from '../../../composables/useToast'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 export default {
   name: 'AppointmentDetails',
@@ -403,6 +748,9 @@ export default {
     const testRoomError = ref(null)
     const testSessionError = ref(null)
     const submittingAssignment = ref(false)
+    
+    // PDF export state
+    const exportingPDF = ref(false)
     
     // Check if the assigned time slot matches the preferred time slot
     const timeSlotsMatch = computed(() => {
@@ -835,6 +1183,441 @@ export default {
       }
     })
     
+    // PDF Export function
+    const exportToPDF = async () => {
+      if (!appointment.value) {
+        showToast('No appointment data to export', 'error')
+        return
+      }
+      
+      exportingPDF.value = true
+      
+      try {
+        // Create a temporary container for PDF content
+        const tempElement = document.createElement('div')
+        tempElement.style.position = 'absolute'
+        tempElement.style.left = '-9999px'
+        tempElement.style.top = '0'
+        tempElement.style.width = '210mm' // A4 width
+        tempElement.style.padding = '20px'
+        tempElement.style.backgroundColor = 'white'
+        tempElement.style.fontFamily = 'Arial, sans-serif'
+        tempElement.style.fontSize = '12px'
+        tempElement.style.lineHeight = '1.4'
+        
+        // Format religious affiliation
+        const formatReligiousAffiliation = (affiliation, other) => {
+          if (!affiliation) return 'N/A'
+          if (affiliation === 'roman_catholic') return 'Roman Catholic'
+          if (affiliation === 'protestant') return 'Protestant'
+          if (affiliation === 'islam') return 'Islam'
+          if (affiliation === 'others') return other || 'Others'
+          return affiliation
+        }
+        
+        // Format applicant type
+        const formatApplicantType = (type) => {
+          if (type === 'senior_high_graduating') return 'Senior High School Graduating Student'
+          if (type === 'senior_high_graduate') return 'Senior High School Graduate'
+          if (type === 'college') return 'College Student'
+          return type || 'N/A'
+        }
+        
+        // Generate PDF content
+        tempElement.innerHTML = `
+          <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #DC2626; padding-bottom: 20px;">
+            <h1 style="color: #DC2626; margin: 0; font-size: 24px; font-weight: bold;">
+              Western Mindanao State University
+            </h1>
+            <h2 style="color: #666; margin: 5px 0 0 0; font-size: 18px;">
+              Testing and Evaluation Center (TEC)
+            </h2>
+            <h3 style="color: #666; margin: 5px 0 0 0; font-size: 16px;">
+              Applicant Details Report
+            </h3>
+          </div>
+          
+          <div style="margin-bottom: 25px;">
+            <h3 style="background-color: #DC2626; color: white; padding: 8px; margin: 0 0 15px 0; font-size: 14px;">
+              Basic Information
+            </h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold; width: 30%;">Full Name:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.full_name || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Last Name:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.last_name || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">First Name:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.first_name || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Middle Name:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.middle_name || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Birth Date:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatBirthDate()}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Age:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.age || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Gender:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatGender(appointment.value.gender)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Email:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.email || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Contact Number:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.contact_number || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Home Address:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.home_address || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Citizenship:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.citizenship || 'N/A'}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="margin-bottom: 25px;">
+            <h3 style="background-color: #DC2626; color: white; padding: 8px; margin: 0 0 15px 0; font-size: 14px;">
+              Educational Background
+            </h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold; width: 30%;">Program:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.program_name || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">School Name:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.school_name || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">School Address:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.school_address || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">High School Code:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.high_school_code || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Applicant Type:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatApplicantType(appointment.value.applicant_type)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Graduation Date:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.school_graduation_date || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">College Course:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.college_course || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">College Type:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.college_type || 'N/A'}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="margin-bottom: 25px;">
+            <h3 style="background-color: #DC2626; color: white; padding: 8px; margin: 0 0 15px 0; font-size: 14px;">
+              Course Choices
+            </h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold; width: 30%;">1st Choice Course:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.first_choice_course || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">1st Choice Campus:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.first_choice_campus || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">2nd Choice Course:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.second_choice_course || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">2nd Choice Campus:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.second_choice_campus || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">3rd Choice Course:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.third_choice_course || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">3rd Choice Campus:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.third_choice_campus || 'N/A'}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="margin-bottom: 25px;">
+            <h3 style="background-color: #DC2626; color: white; padding: 8px; margin: 0 0 15px 0; font-size: 14px;">
+              WMSUCET Experience
+            </h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold; width: 30%;">First Time Taking WMSUCET:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.is_first_time ? 'Yes' : 'No'}</td>
+              </tr>
+              ${!appointment.value.is_first_time ? `
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Times Previously Taken:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.times_taken || 'N/A'}</td>
+              </tr>
+              ` : ''}
+            </table>
+          </div>
+          
+          <div style="margin-bottom: 25px;">
+            <h3 style="background-color: #DC2626; color: white; padding: 8px; margin: 0 0 15px 0; font-size: 14px;">
+              Socio-Economic Data
+            </h3>
+            <h4 style="color: #2563EB; margin: 15px 0 10px 0; font-size: 13px;">Father's Information</h4>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold; width: 30%;">Citizenship:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.father_citizenship || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Education:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.father_education || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Occupation:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.father_work_occupation || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Employer:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.father_employer || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Monthly Income:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.father_monthly_income || 'N/A'}</td>
+              </tr>
+            </table>
+            
+            <h4 style="color: #EC4899; margin: 15px 0 10px 0; font-size: 13px;">Mother's Information</h4>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold; width: 30%;">Citizenship:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.mother_citizenship || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Education:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.mother_education || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Occupation:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.mother_work_occupation || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Employer:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.mother_employer || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Monthly Income:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.mother_monthly_income || 'N/A'}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="margin-bottom: 25px;">
+            <h3 style="background-color: #DC2626; color: white; padding: 8px; margin: 0 0 15px 0; font-size: 14px;">
+              Additional Information
+            </h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold; width: 30%;">Physical Disability:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.has_physical_disability ? 'Yes' : 'No'}</td>
+              </tr>
+              ${appointment.value.has_physical_disability && appointment.value.disability_description ? `
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Disability Description:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.disability_description}</td>
+              </tr>
+              ` : ''}
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Computer Usage Knowledge:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.knows_computer_usage ? 'Yes' : 'No'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Indigenous Peoples Group Member:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.is_indigenous_member ? 'Yes' : 'No'}</td>
+              </tr>
+              ${appointment.value.is_indigenous_member && appointment.value.indigenous_group_specify ? `
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Indigenous Group:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.indigenous_group_specify}</td>
+              </tr>
+              ` : ''}
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Religious Affiliation:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatReligiousAffiliation(appointment.value.religious_affiliation, appointment.value.religious_affiliation_others)}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="margin-bottom: 25px;">
+            <h3 style="background-color: #DC2626; color: white; padding: 8px; margin: 0 0 15px 0; font-size: 14px;">
+              Test Schedule Information
+            </h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold; width: 30%;">Preferred Date:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatDate(appointment.value.preferred_date)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Preferred Time Slot:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatTimeSlot(appointment.value.time_slot)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Status:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatStatus(appointment.value.status)}</td>
+              </tr>
+              ${appointment.value.assigned_test_time_slot ? `
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Assigned Time Slot:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatTimeSlot(appointment.value.assigned_test_time_slot)}</td>
+              </tr>
+              ` : ''}
+              ${appointment.value.exam_date ? `
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Exam Date:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatDate(appointment.value.exam_date)}</td>
+              </tr>
+              ` : ''}
+              ${testDetails.value.test_center ? `
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Test Center:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${testDetails.value.test_center.name || testDetails.value.test_center.center_name}</td>
+              </tr>
+              ` : ''}
+              ${testDetails.value.test_room ? `
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Test Room:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${testDetails.value.test_room.name || testDetails.value.test_room.room_name || testDetails.value.test_room.number}</td>
+              </tr>
+              ` : ''}
+            </table>
+          </div>
+          
+          ${appointment.value.exam_score ? `
+          <div style="margin-bottom: 25px;">
+            <h3 style="background-color: #DC2626; color: white; padding: 8px; margin: 0 0 15px 0; font-size: 14px;">
+              Exam Results
+            </h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold; width: 30%;">Overall Score:</td>
+                <td style="padding: 6px; border: 1px solid #ddd; color: #059669; font-weight: bold;">${appointment.value.exam_score.score || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">OAPR:</td>
+                <td style="padding: 6px; border: 1px solid #ddd; color: #2563EB; font-weight: bold;">${appointment.value.exam_score.oapr || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">English Proficiency:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.exam_score.part1 || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Reading Comprehension:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.exam_score.part2 || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Science Process Skills:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.exam_score.part3 || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Quantitative Skills:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.exam_score.part4 || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Abstract Thinking Skills:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.exam_score.part5 || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Exam Date:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.exam_score.exam_date ? formatDate(appointment.value.exam_score.exam_date) : 'N/A'}</td>
+              </tr>
+            </table>
+          </div>
+          ` : ''}
+          
+          <div style="margin-top: 30px; text-align: center; font-size: 11px; color: #666; border-top: 1px solid #ddd; padding-top: 15px;">
+            <p>Generated on ${new Date().toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}</p>
+            <p>Western Mindanao State University - Testing and Evaluation Center</p>
+          </div>
+        `
+        
+        document.body.appendChild(tempElement)
+        
+        // Convert to canvas
+        const canvas = await html2canvas(tempElement, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          width: tempElement.scrollWidth,
+          height: tempElement.scrollHeight
+        })
+        
+        // Remove temporary element
+        document.body.removeChild(tempElement)
+        
+        // Create PDF
+        const imgData = canvas.toDataURL('image/png')
+        const pdf = new jsPDF('p', 'mm', 'a4')
+        
+        const imgWidth = 210 // A4 width in mm
+        const pageHeight = 295 // A4 height in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width
+        let heightLeft = imgHeight
+        
+        let position = 0
+        
+        // Add first page
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+        
+        // Add additional pages if needed
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight
+          pdf.addPage()
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+          heightLeft -= pageHeight
+        }
+        
+        // Save the PDF
+        const fileName = `WMSU_TEC_Applicant_${appointment.value.full_name.replace(/\s+/g, '_')}_${appointment.value.id}.pdf`
+        pdf.save(fileName)
+        
+        showToast('PDF exported successfully!', 'success')
+        
+      } catch (error) {
+        console.error('Error generating PDF:', error)
+        showToast('Error generating PDF. Please try again.', 'error')
+      } finally {
+        exportingPDF.value = false
+      }
+    }
+    
     return {
       appointment,
       testDetails,
@@ -880,7 +1663,11 @@ export default {
       submittingAssignment,
       filteredTestRooms,
       onTestCenterChange,
-      assignTestDetails
+      assignTestDetails,
+      
+      // PDF Export
+      exportingPDF,
+      exportToPDF
     }
   }
 }
@@ -945,5 +1732,22 @@ export default {
 
 .button-info:hover {
   background-color: #2563EB;
+}
+
+.button-secondary {
+  color: #374151;
+  background-color: #F3F4F6;
+  border: 1px solid #D1D5DB;
+}
+
+.button-secondary:hover {
+  background-color: #E5E7EB;
+  border-color: #9CA3AF;
+}
+
+.button-secondary:disabled {
+  background-color: #F9FAFB;
+  color: #9CA3AF;
+  cursor: not-allowed;
 }
 </style>
