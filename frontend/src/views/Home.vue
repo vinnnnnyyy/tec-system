@@ -10,8 +10,8 @@
         <div class="absolute top-20 -left-20 w-48 h-48 sm:w-72 sm:h-72 bg-blue-200 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
         <div class="absolute -bottom-20 left-10 sm:left-40 w-48 h-48 sm:w-72 sm:h-72 bg-pink-200 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
         
-        <!-- Apply the 'hide-logo-small' class to Hero -->
-        <Hero class="hide-logo-small" />
+        <!-- Hero component - always visible -->
+        <Hero />
       </div>
       <!-- Announcements with improved styling -->
       <Announcements />
