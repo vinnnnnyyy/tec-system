@@ -197,7 +197,7 @@
 </template>
 
 <script>
-import Hero from '../components/Hero.vue'
+import Hero from '../components/layout/Hero.vue'
 import Navbar from '../components/Navbar.vue'
 import Announcements from '../components/Announcements.vue'
 import AuthService from '../services/auth.service'

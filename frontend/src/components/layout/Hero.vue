@@ -1,8 +1,8 @@
 <template>
-  <section class="hero-section relative min-h-[60vh] sm:min-h-[70vh] md:min-h-[calc(100vh-64px)] w-full flex items-center overflow-hidden isolate">
+  <section class="hero-section relative min-h-[60vh] sm:min-h-[70vh] md:min-h-[calc(100vh-64px)] w-full flex items-center overflow-hidden isolate bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
     <!-- Background Image Layer -->
     <div 
-      class="absolute inset-0 bg-cover bg-center image-background transform scale-105 transition-transform duration-[2s]"
+      class="absolute inset-0 bg-cover bg-center image-background transform scale-105 transition-transform duration-[2s] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"
       style="background-image: url('https://i.ytimg.com/vi/JoimFFEafbE/maxresdefault.jpg');"
     ></div>
     
@@ -74,7 +74,7 @@
               <div class="absolute w-48 h-48 md:w-64 md:h-64 bg-gradient-radial from-crimson-500/20 via-crimson-500/10 to-transparent rounded-full animate-slow-pulse blur-xl"></div>
               
             <img 
-              src="../assets/images/wmsu-logo.png" 
+              src="../../assets/images/wmsu-logo.png" 
                 alt="WMSU Logo" 
                 class="relative z-10 rounded-lg w-[80%] sm:w-[70%] md:w-[85%] mx-auto h-auto transform transition-transform duration-500 group-hover:scale-105 floating drop-shadow-2xl"
             >
@@ -129,6 +129,7 @@ export default {
     }
   },
   mounted() {
+    console.log('Hero component mounted successfully');
     this.checkScreenSize();
     window.addEventListener('resize', this.checkScreenSize);
   },
