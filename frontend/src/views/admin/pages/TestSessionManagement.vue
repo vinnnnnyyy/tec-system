@@ -1454,6 +1454,29 @@ export default {
       this.editingRoomId = room.id;
     },
     
+    showDeleteCenterConfirmation(center) {
+      this.confirmationData = {
+        title: 'Delete Test Center',
+        message: `Are you sure you want to delete the center "${center.name}"? This will also delete all rooms associated with this center.`,
+        confirmButtonText: 'Delete',
+        action: this.deleteCenter,
+        item: center
+      };
+      this.showConfirmationModal = true;
+    },
+    
+    async deleteCenter(center) {
+      try {
+        await axiosInstance.delete(`/api/admin/test-centers/${center.id}/`);
+        this.showToast('Test center deleted successfully', 'success');
+        await this.fetchTestCenters();
+        await this.fetchTestRooms(); // Refresh rooms since they might be affected
+      } catch (error) {
+        console.error('Error deleting test center:', error);
+        this.showToast('Failed to delete test center', 'error');
+      }
+    },
+    
     showDeleteRoomConfirmation(room) {
       this.confirmationData = {
         title: 'Delete Test Room',
@@ -1937,6 +1960,52 @@ export default {
       const createButton = document.querySelector("#createRoomBtn");
       if (createButton) {
         createButton.textContent = "Create Room";
+      }
+    },
+    
+    // Handle confirmation modal actions
+    async confirmAction() {
+      if (this.confirmationData.action) {
+        this.loading.confirmation = true;
+        try {
+          await this.confirmationData.action(this.confirmationData.item);
+          this.showConfirmationModal = false;
+        } catch (error) {
+          console.error('Error executing confirmation action:', error);
+          this.showToast('An error occurred while processing your request', 'error');
+        } finally {
+          this.loading.confirmation = false;
+        }
+      }
+    },
+    
+    // Get display text for confirmation modal
+    getItemDisplayText(item) {
+      if (!item) return '';
+      
+      if (item.exam_type) {
+        // Test session
+        return `${item.exam_type} - ${this.formatDate(item.exam_date)}`;
+      } else if (item.name && item.code) {
+        // Test center
+        return `${item.name} (${item.code})`;
+      } else if (item.name && item.room_code) {
+        // Test room
+        return `${item.name} (${item.room_code})`;
+      }
+      
+      return item.name || item.code || 'Unknown item';
+    },
+    
+    // Delete session method
+    async deleteSession(session) {
+      try {
+        await axiosInstance.delete(`/api/admin/test-sessions/${session.id}/`);
+        this.showToast('Test session deleted successfully', 'success');
+        await this.fetchTestSessions();
+      } catch (error) {
+        console.error('Error deleting test session:', error);
+        this.showToast('Failed to delete test session', 'error');
       }
     },
     
