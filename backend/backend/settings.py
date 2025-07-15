@@ -55,6 +55,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'base.middleware.CSPMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -135,11 +136,24 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Additional static files locations (if any)
+STATICFILES_DIRS = [
+    # Add any additional static directories here if needed
+]
 
 # Media files (User uploaded content)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# For production deployment - ensure media files use HTTPS
+if not DEBUG:
+    MEDIA_URL = 'https://wmsutec.pythonanywhere.com/media/'
+else:
+    # For development, use the full URL to avoid mixed content
+    MEDIA_URL = os.getenv('MEDIA_URL', '/media/')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -212,3 +226,13 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@example.com')
 MAILERSEND_API_KEY = os.getenv('MAILERSEND_API_KEY')
 MAILERSEND_DEFAULT_FROM = os.getenv('MAILERSEND_DEFAULT_FROM')
 MAILERSEND_DEFAULT_FROM_NAME = os.getenv('MAILERSEND_DEFAULT_FROM_NAME', 'TEC Registration')
+
+# Content Security Policy Settings
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com")
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com")
+CSP_IMG_SRC = ("'self'", "data:", "https:", "https://wmsutec.pythonanywhere.com")
+CSP_FONT_SRC = ("'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com")
+CSP_CONNECT_SRC = ("'self'", "https://wmsutec.pythonanywhere.com", "https://wmsutec.netlify.app")
+CSP_FRAME_SRC = ("'self'",)
+CSP_MEDIA_SRC = ("'self'", "https://wmsutec.pythonanywhere.com")
