@@ -56,10 +56,10 @@
           </h3>
           
           <!-- Announcement Image -->
-          <div v-if="announcement.image_display || announcement.image_url || announcement.image" class="mb-3">
+          <div v-if="getImageUrl(announcement)" class="mb-3">
             <div class="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100 aspect-video cursor-pointer group-image" 
                  @click="openModal(announcement)">
-              <img :src="announcement.image_display || announcement.image_url || announcement.image" 
+              <img :src="getImageUrl(announcement)" 
                    :alt="announcement.title" 
                    class="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
                    @error="handleImageError($event, announcement)"
@@ -149,9 +149,9 @@
               </h3>
               
               <!-- Modal Image Display -->
-              <div v-if="selectedAnnouncement.image_display || selectedAnnouncement.image_url || selectedAnnouncement.image" class="mb-4">
+              <div v-if="getImageUrl(selectedAnnouncement)" class="mb-4">
                 <div class="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
-                  <img :src="selectedAnnouncement.image_display || selectedAnnouncement.image_url || selectedAnnouncement.image" 
+                  <img :src="getImageUrl(selectedAnnouncement)" 
                        :alt="selectedAnnouncement.title" 
                        class="w-full h-auto max-h-[60vh] object-contain object-center"
                        @error="handleImageError($event, selectedAnnouncement)"
@@ -285,9 +285,65 @@ export default {
       return classes[type] || 'bg-gray-500'
     }
     
+    const getImageUrl = (announcement) => {
+      if (!announcement.image && !announcement.image_url && !announcement.image_display) {
+        return null
+      }
+      
+      // Priority: image_display (from serializer) > image_url (external) > image (filename)
+      const imageUrl = announcement.image_display || announcement.image_url || announcement.image
+      
+      // If it's already a full URL, return as is
+      if (imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+        return imageUrl
+      }
+      
+      // If it's a relative path, construct the full URL using PythonAnywhere domain
+      const baseUrl = 'https://wmsutec.pythonanywhere.com'
+      
+      // Handle different possible image path formats
+      if (imageUrl) {
+        // If it starts with '/', it's already a proper path
+        if (imageUrl.startsWith('/')) {
+          return `${baseUrl}${imageUrl}`
+        }
+        // If it starts with 'media/', add a leading slash
+        if (imageUrl.startsWith('media/')) {
+          return `${baseUrl}/${imageUrl}`
+        }
+        // If it doesn't start with 'media/', assume it's in the announcements folder
+        return `${baseUrl}/media/announcements/${imageUrl}`
+      }
+      
+      return null
+    }
+    
     const handleImageError = (event, announcement) => {
-      console.log('Image failed to load for announcement:', announcement.title, 'URL:', event.target.src)
+      console.error('Image failed to load for announcement:', announcement.title)
+      console.error('Failed URL:', event.target.src)
+      console.error('Raw image data:', {
+        image_display: announcement.image_display,
+        image_url: announcement.image_url,
+        image: announcement.image
+      })
+      
+      // Try alternative URLs if the first one fails
+      const currentSrc = event.target.src
+      const imageUrl = announcement.image_display || announcement.image_url || announcement.image
+      
+      if (imageUrl && !currentSrc.includes('/media/announcements/')) {
+        // Try the announcements folder path
+        const alternativeUrl = `https://wmsutec.pythonanywhere.com/media/announcements/${imageUrl}`
+        if (currentSrc !== alternativeUrl) {
+          console.log('Trying alternative URL:', alternativeUrl)
+          event.target.src = alternativeUrl
+          return
+        }
+      }
+      
+      // If all attempts fail, hide the image
       event.target.style.display = 'none'
+      console.error('All image URL attempts failed for:', announcement.title)
     }
     
     const handleImageLoad = (event, announcement) => {
@@ -304,6 +360,15 @@ export default {
       
       // Debug: Log announcements data
       console.log('Announcements component mounted. Current announcements:', announcementStore.announcements)
+      
+      // Debug: Log image URLs for each announcement
+      announcementStore.announcements.forEach((announcement, index) => {
+        console.log(`Announcement ${index + 1} (${announcement.title}):`)
+        console.log('  - image_display:', announcement.image_display)
+        console.log('  - image_url:', announcement.image_url)
+        console.log('  - image:', announcement.image)
+        console.log('  - final URL:', getImageUrl(announcement))
+      })
     })
     
     return {
@@ -320,6 +385,7 @@ export default {
       openModal,
       closeModal,
       getModalAccentClass,
+      getImageUrl,
       handleImageError,
       handleImageLoad
     }
