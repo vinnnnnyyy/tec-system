@@ -425,6 +425,18 @@
               <!-- School Information -->
               <div class="space-y-4">
                 <h4 class="font-medium text-gray-900 border-b pb-2">School Information</h4>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">School Name</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.school_name || 'N/A' }}</p>
+                </div>
+                <div v-if="appointment.school_address">
+                  <label class="text-xs font-medium text-gray-500">School Address</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.school_address }}</p>
+                </div>
+                <div v-if="appointment.school_type">
+                  <label class="text-xs font-medium text-gray-500">School Type</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.school_type }}</p>
+                </div>
                 <div v-if="appointment.college_course">
                   <label class="text-xs font-medium text-gray-500">College Course</label>
                   <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.college_course }}</p>
@@ -432,6 +444,14 @@
                 <div v-if="appointment.college_type">
                   <label class="text-xs font-medium text-gray-500">College Type</label>
                   <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.college_type }}</p>
+                </div>
+                <div v-if="appointment.track_specialization">
+                  <label class="text-xs font-medium text-gray-500">Track/Specialization</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.track_specialization }}</p>
+                </div>
+                <div v-if="appointment.grade_level">
+                  <label class="text-xs font-medium text-gray-500">Grade Level</label>
+                  <p class="mt-1 text-sm font-medium text-gray-900">{{ appointment.grade_level }}</p>
                 </div>
               </div>
             </div>

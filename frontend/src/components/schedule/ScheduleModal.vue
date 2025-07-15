@@ -14,14 +14,14 @@
            class="fixed inset-0 items-center justify-center z-50 flex">
         <div :class="[
           'bg-white p-6 md:p-8 lg:p-10 rounded-xl shadow-xl w-full mx-2 md:mx-auto my-2 md:my-4 overflow-y-auto',
-          currentStep === 4 ? 'max-w-sm md:max-w-5xl lg:max-w-6xl xl:max-w-7xl max-h-[95vh]' : 'max-w-sm md:max-w-4xl lg:max-w-5xl max-h-[92vh]'
+          currentStep === 5 ? 'max-w-sm md:max-w-5xl lg:max-w-6xl xl:max-w-7xl max-h-[95vh]' : 'max-w-sm md:max-w-4xl lg:max-w-5xl max-h-[92vh]'
         ]">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-crimson-100 flex items-center justify-center">
                 <i class="fas fa-calendar-alt text-xl text-crimson-600"></i>
               </div>
-              {{ program?.name || 'Schedule an Appointment' }} - Step {{ currentStep }} of 4
+              {{ program?.name || 'Schedule an Appointment' }} - Step {{ currentStep }} of 5
             </h3>
             <button @click="close" class="text-gray-400 hover:text-gray-500 p-2 hover:bg-gray-100 rounded-lg transition-all">
               <i class="fas fa-times text-xl"></i>
@@ -1125,8 +1125,171 @@
                   </div>
                 </div>
 
-                <!-- STEP 4: Schedule Details Section (Spans 2 columns on LG) -->
+                <!-- STEP 4: Review Details Section (Spans 2 columns on LG) -->
                 <div v-if="currentStep === 4" class="lg:col-span-2">
+                  <div class="space-y-6 bg-white rounded-xl p-6 md:p-8 border border-gray-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                      <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
+                        <i class="fas fa-clipboard-check text-crimson-500"></i>
+                      </div>
+                      <h4>Review Your Information</h4>
+                    </div>
+                    
+                    <p class="text-gray-600 mb-6">Please review all the information you've entered before scheduling your appointment.</p>
+                    
+                    <!-- Personal Information Review -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                      <h5 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-user text-blue-500"></i>
+                        Personal Information
+                      </h5>
+                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                        <div><span class="font-medium">Name:</span> {{ formData.firstName }} {{ formData.middleName }} {{ formData.lastName }}</div>
+                        <div><span class="font-medium">Email:</span> {{ formData.email }}</div>
+                        <div><span class="font-medium">Contact:</span> {{ formData.contactNumber }}</div>
+                        <div><span class="font-medium">Birth Date:</span> {{ formData.birthMonth }}/{{ formData.birthDay }}/{{ formData.birthYear }}</div>
+                        <div><span class="font-medium">Age:</span> {{ formData.age }}</div>
+                        <div><span class="font-medium">Gender:</span> {{ formData.gender }}</div>
+                        <div><span class="font-medium">Address:</span> {{ formData.streetPurok }}, {{ formData.barangay }}, {{ formData.city }}</div>
+                        <div><span class="font-medium">Citizenship:</span> {{ formData.citizenship }}</div>
+                      </div>
+                    </div>
+
+                    <!-- Educational Background Review -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                      <h5 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-graduation-cap text-green-500"></i>
+                        Educational Background
+                      </h5>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div><span class="font-medium">Applicant Type:</span> 
+                          {{ formData.applicantType === 'senior_high_graduating' ? 'Senior High School Graduating Student' :
+                             formData.applicantType === 'senior_high_graduate' ? 'Senior High School Graduate' :
+                             formData.applicantType === 'college' ? 'College Student' : formData.applicantType }}
+                        </div>
+                        <div><span class="font-medium">WMSUCET Experience:</span> 
+                          {{ formData.wmsucetExperience.firstTime ? 'First Time' : `${formData.wmsucetExperience.timesTaken} times taken` }}
+                        </div>
+                        
+                        <!-- Applicant Type Specific Details -->
+                        <template v-if="formData.applicantType === 'senior_high_graduating'">
+                          <div><span class="font-medium">School:</span> {{ formData.seniorGraduating.schoolName }}</div>
+                          <div><span class="font-medium">School Address:</span> {{ formData.seniorGraduating.schoolAddress }}</div>
+                          <div><span class="font-medium">Expected Graduation:</span> {{ formData.seniorGraduating.graduationDate }}</div>
+                        </template>
+                        
+                        <template v-if="formData.applicantType === 'senior_high_graduate'">
+                          <div><span class="font-medium">School:</span> {{ formData.seniorGraduate.schoolName }}</div>
+                          <div><span class="font-medium">School Address:</span> {{ formData.seniorGraduate.schoolAddress }}</div>
+                          <div><span class="font-medium">Graduation Date:</span> {{ formData.seniorGraduate.graduationDate }}</div>
+                        </template>
+                        
+                        <template v-if="formData.applicantType === 'college'">
+                          <div><span class="font-medium">School:</span> {{ formData.college.schoolName }}</div>
+                          <div><span class="font-medium">School Address:</span> {{ formData.college.schoolAddress }}</div>
+                          <div><span class="font-medium">Course:</span> {{ formData.college.course }}</div>
+                          <div><span class="font-medium">College Type:</span> {{ formData.college.collegeType }}</div>
+                        </template>
+                      </div>
+                    </div>
+
+                    <!-- Course Choices Review -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                      <h5 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-list-ol text-purple-500"></i>
+                        Course Choices
+                      </h5>
+                      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div class="bg-white p-3 rounded border">
+                          <div class="font-medium text-purple-600 mb-1">1st Choice</div>
+                          <div>{{ formData.courseChoices?.firstChoice || 'Not specified' }}</div>
+                          <div class="text-xs text-gray-500 mt-1">{{ formData.courseChoices?.firstChoiceCampus || 'No campus specified' }}</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                          <div class="font-medium text-purple-600 mb-1">2nd Choice</div>
+                          <div>{{ formData.courseChoices?.secondChoice || 'Not specified' }}</div>
+                          <div class="text-xs text-gray-500 mt-1">{{ formData.courseChoices?.secondChoiceCampus || 'No campus specified' }}</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                          <div class="font-medium text-purple-600 mb-1">3rd Choice</div>
+                          <div>{{ formData.courseChoices?.thirdChoice || 'Not specified' }}</div>
+                          <div class="text-xs text-gray-500 mt-1">{{ formData.courseChoices?.thirdChoiceCampus || 'No campus specified' }}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Socio-Economic Information Review -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                      <h5 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-users text-orange-500"></i>
+                        Family Information
+                      </h5>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Father's Information -->
+                        <div class="bg-white p-3 rounded border">
+                          <div class="font-medium text-blue-600 mb-2">Father's Information</div>
+                          <div class="space-y-1 text-sm">
+                            <div><span class="font-medium">Citizenship:</span> {{ formData.socioEconomic?.father?.citizenship || 'Not specified' }}</div>
+                            <div><span class="font-medium">Education:</span> {{ formData.socioEconomic?.father?.education || 'Not specified' }}</div>
+                            <div><span class="font-medium">Occupation:</span> {{ formData.socioEconomic?.father?.occupation || 'Not specified' }}</div>
+                            <div><span class="font-medium">Employer:</span> {{ formData.socioEconomic?.father?.employer || 'Not specified' }}</div>
+                            <div><span class="font-medium">Income:</span> {{ formData.socioEconomic?.father?.income || 'Not specified' }}</div>
+                          </div>
+                        </div>
+                        
+                        <!-- Mother's Information -->
+                        <div class="bg-white p-3 rounded border">
+                          <div class="font-medium text-pink-600 mb-2">Mother's Information</div>
+                          <div class="space-y-1 text-sm">
+                            <div><span class="font-medium">Citizenship:</span> {{ formData.socioEconomic?.mother?.citizenship || 'Not specified' }}</div>
+                            <div><span class="font-medium">Education:</span> {{ formData.socioEconomic?.mother?.education || 'Not specified' }}</div>
+                            <div><span class="font-medium">Occupation:</span> {{ formData.socioEconomic?.mother?.occupation || 'Not specified' }}</div>
+                            <div><span class="font-medium">Employer:</span> {{ formData.socioEconomic?.mother?.employer || 'Not specified' }}</div>
+                            <div><span class="font-medium">Income:</span> {{ formData.socioEconomic?.mother?.income || 'Not specified' }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Additional Information Review -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                      <h5 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-indigo-500"></i>
+                        Additional Information
+                      </h5>
+                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                        <div><span class="font-medium">Physical Disability:</span> {{ formData.additionalInfo?.hasDisability ? 'Yes' : 'No' }}</div>
+                        <div v-if="formData.additionalInfo?.hasDisability"><span class="font-medium">Disability Description:</span> {{ formData.additionalInfo?.disabilityDescription || 'Not specified' }}</div>
+                        <div><span class="font-medium">Computer Knowledge:</span> {{ formData.additionalInfo?.knowsComputer ? 'Yes' : 'No' }}</div>
+                        <div><span class="font-medium">Indigenous Group:</span> {{ formData.additionalInfo?.isIndigenous ? 'Yes' : 'No' }}</div>
+                        <div v-if="formData.additionalInfo?.isIndigenous"><span class="font-medium">Indigenous Group:</span> {{ formData.additionalInfo?.indigenousGroup || 'Not specified' }}</div>
+                        <div><span class="font-medium">Religion:</span> 
+                          {{ formData.additionalInfo?.religion === 'roman_catholic' ? 'Roman Catholic' :
+                             formData.additionalInfo?.religion === 'protestant' ? 'Protestant' :
+                             formData.additionalInfo?.religion === 'islam' ? 'Islam' :
+                             formData.additionalInfo?.religion === 'others' ? (formData.additionalInfo?.religionOthers || 'Others') :
+                             'Not specified' }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Edit Information Notice -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div class="flex items-start gap-3">
+                        <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+                        <div>
+                          <h6 class="font-medium text-blue-900">Need to make changes?</h6>
+                          <p class="text-sm text-blue-700 mt-1">
+                            Use the "Previous" button below to go back and edit any information. Once you proceed to schedule your appointment, this information will be submitted.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- STEP 5: Schedule Details Section (Spans 2 columns on LG) -->
+                <div v-if="currentStep === 5" class="lg:col-span-2">
                   <div class="space-y-6 bg-white rounded-xl p-6 md:p-8 border border-gray-200 shadow-sm">
                     <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
                       <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
@@ -1249,7 +1412,7 @@
 
                 <button 
                   type="button" 
-                  v-if="currentStep < 4"
+                  v-if="currentStep < 5"
                   @click="nextStep"
                   :disabled="currentStep === 1 && !checkDuplicateRegistration()"
                   :class="[
@@ -1259,13 +1422,14 @@
                       : 'bg-crimson-500 hover:bg-crimson-600'
                   ]"
                 >
-                  Next
+                  <span v-if="currentStep === 4">Review & Continue</span>
+                  <span v-else>Next</span>
                   <i class="fas fa-arrow-right"></i>
                 </button>
                 
                 <button 
                   type="submit"
-                  v-if="currentStep === 4"
+                  v-if="currentStep === 5"
                   class="flex-1 bg-gradient-to-r from-crimson-600 to-crimson-700 text-white px-6 py-3 rounded-lg hover:from-crimson-700 hover:to-crimson-800 transition-all text-base font-medium shadow-sm flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto"
                   :disabled="loading"
                 >
@@ -1322,7 +1486,7 @@ export default {
     const dateError = ref('');
     const userAppointments = ref([]);
     const currentStep = ref(1); // To manage the current step of the form
-    const totalSteps = 4; // Total number of steps in the form
+    const totalSteps = 5; // Total number of steps in the form
     const isSubmitting = ref(false); // Track form submission state
     const showNotification = ref(false); // Track notification display state
     const notificationMessage = ref(''); // Notification message content
@@ -3004,10 +3168,10 @@ export default {
       const isStep1Valid = validateLastName() && validateFirstName() && validateMiddleName() && validateContactNumber() && validateEmail() && validateBirthDate() && validateAge() && validateGender() && validateStreetPurok() && validateBarangay() && validateCity() && validateCitizenship();
       const isStep2Valid = validateWmsucetExperience() && validateApplicantType();
       const isStep3Valid = validateCourseChoicesAndSocioEconomic();
-      const isStep4Valid = validateDateTime();
+      const isStep5Valid = validateDateTime();
 
 
-      if (!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep4Valid) {
+      if (!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep5Valid) {
         // Find the first field with an error and scroll to it
         const firstErrorElement = document.querySelector('.error-text:not(:empty)');
         if (firstErrorElement) {
@@ -3247,7 +3411,7 @@ export default {
 
     const nextStep = () => {
       if (validateCurrentStep()) {
-        if (currentStep.value < 4) {
+        if (currentStep.value < 5) {
           currentStep.value++;
         }
       }
@@ -3389,6 +3553,9 @@ export default {
         // Validate the new fields for course choices and socio-economic data
         isValid = validateCourseChoicesAndSocioEconomic();
       } else if (currentStep.value === 4) {
+        // Step 4 is the review step - no additional validation needed since all data has been validated in previous steps
+        isValid = true;
+      } else if (currentStep.value === 5) {
         touchedFields.value.preferredDate = true;
         touchedFields.value.timeSlot = true;
         isValid = validateDateTime();
