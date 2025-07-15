@@ -1,5 +1,5 @@
 <template>
-  <section class="hero-section relative min-h-[60vh] sm:min-h-[70vh] md:min-h-[calc(100vh-64px)] w-full flex items-center overflow-hidden isolate bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+  <section class="hero-section relative min-h-[60vh] sm:min-h-[70vh] md:min-h-[calc(100vh-64px)] w-full flex items-center overflow-hidden isolate bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" style="background-color: #1f2937;">
     <!-- Background Image Layer -->
     <div 
       class="absolute inset-0 bg-cover bg-center image-background transform scale-105 transition-transform duration-[2s] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"

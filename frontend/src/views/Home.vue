@@ -193,12 +193,12 @@
         </div>
       </section>
     </main>
-  </div>
+  </div>  
 </template>
 
 <script>
 import Hero from '../components/layout/Hero.vue'
-import Navbar from '../components/Navbar.vue'
+import Navbar from '../components/layout/Navbar.vue'
 import Announcements from '../components/Announcements.vue'
 import AuthService from '../services/auth.service'
 import { useToast } from '../composables/useToast'
