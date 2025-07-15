@@ -26,17 +26,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY')
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY environment variable is required")
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,wmsutec.pythonanywhere.com,wmsutec.netlify.app').split(',')
 
 # Frontend URL for email links
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3001')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://wmsutec.netlify.app')
 
 
 # Application definition
@@ -149,10 +147,20 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True').lower() == 'true'  # For development only
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() == 'true'  # Set to False for production
 CORS_ALLOWED_ORIGINS = [
-    url.strip() for url in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3001').split(',')
+    'https://wmsutec.netlify.app',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
 ]
+
+# Add any additional origins from environment variable
+if os.getenv('CORS_ALLOWED_ORIGINS'):
+    CORS_ALLOWED_ORIGINS.extend([
+        url.strip() for url in os.getenv('CORS_ALLOWED_ORIGINS').split(',')
+    ])
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
