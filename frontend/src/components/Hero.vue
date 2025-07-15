@@ -254,14 +254,36 @@ section {
 }
 
 /* Responsive Typography */
-@media (max-width: 360px) {
+@media (max-width: 400px) {
+  /* Ensure Hero section is always visible */
+  .hero-section {
+    min-height: 50vh !important;
+    display: flex !important;
+  }
+  
   h1 {
-    font-size: 2rem;
-    line-height: 1.3;
+    font-size: 1.75rem !important;
+    line-height: 1.3 !important;
   }
   
   p {
-    font-size: 1rem;
+    font-size: 0.9375rem !important;
+  }
+  
+  /* Reduce logo size on very small screens */
+  .logo-container img {
+    width: 60% !important;
+  }
+}
+
+@media (max-width: 360px) {
+  h1 {
+    font-size: 1.5rem !important;
+    line-height: 1.3 !important;
+  }
+  
+  p {
+    font-size: 0.875rem !important;
   }
 }
 

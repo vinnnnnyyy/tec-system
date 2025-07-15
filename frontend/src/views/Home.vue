@@ -405,20 +405,14 @@ export default {
   }
 }
 
-/* Simple approach - Hide logo below 400px */
+/* Better small screen support - keep Hero visible but adjust layout */
 @media (max-width: 400px) {
-  /* Hide logo completely for screens below 400px */
-  .hide-logo-small :deep(.hero-logo) {
-    display: none !important;
+  /* Ensure Hero section is always visible */
+  .hide-logo-small {
+    display: block !important;
   }
   
-  /* Adjust hero spacing when logo is hidden */
-  .hide-logo-small :deep(.hero-content) {
-    padding-top: 1rem;
-    padding-bottom: 1rem;
-  }
-  
-  /* Adjust typography for better fit */
+  /* Adjust typography for better fit on very small screens */
   .hide-logo-small :deep(h1) {
     font-size: 1.75rem !important;
     line-height: 1.3 !important;
@@ -428,6 +422,16 @@ export default {
     font-size: 0.9375rem !important;
     margin-top: 0.75rem !important;
     margin-bottom: 1.25rem !important;
+  }
+  
+  /* Make buttons stack vertically on very small screens */
+  .hide-logo-small :deep(.flex-col) {
+    flex-direction: column !important;
+  }
+  
+  /* Reduce logo size on very small screens */
+  .hide-logo-small :deep(.logo-container img) {
+    width: 60% !important;
   }
 }
 
