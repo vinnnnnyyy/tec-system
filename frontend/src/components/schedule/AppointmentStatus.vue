@@ -308,11 +308,12 @@
           </div>
           
           <!-- Action Buttons - More compact and responsive -->
+          <!-- Temporarily commented out download button -->
+          <!--
           <div 
             v-if="shouldShowFormDownloadButton" 
             class="flex flex-col sm:flex-row justify-center items-center gap-3 pt-2"
           >
-            <!-- Download Application Form Button -->
             <button 
               @click="downloadApplicationForm"
               :disabled="isGeneratingPdf"
@@ -323,6 +324,7 @@
               {{ isGeneratingPdf ? 'Generating PDF...' : 'Download Application Form' }}
             </button>
           </div>
+          -->
           
           <!-- Add Reschedule Button (shown for appropriate statuses) -->
           <div 
