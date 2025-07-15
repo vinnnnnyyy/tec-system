@@ -37,7 +37,25 @@ class AppointmentSerializer(serializers.ModelSerializer):
             'applicant_type', 'high_school_code',
             # Additional school information
             'school_graduation_date', 'school_address',
-            'college_course', 'college_type'
+            'college_course', 'college_type',
+            # Course choices and campus information
+            'first_choice_course', 'first_choice_campus',
+            'second_choice_course', 'second_choice_campus',
+            'third_choice_course', 'third_choice_campus',
+            # Socio-economic data - Father information
+            'father_citizenship', 'father_education', 'father_work_occupation',
+            'father_employer', 'father_monthly_income',
+            # Socio-economic data - Mother information
+            'mother_citizenship', 'mother_education', 'mother_work_occupation',
+            'mother_employer', 'mother_monthly_income',
+            # Physical disability information
+            'has_physical_disability', 'disability_description',
+            # Computer usage knowledge
+            'knows_computer_usage',
+            # Indigenous Peoples Group membership
+            'is_indigenous_member', 'indigenous_group_specify',
+            # Religious affiliation
+            'religious_affiliation', 'religious_affiliation_others'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'user']
 

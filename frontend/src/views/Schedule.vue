@@ -365,29 +365,38 @@ export default {
         query: {}
       });
     },
-    handleSchedule(programData) {
+    async handleSchedule(programData) {
       // Reset scheduling state first to ensure modal works properly
       this.resetSchedulingState();
       
-      // Check if this is a full program object or just program data with rescheduling info
-      if (programData.reschedulingInfo) {
-        // Store rescheduling information
-        this.reschedulingInfo = programData.reschedulingInfo;
-        this.isRescheduling = true;
-        this.selectedProgram = programData.program;
-        
-        // Fetch availability data before showing the modal
-        this.fetchDateAvailability(this.selectedProgram.id).then(() => {
+      try {
+        // Check if this is a full program object or just program data with rescheduling info
+        if (programData.reschedulingInfo) {
+          // Store rescheduling information
+          this.reschedulingInfo = programData.reschedulingInfo;
+          this.isRescheduling = true;
+          this.selectedProgram = programData.program;
+          
+          // Fetch availability data before showing the modal
+          await this.fetchDateAvailability(this.selectedProgram.id);
           this.showRescheduleModal = true;
-        });
-      } else {
-        // Regular scheduling (no rescheduling info provided)
-        this.selectedProgram = programData;
-        
-        // Fetch availability data before showing the modal
-        this.fetchDateAvailability(this.selectedProgram.id).then(() => {
+        } else {
+          // Regular scheduling (no rescheduling info provided)
+          this.selectedProgram = programData;
+          
+          // Fetch availability data before showing the modal
+          await this.fetchDateAvailability(this.selectedProgram.id);
           this.showScheduleModal = true;
-        });
+        }
+      } catch (error) {
+        console.error('Error in handleSchedule:', error);
+        const { showToast } = useToast();
+        showToast('Failed to load scheduling information. Please try again.', 'error');
+        
+        // Reset state on error
+        this.selectedProgram = null;
+        this.showScheduleModal = false;
+        this.showRescheduleModal = false;
       }
     },
     async handleScheduleSubmit(formData) {

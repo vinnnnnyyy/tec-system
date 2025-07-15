@@ -14,14 +14,14 @@
            class="fixed inset-0 items-center justify-center z-50 flex">
         <div :class="[
           'bg-white p-6 md:p-8 lg:p-10 rounded-xl shadow-xl w-full mx-2 md:mx-auto my-2 md:my-4 overflow-y-auto',
-          currentStep === 3 ? 'max-w-sm md:max-w-5xl lg:max-w-6xl xl:max-w-7xl max-h-[95vh]' : 'max-w-sm md:max-w-4xl lg:max-w-5xl max-h-[92vh]'
+          currentStep === 4 ? 'max-w-sm md:max-w-5xl lg:max-w-6xl xl:max-w-7xl max-h-[95vh]' : 'max-w-sm md:max-w-4xl lg:max-w-5xl max-h-[92vh]'
         ]">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-crimson-100 flex items-center justify-center">
                 <i class="fas fa-calendar-alt text-xl text-crimson-600"></i>
               </div>
-              {{ program?.name || 'Schedule an Appointment' }} - Step {{ currentStep }} of 3
+              {{ program?.name || 'Schedule an Appointment' }} - Step {{ currentStep }} of 4
             </h3>
             <button @click="close" class="text-gray-400 hover:text-gray-500 p-2 hover:bg-gray-100 rounded-lg transition-all">
               <i class="fas fa-times text-xl"></i>
@@ -704,8 +704,429 @@
                   </div>
                 </div>
 
-                <!-- STEP 3: Schedule Details Section (Spans 2 columns on LG) -->
-                <div v-if="currentStep === 3" class="lg:col-span-2">
+                <!-- STEP 3: Course Choices & Additional Information (Spans 2 columns on LG) -->
+                <div v-if="currentStep === 3" class="space-y-8 lg:col-span-2">
+                  <!-- Course Choices Section -->
+                  <div class="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                      <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
+                        <i class="fas fa-graduation-cap text-crimson-500"></i>
+                      </div>
+                      <h4>Course to take up (Choose from the list of WMSU Campuses and undergraduate degree programs/courses offered by WMSU posted in your school's bulletin board.)</h4>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                      <!-- 1st Choice -->
+                      <div class="space-y-2">
+                        <label for="firstChoiceCourse" class="block text-sm font-medium text-gray-700 mb-1.5">1st Choice:</label>
+                        <input 
+                          id="firstChoiceCourse"
+                          v-model="formData.courseChoices.firstChoice"
+                          type="text"
+                          list="wmsu-courses-list-first"
+                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                          placeholder="Enter your first choice course"
+                          autocomplete="off"
+                        />
+                        <datalist id="wmsu-courses-list-first">
+                          <option v-for="course in wmsucourses" :key="course" :value="course">{{ course }}</option>
+                        </datalist>
+                      </div>
+                      
+                      <div class="space-y-2">
+                        <label for="firstChoiceCampus" class="block text-sm font-medium text-gray-700 mb-1.5">Campus:</label>
+                        <select 
+                          id="firstChoiceCampus"
+                          v-model="formData.courseChoices.firstChoiceCampus"
+                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                        >
+                          <option value="">Select a campus</option>
+                          <option v-for="campus in campusOptions" :key="campus" :value="campus">
+                            {{ campus }}
+                          </option>
+                        </select>
+                      </div>
+                      
+                      <!-- 2nd Choice -->
+                      <div class="space-y-2">
+                        <label for="secondChoiceCourse" class="block text-sm font-medium text-gray-700 mb-1.5">2nd Choice:</label>
+                        <input 
+                          id="secondChoiceCourse"
+                          v-model="formData.courseChoices.secondChoice"
+                          type="text"
+                          list="wmsu-courses-list-second"
+                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                          placeholder="Enter your second choice course"
+                          autocomplete="off"
+                        />
+                        <datalist id="wmsu-courses-list-second">
+                          <option v-for="course in wmsucourses" :key="course" :value="course">{{ course }}</option>
+                        </datalist>
+                      </div>
+                      
+                      <div class="space-y-2">
+                        <label for="secondChoiceCampus" class="block text-sm font-medium text-gray-700 mb-1.5">Campus:</label>
+                        <select 
+                          id="secondChoiceCampus"
+                          v-model="formData.courseChoices.secondChoiceCampus"
+                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                        >
+                          <option value="">Select a campus</option>
+                          <option v-for="campus in campusOptions" :key="campus" :value="campus">
+                            {{ campus }}
+                          </option>
+                        </select>
+                      </div>
+                      
+                      <!-- 3rd Choice -->
+                      <div class="space-y-2">
+                        <label for="thirdChoiceCourse" class="block text-sm font-medium text-gray-700 mb-1.5">3rd Choice:</label>
+                        <input 
+                          id="thirdChoiceCourse"
+                          v-model="formData.courseChoices.thirdChoice"
+                          type="text"
+                          list="wmsu-courses-list-third"
+                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                          placeholder="Enter your third choice course"
+                          autocomplete="off"
+                        />
+                        <datalist id="wmsu-courses-list-third">
+                          <option v-for="course in wmsucourses" :key="course" :value="course">{{ course }}</option>
+                        </datalist>
+                      </div>
+                      
+                      <div class="space-y-2">
+                        <label for="thirdChoiceCampus" class="block text-sm font-medium text-gray-700 mb-1.5">Campus:</label>
+                        <select 
+                          id="thirdChoiceCampus"
+                          v-model="formData.courseChoices.thirdChoiceCampus"
+                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                        >
+                          <option value="">Select a campus</option>
+                          <option v-for="campus in campusOptions" :key="campus" :value="campus">
+                            {{ campus }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Socio Economic Data Section -->
+                  <div class="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                      <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
+                        <i class="fas fa-users text-crimson-500"></i>
+                      </div>
+                      <h4>Socio Economic Data: Furnish all required information. Under the column "Highest Educational Attainment" indicate the educational level actually completed (eg. Grade III, Third year high school, High School Graduate, Second Year, College Graduate, etc)</h4>
+                    </div>
+                    
+                    <!-- Responsive Card Layout -->
+                    <div class="space-y-6">
+                      <!-- Father Information Card -->
+                      <div class="bg-blue-50 border border-blue-200 rounded-lg p-5">
+                        <h5 class="font-semibold text-blue-800 mb-4 flex items-center">
+                          <i class="fas fa-male mr-2"></i>
+                          Father's Information
+                        </h5>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Citizenship</label>
+                            <input 
+                              v-model="formData.socioEconomic.father.citizenship"
+                              type="text"
+                              list="citizenship-options-father"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., Filipino"
+                              autocomplete="off"
+                            />
+                            <datalist id="citizenship-options-father">
+                              <option v-for="citizenship in citizenshipOptions" :key="citizenship" :value="citizenship">{{ citizenship }}</option>
+                            </datalist>
+                          </div>
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Highest Educational Attainment</label>
+                            <input 
+                              v-model="formData.socioEconomic.father.education"
+                              type="text"
+                              list="education-options-father"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., High School Graduate, College Graduate"
+                              autocomplete="off"
+                            />
+                            <datalist id="education-options-father">
+                              <option v-for="education in educationalAttainmentOptions" :key="education" :value="education">{{ education }}</option>
+                            </datalist>
+                          </div>
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Work/Occupation</label>
+                            <input 
+                              v-model="formData.socioEconomic.father.occupation"
+                              type="text"
+                              list="occupation-options-father"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., Teacher, Farmer, Engineer"
+                              autocomplete="off"
+                            />
+                            <datalist id="occupation-options-father">
+                              <option v-for="occupation in occupationOptions" :key="occupation" :value="occupation">{{ occupation }}</option>
+                            </datalist>
+                          </div>
+                          <div class="space-y-2 md:col-span-2 lg:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700">Employer/Place of Work</label>
+                            <input 
+                              v-model="formData.socioEconomic.father.employer"
+                              type="text"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., Company name, School name"
+                            />
+                          </div>
+                          <div class="space-y-2 md:col-span-2 lg:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700">Monthly Income/Salary</label>
+                            <input 
+                              v-model="formData.socioEconomic.father.income"
+                              type="text"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., ₱15,000, ₱25,000"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Mother Information Card -->
+                      <div class="bg-pink-50 border border-pink-200 rounded-lg p-5">
+                        <h5 class="font-semibold text-pink-800 mb-4 flex items-center">
+                          <i class="fas fa-female mr-2"></i>
+                          Mother's Information
+                        </h5>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Citizenship</label>
+                            <input 
+                              v-model="formData.socioEconomic.mother.citizenship"
+                              type="text"
+                              list="citizenship-options-mother"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., Filipino"
+                              autocomplete="off"
+                            />
+                            <datalist id="citizenship-options-mother">
+                              <option v-for="citizenship in citizenshipOptions" :key="citizenship" :value="citizenship">{{ citizenship }}</option>
+                            </datalist>
+                          </div>
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Highest Educational Attainment</label>
+                            <input 
+                              v-model="formData.socioEconomic.mother.education"
+                              type="text"
+                              list="education-options-mother"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., High School Graduate, College Graduate"
+                              autocomplete="off"
+                            />
+                            <datalist id="education-options-mother">
+                              <option v-for="education in educationalAttainmentOptions" :key="education" :value="education">{{ education }}</option>
+                            </datalist>
+                          </div>
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Work/Occupation</label>
+                            <input 
+                              v-model="formData.socioEconomic.mother.occupation"
+                              type="text"
+                              list="occupation-options-mother"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., Housewife, Nurse, Business Owner"
+                              autocomplete="off"
+                            />
+                            <datalist id="occupation-options-mother">
+                              <option v-for="occupation in occupationOptions" :key="occupation" :value="occupation">{{ occupation }}</option>
+                            </datalist>
+                          </div>
+                          <div class="space-y-2 md:col-span-2 lg:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700">Employer/Place of Work</label>
+                            <input 
+                              v-model="formData.socioEconomic.mother.employer"
+                              type="text"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., Hospital name, Own business"
+                            />
+                          </div>
+                          <div class="space-y-2 md:col-span-2 lg:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700">Monthly Income/Salary</label>
+                            <input 
+                              v-model="formData.socioEconomic.mother.income"
+                              type="text"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., ₱12,000, ₱20,000"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Additional Questions Section -->
+                  <div class="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                      <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
+                        <i class="fas fa-question-circle text-crimson-500"></i>
+                      </div>
+                      <h4>Additional Information</h4>
+                    </div>
+                    
+                    <div class="space-y-6">
+                      <!-- Physical Disability Question -->
+                      <div class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Do you have a physical disability or condition that requires special attention or would make it difficult for you to take a regular test?</label>
+                        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-6">
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.hasDisability" 
+                              :value="false"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">No</span>
+                          </label>
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.hasDisability" 
+                              :value="true"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Yes (If yes, please submit a medical certificate/documentation of disability together with this form.)</span>
+                          </label>
+                        </div>
+                        
+                        <!-- Disability Description -->
+                        <div v-if="formData.additionalInfo.hasDisability" class="mt-3">
+                          <textarea 
+                            v-model="formData.additionalInfo.disabilityDescription"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                            rows="3"
+                            placeholder="Please describe your disability or special attention needed"
+                          ></textarea>
+                        </div>
+                      </div>
+
+                      <!-- Computer Usage Question -->
+                      <div class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Do you know how to use a computer?</label>
+                        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-6">
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.knowsComputer" 
+                              :value="false"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">No</span>
+                          </label>
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.knowsComputer" 
+                              :value="true"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Yes</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <!-- Indigenous Peoples Group Question -->
+                      <div class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Are you a member of an Indigenous Peoples Group (IPG)?</label>
+                        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-6">
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.isIndigenous" 
+                              :value="false"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">No</span>
+                          </label>
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.isIndigenous" 
+                              :value="true"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Yes</span>
+                          </label>
+                        </div>
+                        
+                        <!-- Indigenous Group Specification -->
+                        <div v-if="formData.additionalInfo.isIndigenous" class="mt-3">
+                          <input 
+                            v-model="formData.additionalInfo.indigenousGroup"
+                            type="text"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                            placeholder="Please specify the Indigenous Peoples Group"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Religious Affiliation Question -->
+                      <div class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Religious affiliation:</label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.religion" 
+                              value="roman_catholic"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Roman Catholic</span>
+                          </label>
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.religion" 
+                              value="protestant"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Protestant</span>
+                          </label>
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.religion" 
+                              value="islam"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Islam</span>
+                          </label>
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.religion" 
+                              value="others"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Others</span>
+                          </label>
+                        </div>
+                        
+                        <!-- Religion Others Specification -->
+                        <div v-if="formData.additionalInfo.religion === 'others'" class="mt-3">
+                          <input 
+                            v-model="formData.additionalInfo.religionOthers"
+                            type="text"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                            placeholder="Please specify your religion"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- STEP 4: Schedule Details Section (Spans 2 columns on LG) -->
+                <div v-if="currentStep === 4" class="lg:col-span-2">
                   <div class="space-y-6 bg-white rounded-xl p-6 md:p-8 border border-gray-200 shadow-sm">
                     <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
                       <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
@@ -828,7 +1249,7 @@
 
                 <button 
                   type="button" 
-                  v-if="currentStep < 3"
+                  v-if="currentStep < 4"
                   @click="nextStep"
                   :disabled="currentStep === 1 && !checkDuplicateRegistration()"
                   :class="[
@@ -844,7 +1265,7 @@
                 
                 <button 
                   type="submit"
-                  v-if="currentStep === 3"
+                  v-if="currentStep === 4"
                   class="flex-1 bg-gradient-to-r from-crimson-600 to-crimson-700 text-white px-6 py-3 rounded-lg hover:from-crimson-700 hover:to-crimson-800 transition-all text-base font-medium shadow-sm flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto"
                   :disabled="loading"
                 >
@@ -901,6 +1322,11 @@ export default {
     const dateError = ref('');
     const userAppointments = ref([]);
     const currentStep = ref(1); // To manage the current step of the form
+    const totalSteps = 4; // Total number of steps in the form
+    const isSubmitting = ref(false); // Track form submission state
+    const showNotification = ref(false); // Track notification display state
+    const notificationMessage = ref(''); // Notification message content
+    const notificationType = ref('info'); // Notification type (info, warning, error, success)
 
     const validationErrors = ref({
       lastName: '',
@@ -983,6 +1409,42 @@ export default {
         schoolAddress: '',
         course: '',
         collegeType: ''
+      },
+      // Course choices and campus information
+      courseChoices: {
+        firstChoice: '',
+        firstChoiceCampus: '',
+        secondChoice: '',
+        secondChoiceCampus: '',
+        thirdChoice: '',
+        thirdChoiceCampus: ''
+      },
+      // Socio-economic data
+      socioEconomic: {
+        father: {
+          citizenship: '',
+          education: '',
+          occupation: '',
+          employer: '',
+          income: ''
+        },
+        mother: {
+          citizenship: '',
+          education: '',
+          occupation: '',
+          employer: '',
+          income: ''
+        }
+      },
+      // Additional information
+      additionalInfo: {
+        hasDisability: false,
+        disabilityDescription: '',
+        knowsComputer: false,
+        isIndigenous: false,
+        indigenousGroup: '',
+        religion: '',
+        religionOthers: ''
       }
     });
     
@@ -991,6 +1453,176 @@ export default {
     const philippineCities = ref(citiesData);
     const citizenshipOptions = ref(citizenshipsData);
     const zamboanganSchools = ref(allZamboanganSchoolsFull);
+    
+    // WMSU Campus options for course choices
+    const campusOptions = ref([
+      'WMSU Main Campus',
+      'WMSU ESU - Alicia (Zamboanga Sibugay)',
+      'WMSU ESU - Aurora (Zamboanga del Sur)',
+      'WMSU ESU - Curuan (Zamboanga City) – autonomous campus',
+      'WMSU ESU - Malangas (Zamboanga Sibugay) – autonomous campus',
+      'WMSU ESU - Diplahan (Zamboanga Sibugay)',
+      'WMSU ESU - Imelda (Zamboanga Sibugay)',
+      'WMSU ESU - Ipil (Zamboanga Sibugay)',
+      'WMSU ESU - Mabuhay (Zamboanga Sibugay)',
+      'WMSU ESU - Molave (Zamboanga del Sur)',
+      'WMSU ESU - Naga (Zamboanga Sibugay)',
+      'WMSU ESU - Olutanga (Zamboanga Sibugay)',
+      'WMSU ESU - Pagadian City (Zamboanga del Sur)',
+      'WMSU ESU - Siay (Zamboanga Sibugay)',
+      'WMSU ESU - Tungawan (Zamboanga Sibugay)',
+      'San Ramon Campus (Zamboanga City) – satellite campus',
+      'Curuan Campus (Zamboanga City) – autonomous campus',
+      'Malangas Campus (Zamboanga Sibugay) – autonomous campus'
+    ]);
+
+    // WMSU Undergraduate Programs data
+    const wmsucourses = ref([
+      // College of Architecture
+      'BS Architecture (Specializations: Housing, Planning, Construction Technology, Architectural Design)',
+      
+      // College of Agriculture
+      'BS Agriculture (majors: Crop Science, Animal Science, Soil Science, Entomology, Horticulture)',
+      'BS Agricultural Engineering',
+      'Diploma in Agricultural Technology / BAT ladder-course',
+      
+      // College of Forestry & Environmental Studies
+      'BS Forestry',
+      
+      // College of Engineering
+      'BS Civil Engineering',
+      'BS Mechanical Engineering',
+      'BS Electrical Engineering',
+      'BS Computer Engineering',
+      'BS Environmental Engineering',
+      'BS Geodetic Engineering',
+      
+      // College of Computing Studies
+      'BS Computer Science',
+      'BS Information Technology',
+      'Associate In Computer Technology: Networking',
+      'Associate In Computer Technology: Application Development',
+      
+      // College of Science & Mathematics
+      'BS Chemistry',
+      'BS Biology',
+      'BS Mathematics',
+      'BS Physics',
+      'BS Statistics',
+      
+      // College of Nursing
+      'BS Nursing',
+      
+      // College of Home Economics
+      'BS Home Economics Education',
+      
+      // College of Social Work & Community Development
+      'BS Social Work',
+      
+      // College of Criminal Justice Education
+      'BS Criminology',
+      
+      // College of Teacher Education
+      'BEED (majors: Guidance & Counseling, Pre‑School, English, Work Education, Filipino, Math, MAPE, Science & Health, Social Studies, Special Education)',
+      'BSED (majors: English, PEHM, Filipino, Math, Physics, Biology, Social Studies, Values Education, Chemistry, General Science)',
+      
+      // College of Liberal Arts
+      'BA English',
+      'BA Political Science',
+      'BA Mass Communication (Journalism & Broadcasting)',
+      'BA Social Studies',
+      'BA Filipino',
+      'BS Economics',
+      'BS Psychology',
+      
+      // College of Asian & Islamic Studies
+      'BS Islamic Studies',
+      'BA Asian Studies (Southeast Asian focus; including Philippine/Korean history & culture)',
+      
+      // College of Physical Education
+      'BPE (Physical Education)',
+      
+      // College of Nutrition & Dietetics
+      'BS Nutrition & Dietetics',
+      
+      // College of Sports Science & Physical Education
+      'Undergrad in Physical Education',
+      
+      // College of Public Administration & Development Studies
+      'BS Community Development (BSCD)',
+      
+      // College of Law
+      'Bachelor of Laws (with specialization in Islamic Jurisprudence)'
+    ]);
+
+    // Socio-Economic Data Options
+    const educationalAttainmentOptions = ref([
+      'No Formal Education',
+      'Elementary Graduate',
+      'Elementary Undergraduate',
+      'High School Graduate', 
+      'High School Undergraduate',
+      'Senior High School Graduate',
+      'Senior High School Undergraduate',
+      'Vocational Graduate',
+      'Vocational Undergraduate',
+      'College Graduate',
+      'College Undergraduate',
+      'Masteral Graduate',
+      'Masteral Undergraduate',
+      'Doctoral Graduate',
+      'Doctoral Undergraduate'
+    ]);
+
+    const occupationOptions = ref([
+      // Professional/Technical
+      'Teacher',
+      'Engineer',
+      'Doctor',
+      'Nurse',
+      'Lawyer',
+      'Accountant',
+      'Architect',
+      'Social Worker',
+      'Police Officer',
+      'Military Personnel',
+      'Government Employee',
+      
+      // Business/Service
+      'Business Owner',
+      'Manager',
+      'Sales Representative',
+      'Cashier',
+      'Security Guard',
+      'Driver',
+      'Mechanic',
+      'Electrician',
+      'Plumber',
+      'Carpenter',
+      
+      // Agriculture/Fishing
+      'Farmer',
+      'Fisherman',
+      'Agricultural Worker',
+      
+      // Labor/Service
+      'Construction Worker',
+      'Factory Worker',
+      'Domestic Helper',
+      'Cook',
+      'Vendor',
+      'Jeepney Driver',
+      'Tricycle Driver',
+      
+      // Others
+      'Self-Employed',
+      'Housewife/Househusband',
+      'Retired',
+      'Unemployed',
+      'Student',
+      'Overseas Filipino Worker (OFW)',
+      'Others'
+    ]);
     
     // Location data for the new LocationDropdowns component
     const locationData = ref({
@@ -1420,7 +2052,7 @@ export default {
       // Middle name is optional, so no error if empty.
       // If provided, it can have a min length, e.g., 1 character if not just an initial.
       if (formData.value.middleName.trim() && formData.value.middleName.trim().length < 1) {
-        validationErrors.value.middleName = 'Middle name seems too short';
+        validationErrors.value.middleName = 'Middle name seems to short';
         return false; // Or true if partial validation is acceptable for optional fields
       }
       validationErrors.value.middleName = '';
@@ -1626,6 +2258,120 @@ export default {
       }
     };
     
+    // Validate course choices and socio-economic data
+    const validateCourseChoicesAndSocioEconomic = () => {
+      let isValid = true;
+      
+      // Safety check - ensure data structures exist
+      if (!formData.value.courseChoices || !formData.value.socioEconomic || !formData.value.additionalInfo) {
+        return true; // Skip validation if structures don't exist yet
+      }
+      
+      // Course choices validation
+      if (!formData.value.courseChoices?.firstChoice || !formData.value.courseChoices.firstChoice.trim()) {
+        validationErrors.value.firstChoice = 'First choice course is required';
+        isValid = false;
+      } else {
+        validationErrors.value.firstChoice = '';
+      }
+      
+      if (!formData.value.courseChoices?.firstChoiceCampus || !formData.value.courseChoices.firstChoiceCampus.trim()) {
+        validationErrors.value.firstChoiceCampus = 'Campus for first choice is required';
+        isValid = false;
+      } else {
+        validationErrors.value.firstChoiceCampus = '';
+      }
+      
+      if (!formData.value.courseChoices?.secondChoice || !formData.value.courseChoices.secondChoice.trim()) {
+        validationErrors.value.secondChoice = 'Second choice course is required';
+        isValid = false;
+      } else {
+        validationErrors.value.secondChoice = '';
+      }
+      
+      if (!formData.value.courseChoices?.secondChoiceCampus || !formData.value.courseChoices.secondChoiceCampus.trim()) {
+        validationErrors.value.secondChoiceCampus = 'Campus for second choice is required';
+        isValid = false;
+      } else {
+        validationErrors.value.secondChoiceCampus = '';
+      }
+      
+      // Socio-economic validation - Father
+      if (!formData.value.socioEconomic?.father?.citizenship || !formData.value.socioEconomic.father.citizenship.trim()) {
+        validationErrors.value.fatherCitizenship = "Father's citizenship is required";
+        isValid = false;
+      } else {
+        validationErrors.value.fatherCitizenship = '';
+      }
+      
+      if (!formData.value.socioEconomic?.father?.education || !formData.value.socioEconomic.father.education.trim()) {
+        validationErrors.value.fatherEducation = "Father's education is required";
+        isValid = false;
+      } else {
+        validationErrors.value.fatherEducation = '';
+      }
+      
+      if (!formData.value.socioEconomic?.father?.occupation || !formData.value.socioEconomic.father.occupation.trim()) {
+        validationErrors.value.fatherOccupation = "Father's occupation is required";
+        isValid = false;
+      } else {
+        validationErrors.value.fatherOccupation = '';
+      }
+      
+      // Socio-economic validation - Mother
+      if (!formData.value.socioEconomic?.mother?.citizenship || !formData.value.socioEconomic.mother.citizenship.trim()) {
+        validationErrors.value.motherCitizenship = "Mother's citizenship is required";
+        isValid = false;
+      } else {
+        validationErrors.value.motherCitizenship = '';
+      }
+      
+      if (!formData.value.socioEconomic?.mother?.education || !formData.value.socioEconomic.mother.education.trim()) {
+        validationErrors.value.motherEducation = "Mother's education is required";
+        isValid = false;
+      } else {
+        validationErrors.value.motherEducation = '';
+      }
+      
+      if (!formData.value.socioEconomic?.mother?.occupation || !formData.value.socioEconomic.mother.occupation.trim()) {
+        validationErrors.value.motherOccupation = "Mother's occupation is required";
+        isValid = false;
+      } else {
+        validationErrors.value.motherOccupation = '';
+      }
+      
+      // Additional information validation
+      if (formData.value.additionalInfo?.hasDisability === null || formData.value.additionalInfo?.hasDisability === undefined) {
+        validationErrors.value.hasDisability = "Please select whether you have any disability";
+        isValid = false;
+      } else {
+        validationErrors.value.hasDisability = '';
+      }
+      
+      if (formData.value.additionalInfo?.knowsComputer === null || formData.value.additionalInfo?.knowsComputer === undefined) {
+        validationErrors.value.knowsComputer = "Please select whether you know how to use a computer";
+        isValid = false;
+      } else {
+        validationErrors.value.knowsComputer = '';
+      }
+      
+      if (formData.value.additionalInfo?.isIndigenous === null || formData.value.additionalInfo?.isIndigenous === undefined) {
+        validationErrors.value.isIndigenous = "Please select whether you belong to an indigenous group";
+        isValid = false;
+      } else {
+        validationErrors.value.isIndigenous = '';
+      }
+      
+      if (!formData.value.additionalInfo?.religion || !formData.value.additionalInfo.religion.trim()) {
+        validationErrors.value.religion = "Religious affiliation is required";
+        isValid = false;
+      } else {
+        validationErrors.value.religion = '';
+      }
+      
+      return isValid;
+    };
+    
     // Validate date and time slot
     const validateDateTime = () => {
       if (!formData.value.preferredDate) {
@@ -1797,6 +2543,42 @@ export default {
             schoolAddress: '',
             course: '',
             collegeType: ''
+          },
+          // Course choices and campus information
+          courseChoices: {
+            firstChoice: '',
+            firstChoiceCampus: '',
+            secondChoice: '',
+            secondChoiceCampus: '',
+            thirdChoice: '',
+            thirdChoiceCampus: ''
+          },
+          // Socio-economic data
+          socioEconomic: {
+            father: {
+              citizenship: '',
+              education: '',
+              occupation: '',
+              employer: '',
+              income: ''
+            },
+            mother: {
+              citizenship: '',
+              education: '',
+              occupation: '',
+              employer: '',
+              income: ''
+            }
+          },
+          // Additional information
+          additionalInfo: {
+            hasDisability: false,
+            disabilityDescription: '',
+            knowsComputer: false,
+            isIndigenous: false,
+            indigenousGroup: '',
+            religion: '',
+            religionOthers: ''
           }
         };
         dateError.value = '';
@@ -1857,6 +2639,54 @@ export default {
     // Add debugging on mount
     onMounted(() => {
       console.log('ScheduleModal mounted');
+      console.log('formData:', formData.value);
+      console.log('courseChoices:', formData.value?.courseChoices);
+      console.log('socioEconomic:', formData.value?.socioEconomic);
+      console.log('additionalInfo:', formData.value?.additionalInfo);
+      
+      // Ensure formData nested objects are properly initialized
+      if (!formData.value.courseChoices) {
+        formData.value.courseChoices = {
+          firstChoice: '',
+          firstChoiceCampus: '',
+          secondChoice: '',
+          secondChoiceCampus: '',
+          thirdChoice: '',
+          thirdChoiceCampus: ''
+        };
+      }
+      
+      if (!formData.value.socioEconomic) {
+        formData.value.socioEconomic = {
+          father: {
+            citizenship: '',
+            education: '',
+            occupation: '',
+            employer: '',
+            income: ''
+          },
+          mother: {
+            citizenship: '',
+            education: '',
+            occupation: '',
+            employer: '',
+            income: ''
+          }
+        };
+      }
+      
+      if (!formData.value.additionalInfo) {
+        formData.value.additionalInfo = {
+          hasDisability: false,
+          disabilityDescription: '',
+          knowsComputer: false,
+          isIndigenous: false,
+          indigenousGroup: '',
+          religion: '',
+          religionOthers: ''
+        };
+      }
+      
       console.log('philippineBarangays length:', philippineBarangays.value.length);
       console.log('philippineCities length:', philippineCities.value.length);
       console.log('citizenshipOptions length:', citizenshipOptions.value.length);
@@ -1973,7 +2803,7 @@ export default {
       
       if (!isValid) {
         // Find the first field with an error and scroll to it
-        const firstErrorElement = document.querySelector('.error-text');
+        const firstErrorElement = document.querySelector('.error-text:not(:empty)');
         if (firstErrorElement) {
           firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -2173,10 +3003,11 @@ export default {
       // Run all validation functions
       const isStep1Valid = validateLastName() && validateFirstName() && validateMiddleName() && validateContactNumber() && validateEmail() && validateBirthDate() && validateAge() && validateGender() && validateStreetPurok() && validateBarangay() && validateCity() && validateCitizenship();
       const isStep2Valid = validateWmsucetExperience() && validateApplicantType();
-      const isStep3Valid = validateDateTime();
+      const isStep3Valid = validateCourseChoicesAndSocioEconomic();
+      const isStep4Valid = validateDateTime();
 
 
-      if (!isStep1Valid || !isStep2Valid || !isStep3Valid) {
+      if (!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep4Valid) {
         // Find the first field with an error and scroll to it
         const firstErrorElement = document.querySelector('.error-text:not(:empty)');
         if (firstErrorElement) {
@@ -2185,7 +3016,7 @@ export default {
         
         // Show a notification about missing fields
         const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md z-[100] animate-fade-in';
+        notification.className = 'fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md z-50 animate-fade-in';
         notification.innerHTML = `
           <div class="flex items-center">
             <div class="flex-shrink-0">
@@ -2199,6 +3030,7 @@ export default {
         `;
         document.body.appendChild(notification);
         
+        // Remove the notification after 5 seconds
         setTimeout(() => {
           if (document.body.contains(notification)) {
             notification.remove();
@@ -2236,6 +3068,43 @@ export default {
           
           // Applicant type
           applicant_type: formData.value.applicantType,
+          
+          // Course choices and campus information
+          first_choice_course: formData.value.courseChoices.firstChoice,
+          first_choice_campus: formData.value.courseChoices.firstChoiceCampus,
+          second_choice_course: formData.value.courseChoices.secondChoice,
+          second_choice_campus: formData.value.courseChoices.secondChoiceCampus,
+          third_choice_course: formData.value.courseChoices.thirdChoice,
+          third_choice_campus: formData.value.courseChoices.thirdChoiceCampus,
+          
+          // Socio-economic data - Father information
+          father_citizenship: formData.value.socioEconomic.father.citizenship,
+          father_education: formData.value.socioEconomic.father.education,
+          father_work_occupation: formData.value.socioEconomic.father.occupation,
+          father_employer: formData.value.socioEconomic.father.employer,
+          father_monthly_income: formData.value.socioEconomic.father.income,
+          
+          // Socio-economic data - Mother information
+          mother_citizenship: formData.value.socioEconomic.mother.citizenship,
+          mother_education: formData.value.socioEconomic.mother.education,
+          mother_work_occupation: formData.value.socioEconomic.mother.occupation,
+          mother_employer: formData.value.socioEconomic.mother.employer,
+          mother_monthly_income: formData.value.socioEconomic.mother.income,
+          
+          // Physical disability information
+          has_physical_disability: formData.value.additionalInfo.hasDisability,
+          disability_description: formData.value.additionalInfo.disabilityDescription,
+          
+          // Computer usage knowledge
+          knows_computer_usage: formData.value.additionalInfo.knowsComputer,
+          
+          // Indigenous Peoples Group membership
+          is_indigenous_member: formData.value.additionalInfo.isIndigenous,
+          indigenous_group_specify: formData.value.additionalInfo.indigenousGroup,
+          
+          // Religious affiliation
+          religious_affiliation: formData.value.additionalInfo.religion,
+          religious_affiliation_others: formData.value.additionalInfo.religionOthers,
           
           // School info - will be populated based on applicant type
           school_name: formData.value.schoolName || '',
@@ -2378,7 +3247,7 @@ export default {
 
     const nextStep = () => {
       if (validateCurrentStep()) {
-        if (currentStep.value < 3) {
+        if (currentStep.value < 4) {
           currentStep.value++;
         }
       }
@@ -2441,23 +3310,85 @@ export default {
         touchedFields.value.city = true;
         touchedFields.value.citizenship = true;
 
-        isValid = validateLastName() &&
-                  validateFirstName() &&
-                  validateMiddleName() && // Include in validation chain
-                  validateContactNumber() &&
-                  validateEmail() &&
-                  validateBirthDate() &&
-                  validateGender() &&
-                  validateStreetPurok() &&
-                  validateBarangay() &&
-                  validateCity() &&
-                  validateCitizenship() &&
-                  validateAge(); // Also validate age, as it depends on birthdate
+        // Calculate age first if birth date fields are filled
+        if (formData.value.birthMonth && formData.value.birthDay && formData.value.birthYear) {
+          calculateAndSetAge();
+        }
+
+        // Calculate age first if birth date fields are filled
+        if (formData.value.birthMonth && formData.value.birthDay && formData.value.birthYear) {
+          calculateAndSetAge();
+        }
+
+        // Validate all Step 1 fields
+        const lastNameValid = validateLastName();
+        const firstNameValid = validateFirstName();
+        const middleNameValid = validateMiddleName();
+        const contactValid = validateContactNumber();
+        const emailValid = validateEmail();
+        const birthDateValid = validateBirthDate();
+        const ageValid = validateAge();
+        const genderValid = validateGender();
+        const streetValid = validateStreetPurok();
+        const barangayValid = validateBarangay();
+        const cityValid = validateCity();
+        const citizenshipValid = validateCitizenship();
+
+        isValid = lastNameValid &&
+                  firstNameValid &&
+                  middleNameValid &&
+                  contactValid &&
+                  emailValid &&
+                  birthDateValid &&
+                  ageValid &&
+                  genderValid &&
+                  streetValid &&
+                  barangayValid &&
+                  cityValid &&
+                  citizenshipValid;
+
+        // Debug logging to help identify which field is failing
+        if (!isValid) {
+          console.log('Step 1 validation failed. Field validation results:', {
+            lastNameValid,
+            firstNameValid,
+            middleNameValid,
+            contactValid,
+            emailValid,
+            birthDateValid,
+            ageValid,
+            genderValid,
+            streetValid,
+            barangayValid,
+            cityValid,
+            citizenshipValid
+          });
+          console.log('Current form data:', {
+            lastName: formData.value.lastName,
+            firstName: formData.value.firstName,
+            middleName: formData.value.middleName,
+            contactNumber: formData.value.contactNumber,
+            email: formData.value.email,
+            birthMonth: formData.value.birthMonth,
+            birthDay: formData.value.birthDay,
+            birthYear: formData.value.birthYear,
+            age: formData.value.age,
+            gender: formData.value.gender,
+            streetPurok: formData.value.streetPurok,
+            barangay: formData.value.barangay,
+            city: formData.value.city,
+            citizenship: formData.value.citizenship
+          });
+          console.log('Validation errors:', validationErrors.value);
+        }
       } else if (currentStep.value === 2) {
         touchedFields.value.applicantType = true; // Assuming this covers all applicant type interactions
         // Mark WMSUCET experience fields as touched if necessary
         isValid = validateWmsucetExperience() && validateApplicantType();
       } else if (currentStep.value === 3) {
+        // Validate the new fields for course choices and socio-economic data
+        isValid = validateCourseChoicesAndSocioEconomic();
+      } else if (currentStep.value === 4) {
         touchedFields.value.preferredDate = true;
         touchedFields.value.timeSlot = true;
         isValid = validateDateTime();
@@ -2489,34 +3420,85 @@ export default {
       return isValid;
     };
     
+    // Safe access computed properties to prevent undefined errors
+    const safeFormData = computed(() => {
+      return {
+        ...formData.value,
+        courseChoices: formData.value?.courseChoices || {
+          firstChoice: '',
+          firstChoiceCampus: '',
+          secondChoice: '',
+          secondChoiceCampus: '',
+          thirdChoice: '',
+          thirdChoiceCampus: ''
+        },
+        socioEconomic: formData.value?.socioEconomic || {
+          father: {
+            citizenship: '',
+            education: '',
+            occupation: '',
+            employer: '',
+            income: ''
+          },
+          mother: {
+            citizenship: '',
+            education: '',
+            occupation: '',
+            employer: '',
+            income: ''
+          }
+        },
+        additionalInfo: formData.value?.additionalInfo || {
+          hasDisability: false,
+          disabilityDescription: '',
+          knowsComputer: false,
+          isIndigenous: false,
+          indigenousGroup: '',
+          religion: '',
+          religionOthers: ''
+        }
+      }
+    });
+
+    // Clear notification function
+    const clearNotification = () => {
+      showNotification.value = false;
+      notificationMessage.value = '';
+      notificationType.value = 'info';
+    };
+
+    // Return all reactive references and functions for the template
     return {
-      loading,
-      error,
-      apiData,
+      // Data refs
       formData,
-      dateError,
-      showCalendar,
-      isFormValid,
-      isMorningAvailable,
-      isAfternoonAvailable,
+      currentStep,
+      totalSteps,
       validationErrors,
-      birthYears,
+      isSubmitting,
+      showNotification,
+      notificationMessage,
+      notificationType,
+      locationData,
+      addressSuggestions,
       philippineBarangays,
       philippineCities,
       citizenshipOptions,
       zamboanganSchools,
+      campusOptions,
+      wmsucourses,
+      educationalAttainmentOptions,
+      occupationOptions,
+      loading,
+      error,
+      apiData,
       testSessions,
+      showCalendar,
+      dateError,
       userAppointments,
-      fetchData,
-      formatDate,
-      selectTimeSlot,
-      validateForm,
-      submitForm,
-      close,
-      closeCalendarWithDelay,
-      markAsTouched,
-      checkDuplicateRegistration,
       touchedFields,
+      
+      // Functions for form handling
+      markAsTouched,
       isFieldValid,
       isFieldInvalid,
       getInputClasses,
@@ -2526,13 +3508,9 @@ export default {
       selectAddressSuggestion,
       showAddressSuggestions,
       hideAddressSuggestions,
-      addressSuggestions,
-      calculateAndSetAge,
-      currentStep,
-      nextStep,
-      prevStep,
-      validateCurrentStep,
-      // Add all validation functions
+      onLocationChange,
+      
+      // Validation functions
       validateLastName,
       validateFirstName,
       validateMiddleName,
@@ -2547,9 +3525,38 @@ export default {
       validateCitizenship,
       validateWmsucetExperience,
       validateApplicantType,
+      validateCourseChoicesAndSocioEconomic,
       validateDateTime,
-      locationData,
-      onLocationChange
+      validateCurrentStep,
+      
+      // Computed properties
+      birthYears,
+      isFormValid,
+      isMorningAvailable,
+      isAfternoonAvailable,
+      safeFormData,
+      
+      // Navigation functions
+      nextStep,
+      prevStep,
+      
+      // Form submission
+      submitForm,
+      close,
+      
+      // Date and time functions
+      formatDate,
+      selectTimeSlot,
+      closeCalendarWithDelay,
+      calculateAndSetAge,
+      
+      // Utility functions
+      checkDuplicateRegistration,
+      clearNotification,
+      fetchData,
+      fetchTestSessions,
+      fetchUserAppointments,
+      formatDateForApi
     };
   }
 }

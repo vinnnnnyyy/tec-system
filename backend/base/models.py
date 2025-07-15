@@ -123,6 +123,49 @@ class Appointment(models.Model):
     college_course = models.CharField(max_length=100, blank=True, null=True)
     college_type = models.CharField(max_length=50, blank=True, null=True)
     
+    # Course choices and campus information
+    first_choice_course = models.CharField(max_length=255, blank=True, null=True)
+    first_choice_campus = models.CharField(max_length=255, blank=True, null=True)
+    second_choice_course = models.CharField(max_length=255, blank=True, null=True)
+    second_choice_campus = models.CharField(max_length=255, blank=True, null=True)
+    third_choice_course = models.CharField(max_length=255, blank=True, null=True)
+    third_choice_campus = models.CharField(max_length=255, blank=True, null=True)
+    
+    # Socio-economic data - Father information
+    father_citizenship = models.CharField(max_length=100, blank=True, null=True)
+    father_education = models.CharField(max_length=100, blank=True, null=True)
+    father_work_occupation = models.CharField(max_length=100, blank=True, null=True)
+    father_employer = models.CharField(max_length=100, blank=True, null=True)
+    father_monthly_income = models.CharField(max_length=50, blank=True, null=True)
+    
+    # Socio-economic data - Mother information
+    mother_citizenship = models.CharField(max_length=100, blank=True, null=True)
+    mother_education = models.CharField(max_length=100, blank=True, null=True)
+    mother_work_occupation = models.CharField(max_length=100, blank=True, null=True)
+    mother_employer = models.CharField(max_length=100, blank=True, null=True)
+    mother_monthly_income = models.CharField(max_length=50, blank=True, null=True)
+    
+    # Physical disability information
+    has_physical_disability = models.BooleanField(default=False, blank=True, null=True)
+    disability_description = models.TextField(blank=True, null=True, help_text="Please describe the disability or special attention needed")
+    
+    # Computer usage knowledge
+    knows_computer_usage = models.BooleanField(default=False, blank=True, null=True)
+    
+    # Indigenous Peoples Group membership
+    is_indigenous_member = models.BooleanField(default=False, blank=True, null=True)
+    indigenous_group_specify = models.CharField(max_length=255, blank=True, null=True, help_text="Please specify the Indigenous Peoples Group")
+    
+    # Religious affiliation
+    RELIGIOUS_CHOICES = [
+        ('roman_catholic', 'Roman Catholic'),
+        ('protestant', 'Protestant'),
+        ('islam', 'Islam'),
+        ('others', 'Others'),
+    ]
+    religious_affiliation = models.CharField(max_length=50, choices=RELIGIOUS_CHOICES, blank=True, null=True)
+    religious_affiliation_others = models.CharField(max_length=100, blank=True, null=True, help_text="Please specify if others")
+    
     # Meta fields
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
