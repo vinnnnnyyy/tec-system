@@ -316,7 +316,7 @@ class FAQViewSet(viewsets.ModelViewSet):
         return [permissions.IsAdminUser()]  # Only admin users can create/update/delete FAQs
 
 class TestCenterViewSet(viewsets.ModelViewSet):
-    queryset = TestCenter.objects.all()
+    queryset = TestCenter.objects.filter(is_active=True)
     serializer_class = TestCenterSerializer
     permission_classes = [IsAuthenticated]
 
@@ -331,6 +331,10 @@ class TestCenterViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
 
+    def get_queryset(self):
+        """Only return active test centers"""
+        return TestCenter.objects.filter(is_active=True)
+
     def perform_create(self, serializer):
         serializer.save()
 
@@ -338,14 +342,38 @@ class TestCenterViewSet(viewsets.ModelViewSet):
     def rooms(self, request, pk=None):
         """Get rooms for a specific test center"""
         test_center = self.get_object()
-        rooms = TestRoom.objects.filter(test_center=test_center)
-        serializer = TestRoomSerializer(rooms, many=True)
+        rooms = TestRoom.objects.filter(test_center=test_center, is_active=True)
+        serializer = TestRoomSerializer(rooms, many=True, context={'request': request})
         return Response(serializer.data)
+
+    @action(detail=False, methods=['GET'])
+    def debug(self, request):
+        """Debug endpoint to check test centers"""
+        test_centers = TestCenter.objects.all()
+        active_centers = TestCenter.objects.filter(is_active=True)
+        return Response({
+            'total_centers': test_centers.count(),
+            'active_centers': active_centers.count(),
+            'centers': [{'id': tc.id, 'name': tc.name, 'code': tc.code, 'is_active': tc.is_active} for tc in test_centers]
+        })
 
 class TestRoomViewSet(viewsets.ModelViewSet):
     queryset = TestRoom.objects.all()
     serializer_class = TestRoomSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter rooms based on query parameters"""
+        queryset = TestRoom.objects.filter(is_active=True)
+        test_center = self.request.query_params.get('test_center', None)
+        time_slot = self.request.query_params.get('time_slot', None)
+        
+        if test_center is not None:
+            queryset = queryset.filter(test_center=test_center)
+        if time_slot is not None:
+            queryset = queryset.filter(time_slot=time_slot)
+            
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save()
@@ -921,6 +949,15 @@ def create_appointment(request):
             # Link to user if authenticated
             user=request.user if request.user.is_authenticated else None
         )
+        
+        # Set test center if provided
+        test_center_id = data.get('test_center')
+        if test_center_id:
+            try:
+                test_center = TestCenter.objects.get(id=test_center_id)
+                appointment.test_center = test_center
+            except TestCenter.DoesNotExist:
+                pass  # Continue without test center if not found
         
         # Auto-approve if program has auto_approve_appointments enabled and no custom status was provided
         if program.auto_approve_appointments and not data.get('status'):

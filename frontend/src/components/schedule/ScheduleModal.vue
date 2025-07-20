@@ -1295,7 +1295,7 @@
                       <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
                         <i class="fas fa-calendar-alt text-crimson-500"></i>
                       </div>
-                      <h4>Schedule Details</h4>
+                      <h4>Registration Schedule Details</h4>
                     </div>
                     
                     <div class="grid grid-cols-1 gap-x-6 gap-y-6">
@@ -1383,6 +1383,92 @@
                             </div>
                           </button>
                         </div>
+                      </div>
+                      
+                      <!-- Test Center Selection -->
+                      <div v-if="formData.timeSlot" class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Preferred Test Center</label>
+                        <p class="text-sm text-gray-500 mb-4">
+                          Select your preferred test center. Room availability is shown for your selected time slot.
+                        </p>
+                        
+                        <div v-if="loadingTestCenters" class="flex justify-center py-8">
+                          <div class="animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-crimson-600"></div>
+                        </div>
+                        
+                        <div v-else-if="testCenters.length === 0" class="text-center py-8 text-gray-500">
+                          <i class="fas fa-building text-4xl mb-3"></i>
+                          <p>No test centers available at the moment.</p>
+                        </div>
+                        
+                        <div v-else class="grid grid-cols-1 gap-4">
+                          <div v-for="center in testCenters" :key="center.id"
+                            @click="selectTestCenter(center); markAsTouched('testCenter')"
+                            :class="[
+                              'border rounded-xl p-4 cursor-pointer transition-all duration-200 hover:shadow-md',
+                              formData.testCenter === center.id 
+                                ? 'border-crimson-500 bg-crimson-50 shadow-md' 
+                                : 'border-gray-300 hover:border-crimson-300',
+                              touchedFields.testCenter && validationErrors.testCenter ? 'border-red-500' : ''
+                            ]"
+                          >
+                            <div class="flex items-start justify-between">
+                              <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                  <div :class="[
+                                    'w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all',
+                                    formData.testCenter === center.id 
+                                      ? 'border-crimson-500 bg-crimson-500' 
+                                      : 'border-gray-300'
+                                  ]">
+                                    <div v-if="formData.testCenter === center.id" class="w-2 h-2 bg-white rounded-full"></div>
+                                  </div>
+                                  <h4 class="font-semibold text-gray-900">{{ center.name }}</h4>
+                                  <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ center.code }}</span>
+                                </div>
+                                
+                                <p v-if="center.address" class="text-sm text-gray-600 mb-3 ml-7">{{ center.address }}</p>
+                                
+                                <div class="ml-7">
+                                  <div class="flex items-center gap-2 mb-2">
+                                    <i class="fas fa-door-open text-crimson-500"></i>
+                                    <span class="text-sm font-medium text-gray-700">Available Rooms for {{ formData.timeSlot === 'morning' ? 'Morning' : 'Afternoon' }}:</span>
+                                  </div>
+                                  
+                                  <div v-if="getRoomsForCenter(center.id, formData.timeSlot).length === 0" 
+                                    class="text-sm text-red-600 flex items-center gap-2">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>No rooms available for this time slot</span>
+                                  </div>
+                                  
+                                  <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    <div v-for="room in getRoomsForCenter(center.id, formData.timeSlot)" :key="room.id"
+                                      :class="[
+                                        'text-xs p-2 rounded border',
+                                        room.available_capacity > 0 
+                                          ? 'bg-green-50 border-green-200 text-green-800' 
+                                          : 'bg-red-50 border-red-200 text-red-800'
+                                      ]"
+                                    >
+                                      <div class="font-medium">{{ room.name }}</div>
+                                      <div class="flex items-center gap-1 mt-1">
+                                        <i :class="[
+                                          'fas fa-users text-xs',
+                                          room.available_capacity > 0 ? 'text-green-600' : 'text-red-600'
+                                        ]"></i>
+                                        <span>{{ room.available_capacity }}/{{ room.capacity }}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <p v-if="touchedFields.testCenter && validationErrors.testCenter" class="text-sm text-red-600 mt-2 error-text">
+                          {{ validationErrors.testCenter }}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1482,6 +1568,9 @@ export default {
     const error = ref(null);
     const apiData = ref(null);
     const testSessions = ref([]);
+    const testCenters = ref([]);
+    const testRooms = ref([]);
+    const loadingTestCenters = ref(false);
     const showCalendar = ref(false);
     const dateError = ref('');
     const userAppointments = ref([]);
@@ -1507,6 +1596,7 @@ export default {
       citizenship: '',
       wmsucetExperience: '',
       applicantType: '',
+      testCenter: '',
       age: '' // Added age here
     });
     
@@ -1528,12 +1618,14 @@ export default {
       highSchoolCode: false,
       applicantType: false,
       timeSlot: false,
-      preferredDate: false
+      preferredDate: false,
+      testCenter: false
     });
     
     const formData = ref({
       preferredDate: '',
       timeSlot: '',
+      testCenter: '',
       lastName: '',
       firstName: '',
       middleName: '',
@@ -2546,7 +2638,13 @@ export default {
         dateError.value = 'Please select a time slot for your appointment';
         return false;
       }
+      if (!formData.value.testCenter) {
+        validationErrors.value.testCenter = 'Please select a test center for your appointment';
+        return false;
+      }
+      
       dateError.value = '';
+      validationErrors.value.testCenter = '';
       return true;
     };
     
@@ -2922,10 +3020,87 @@ export default {
       formData.value.timeSlot = slot;
       dateError.value = '';
       
+      // Reset test center selection when time slot changes
+      formData.value.testCenter = '';
+      validationErrors.value.testCenter = '';
+      
+      console.log('🕒 Time slot selected:', slot);
+      console.log('📅 Current date:', formData.value.preferredDate);
+      console.log('🔄 About to fetch test centers...');
+      
+      // Fetch test centers and rooms when time slot is selected
+      fetchTestCenters();
+      
       // Add a slight delay before closing the calendar for better UX
       setTimeout(() => {
         showCalendar.value = false;
       }, 500); // Increased delay for better reliability
+    };
+    
+    // Test Center selection
+    const selectTestCenter = (center) => {
+      formData.value.testCenter = center.id;
+      validationErrors.value.testCenter = '';
+    };
+    
+    // Fetch test centers
+    const fetchTestCenters = async () => {
+      loadingTestCenters.value = true;
+      try {
+        console.log('🔄 Fetching test centers...');
+        console.log('📍 Current step:', currentStep.value);
+        console.log('📅 Selected date:', formData.value.preferredDate);
+        console.log('⏰ Selected time slot:', formData.value.timeSlot);
+        
+        const response = await axios.get('/api/test-centers/');
+        console.log('✅ Test centers response status:', response.status);
+        console.log('📊 Test centers response data:', response.data);
+        console.log('📈 Number of test centers:', response.data.length);
+        
+        testCenters.value = response.data;
+        
+        if (response.data.length > 0) {
+          console.log('🎯 Test centers loaded successfully:', testCenters.value);
+        } else {
+          console.warn('⚠️ API returned empty array for test centers');
+        }
+        
+        // Also fetch test rooms for room availability
+        await fetchTestRooms();
+      } catch (error) {
+        console.error('❌ Error fetching test centers:', error);
+        console.error('🔍 Error status:', error.response?.status);
+        console.error('📝 Error details:', error.response?.data);
+        console.error('🌐 Error message:', error.message);
+        testCenters.value = [];
+        
+        // Show user-friendly error message
+        showToast('Error loading test centers. Please try again.', 'error');
+      } finally {
+        loadingTestCenters.value = false;
+        console.log('🏁 fetchTestCenters completed. testCenters.value.length:', testCenters.value.length);
+      }
+    };
+    
+    // Fetch test rooms
+    const fetchTestRooms = async () => {
+      try {
+        console.log('Fetching test rooms...');
+        const response = await axios.get('/api/admin/test-rooms/');
+        console.log('Test rooms response:', response.data);
+        testRooms.value = response.data;
+      } catch (error) {
+        console.error('Error fetching test rooms:', error);
+        console.error('Error details:', error.response?.data);
+        testRooms.value = [];
+      }
+    };
+    
+    // Get rooms for a specific test center and time slot
+    const getRoomsForCenter = (centerId, timeSlot) => {
+      return testRooms.value.filter(room => 
+        room.test_center === centerId && room.time_slot === timeSlot && room.is_active
+      );
     };
     
     // Add watcher to close calendar when time slot changes, as a backup
@@ -3282,6 +3457,7 @@ export default {
           program: props.program?.id,
           preferred_date: formData.value.preferredDate,
           time_slot: formData.value.timeSlot,
+          test_center: formData.value.testCenter,
         };
         
         // Set school-related fields based on applicant type (remains the same)
@@ -3659,6 +3835,9 @@ export default {
       error,
       apiData,
       testSessions,
+      testCenters,
+      testRooms,
+      loadingTestCenters,
       showCalendar,
       dateError,
       userAppointments,
@@ -3714,8 +3893,14 @@ export default {
       // Date and time functions
       formatDate,
       selectTimeSlot,
+      selectTestCenter,
       closeCalendarWithDelay,
       calculateAndSetAge,
+      
+      // Test center functions
+      fetchTestCenters,
+      fetchTestRooms,
+      getRoomsForCenter,
       
       // Utility functions
       checkDuplicateRegistration,
