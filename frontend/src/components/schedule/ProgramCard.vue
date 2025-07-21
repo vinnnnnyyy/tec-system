@@ -58,6 +58,13 @@
                   This exam date has already passed
                 </span>
               </div>
+              <!-- Warning message for prerequisite restrictions -->
+              <div v-else-if="isRestricted && restrictionReason.includes('must schedule and complete')" class="mt-1">
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                  <i class="fas fa-lock mr-1"></i>
+                  Requires CET completion first
+                </span>
+              </div>
               <!-- Warning message for closed registration -->
               <div v-else-if="registrationStatus === 'closed'" class="mt-1">
                 <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">
@@ -517,6 +524,7 @@ export default {
       }
     },
     getButtonText() {
+      if (this.isRestricted && this.restrictionReason.includes('must schedule and complete')) return 'Requires CET';
       if (this.isExamDatePast) return 'Exam Ended';
       if (this.registrationStatus === 'closed') return 'Registration Closed';
       if (this.registrationStatus === 'not_started') return 'Registration Soon';

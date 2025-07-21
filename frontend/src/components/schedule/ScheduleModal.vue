@@ -151,8 +151,8 @@
                             :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('suffix')]"
                           >
                             <option value="">Select suffix (Optional)</option>
-                            <option value="Jr.">Jr.</option>
-                            <option value="Sr.">Sr.</option>
+                            <option value="JR.">JR.</option>
+                            <option value="SR.">SR.</option>
                             <option value="II">II</option>
                             <option value="III">III</option>
                             <option value="IV">IV</option>
@@ -319,7 +319,7 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                       <!-- Street/Purok -->
-                      <div class="space-y-2">
+                      <div class="space-y-2 md:col-span-2">
                         <label for="streetPurok" class="block text-sm font-medium text-gray-700 mb-1.5">Street/Purok</label>
                         <div class="relative">
                           <input 
@@ -350,7 +350,7 @@
                       </div>
                       
                       <!-- Citizenship -->
-                      <div class="space-y-2">
+                      <div class="space-y-2 md:col-span-2">
                         <label for="citizenship" class="block text-sm font-medium text-gray-700 mb-1.5">Citizenship</label>
                         <div class="relative">
                           <input 
@@ -378,7 +378,7 @@
                       
                       <!-- High School Code -->
                       <div class="space-y-2 md:col-span-full">
-                        <label for="highSchoolCode" class="block text-sm font-medium text-gray-700 mb-1.5">High School Code (if known)</label>
+                        <label for="highSchoolCode" class="block text-sm font-medium text-gray-700 mb-1.5">High School Code / LRN (if known)</label>
                         <input 
                           id="highSchoolCode"
                           v-model="formData.highSchoolCode"
@@ -1306,6 +1306,32 @@
                       </div>
                     </div>
 
+                    <!-- Privacy Policy Agreement -->
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                      <div class="flex items-start gap-3">
+                        <input 
+                          type="checkbox" 
+                          id="privacyPolicyAgreement" 
+                          v-model="formData.privacyPolicyAgreed"
+                          @change="markAsTouched('privacyPolicyAgreed'); validatePrivacyPolicy()"
+                          :class="['h-5 w-5 text-crimson-600 focus:ring-crimson-500 border-gray-300 rounded mt-0.5', 
+                            isFieldInvalid('privacyPolicyAgreed') ? 'border-red-500' : '']"
+                        >
+                        <div class="flex-1">
+                          <label for="privacyPolicyAgreement" class="text-sm font-medium text-gray-900 cursor-pointer">
+                            <i class="fas fa-shield-alt text-yellow-600 mr-2"></i>
+                            Privacy Policy Agreement
+                          </label>
+                          <p class="text-sm text-gray-700 mt-1">
+                            ☑ I agree to the <a href="#" class="text-crimson-600 hover:text-crimson-700 font-medium underline">Privacy Policy</a> and allow the collection and processing of my personal data in accordance with the Data Privacy Act of 2012.
+                          </p>
+                          <p v-if="isFieldInvalid('privacyPolicyAgreed')" class="text-sm text-red-600 mt-1">
+                            {{ validationErrors.privacyPolicyAgreed }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     <!-- Edit Information Notice -->
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div class="flex items-start gap-3">
@@ -1586,7 +1612,7 @@
                 <button 
                   type="button" 
                   @click="close" 
-                  class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-all text-base font-medium flex items-center justify-center gap-2 order-1 sm:order-none"
+                  class="flex-1 sm:w-40 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-all text-base font-medium flex items-center justify-center gap-2 order-1 sm:order-none"
                 >
                   <i class="fas fa-times"></i>
                   Cancel
@@ -1596,7 +1622,7 @@
                   type="button" 
                   v-if="currentStep > 1"
                   @click="prevStep"
-                  class="bg-gray-200 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-300 transition-all text-base font-medium flex items-center justify-center gap-2 order-2 sm:order-none"
+                  class="flex-1 sm:w-40 bg-gray-200 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-300 transition-all text-base font-medium flex items-center justify-center gap-2 order-2 sm:order-none"
                 >
                   <i class="fas fa-arrow-left"></i>
                   Previous
@@ -1608,7 +1634,7 @@
                   @click="nextStep"
                   :disabled="currentStep === 1 && !checkDuplicateRegistration()"
                   :class="[
-                    'flex-1 text-white px-6 py-3 rounded-lg transition-all text-base font-medium flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto',
+                    'flex-1 sm:w-40 text-white px-6 py-3 rounded-lg transition-all text-base font-medium flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto',
                     (currentStep === 1 && !checkDuplicateRegistration()) 
                       ? 'bg-gray-400 cursor-not-allowed' 
                       : 'bg-crimson-500 hover:bg-crimson-600'
@@ -1622,7 +1648,7 @@
                 <button 
                   type="submit"
                   v-if="currentStep === 5"
-                  class="flex-1 bg-gradient-to-r from-crimson-600 to-crimson-700 text-white px-6 py-3 rounded-lg hover:from-crimson-700 hover:to-crimson-800 transition-all text-base font-medium shadow-sm flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto"
+                  class="flex-1 sm:w-40 bg-gradient-to-r from-crimson-600 to-crimson-700 text-white px-6 py-3 rounded-lg hover:from-crimson-700 hover:to-crimson-800 transition-all text-base font-medium shadow-sm flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto"
                   :disabled="loading"
                 >
                   <i class="fas fa-calendar-check"></i>
@@ -1704,7 +1730,8 @@ export default {
       applicantType: '',
       testCenter: '',
       testSession: '',
-      age: '' // Added age here
+      age: '', // Added age here
+      privacyPolicyAgreed: '' // Added privacy policy validation
     });
     
     // Add a touched state to track which fields have been interacted with
@@ -1727,7 +1754,8 @@ export default {
       timeSlot: false,
       preferredDate: false,
       testCenter: false,
-      testSession: false
+      testSession: false,
+      privacyPolicyAgreed: false // Added privacy policy touched field
     });
     
     const formData = ref({
@@ -1811,7 +1839,9 @@ export default {
         indigenousGroup: '',
         religion: '',
         religionOthers: ''
-      }
+      },
+      // Privacy Policy Agreement
+      privacyPolicyAgreed: false
     });
     
     // Convert imported arrays to reactive refs
@@ -2780,6 +2810,17 @@ export default {
       return true;
     };
     
+    // Validate privacy policy agreement
+    const validatePrivacyPolicy = () => {
+      if (!formData.value.privacyPolicyAgreed) {
+        validationErrors.value.privacyPolicyAgreed = 'You must agree to the Privacy Policy to continue';
+        return false;
+      } else {
+        validationErrors.value.privacyPolicyAgreed = '';
+        return true;
+      }
+    };
+    
     // Set up watchers for real-time validation
     watch(() => formData.value.lastName, () => {
       if (touchedFields.value.lastName) validateLastName();
@@ -2873,6 +2914,11 @@ export default {
     watch(() => formData.value.testSession, () => {
       touchedFields.value.testSession = true;
       validateDateTime();
+    });
+    
+    watch(() => formData.value.privacyPolicyAgreed, () => {
+      touchedFields.value.privacyPolicyAgreed = true;
+      validatePrivacyPolicy();
     });
     
     // fetchData is now moved above the watch statement
@@ -3057,7 +3103,9 @@ export default {
             indigenousGroup: '',
             religion: '',
             religionOthers: ''
-          }
+          },
+          // Privacy Policy Agreement
+          privacyPolicyAgreed: false
         };
         dateError.value = '';
         validationErrors.value = {
@@ -3076,7 +3124,8 @@ export default {
           wmsucetExperience: '',
           applicantType: '',
           testCenter: '',
-          testSession: ''
+          testSession: '',
+          privacyPolicyAgreed: '' // Added privacy policy validation
         };
         
         // Reset touched fields
@@ -3382,7 +3431,8 @@ export default {
         validateCitizenship(),
         validateWmsucetExperience(),
         validateApplicantType(),
-        validateDateTime()
+        validateDateTime(),
+        validatePrivacyPolicy() // Added privacy policy validation
       ];
       
       const isValid = validationResults.every(result => result);
