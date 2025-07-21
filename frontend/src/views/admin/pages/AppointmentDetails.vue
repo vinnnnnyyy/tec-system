@@ -228,93 +228,125 @@
           </div>
         </div>
 
-        <!-- Test Assignment Section - Only show when status is submitted -->
-        <div v-if="appointment && appointment.status === 'submitted'" 
-             class="lg:col-span-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <!-- Applicant's Registration Schedule Details -->
+        <div class="lg:col-span-3 bg-white rounded-lg border border-gray-200 shadow-sm">
           <div class="p-4 border-b border-gray-100">
             <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-              <i class="fas fa-clipboard-list text-indigo-500 mr-2"></i>
-              Assign Test Center and Room
+              <i class="fas fa-user-calendar text-indigo-500 mr-2"></i>
+              Applicant's Registration Schedule Details
+            </h3>
+            <p class="text-sm text-gray-600 mt-1">Details selected by the applicant during registration</p>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <!-- Preferred Date -->
+              <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-calendar text-indigo-500"></i>
+                  <label class="text-xs font-medium text-gray-500">Preferred Date</label>
+                </div>
+                <p class="text-sm font-medium text-gray-900 bg-gray-50 p-3 rounded-lg">
+                  {{ formatDate(appointment.preferred_date) }}
+                </p>
+              </div>
+              
+              <!-- Preferred Time Slot -->
+              <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-clock text-indigo-500"></i>
+                  <label class="text-xs font-medium text-gray-500">Preferred Time Slot</label>
+                </div>
+                <p class="text-sm font-medium text-gray-900 bg-gray-50 p-3 rounded-lg">
+                  {{ formatTimeSlot(appointment.time_slot) }}
+                </p>
+              </div>
+              
+              <!-- Selected Test Center -->
+              <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-building text-indigo-500"></i>
+                  <label class="text-xs font-medium text-gray-500">Selected Test Center</label>
+                </div>
+                <p class="text-sm font-medium text-gray-900 bg-gray-50 p-3 rounded-lg">
+                  {{ appointment.test_center_name || 'Not selected' }}
+                </p>
+              </div>
+              
+              <!-- Test Session -->
+              <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-graduation-cap text-indigo-500"></i>
+                  <label class="text-xs font-medium text-gray-500">Selected Test Session</label>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg space-y-1">
+                  <p class="text-sm font-medium text-gray-900">
+                    {{ appointment.test_session_name || 'Not selected' }}
+                  </p>
+                  <p v-if="appointment.test_session_exam_date" class="text-xs text-gray-600">
+                    Exam Date: {{ formatDate(appointment.test_session_exam_date) }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Test Session Registration Details -->
+            <div v-if="appointment.test_session_registration_start || appointment.test_session_registration_end" 
+                 class="mt-6 pt-4 border-t border-gray-200">
+              <h4 class="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <i class="fas fa-info-circle text-blue-500"></i>
+                Test Session Registration Period
+              </h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div v-if="appointment.test_session_registration_start" class="space-y-1">
+                  <label class="text-xs font-medium text-gray-500">Registration Start</label>
+                  <p class="text-sm font-medium text-gray-900 bg-green-50 px-3 py-2 rounded border border-green-200">
+                    {{ formatDate(appointment.test_session_registration_start) }}
+                  </p>
+                </div>
+                <div v-if="appointment.test_session_registration_end" class="space-y-1">
+                  <label class="text-xs font-medium text-gray-500">Registration End</label>
+                  <p class="text-sm font-medium text-gray-900 bg-red-50 px-3 py-2 rounded border border-red-200">
+                    {{ formatDate(appointment.test_session_registration_end) }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Additional Test Session Info -->
+            <div v-if="appointment.test_session_description" 
+                 class="mt-6 pt-4 border-t border-gray-200">
+              <h4 class="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <i class="fas fa-file-alt text-gray-500"></i>
+                Test Session Description
+              </h4>
+              <p class="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                {{ appointment.test_session_description }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Automatic Assignment Status - Show when status is submitted and no test room assigned -->
+        <div v-if="appointment && appointment.status === 'submitted' && !testDetails.test_room" 
+             class="lg:col-span-3 bg-blue-50 rounded-lg border border-blue-200 shadow-sm">
+          <div class="p-4 border-b border-blue-100">
+            <h3 class="text-lg font-semibold text-blue-900 flex items-center">
+              <i class="fas fa-robot text-blue-500 mr-2"></i>
+              Automatic Test Room Assignment
             </h3>
           </div>
           
           <div class="p-6">
-            <p class="mb-4 text-gray-600">
-              Select a test session, test center, and test room to assign to this applicant. 
-              The test session determines the exam date. Once assigned, the status will automatically update to "Waiting for Submission".
-            </p>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <!-- Test Session Selection -->
-              <div class="space-y-3">
-                <label class="block text-sm font-medium text-gray-700">Test Session</label>
-                <div class="relative">
-                  <select 
-                    v-model="selectedTestSession" 
-                    class="form-select block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    <option value="" disabled selected>Select a test session</option>
-                    <option v-for="session in testSessions" :key="session.id" :value="session.id">
-                      {{ session.exam_type }} - {{ formatDate(session.exam_date) }}
-                    </option>
-                  </select>
-                  <div v-if="loadingTestSessions" class="absolute right-10 top-3">
-                    <i class="fas fa-circle-notch fa-spin text-gray-400"></i>
-                  </div>
-                </div>
-                <p v-if="testSessionError" class="text-sm text-red-500">{{ testSessionError }}</p>
+            <div class="flex items-center gap-4 text-blue-800">
+              <i class="fas fa-info-circle text-blue-500"></i>
+              <div>
+                <p class="font-medium">Test room will be automatically assigned</p>
+                <p class="text-sm text-blue-600 mt-1">
+                  When you approve this application, the system will automatically assign an available test room 
+                  based on the applicant's selected test center ({{ appointment.test_center ? testDetails.test_center?.name : 'Not selected' }}) 
+                  and preferred time slot ({{ formatTimeSlot(appointment.time_slot) }}).
+                </p>
               </div>
-              
-              <!-- Test Center Selection -->
-              <div class="space-y-3">
-                <label class="block text-sm font-medium text-gray-700">Test Center</label>
-                <div class="relative">
-                  <select 
-                    v-model="selectedTestCenter" 
-                    @change="onTestCenterChange"
-                    class="form-select block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    <option value="" disabled selected>Select a test center</option>
-                    <option v-for="center in testCenters" :key="center.id" :value="center.id">
-                      {{ center.name }}
-                    </option>
-                  </select>
-                  <div v-if="loadingTestCenters" class="absolute right-10 top-3">
-                    <i class="fas fa-circle-notch fa-spin text-gray-400"></i>
-                  </div>
-                </div>
-                <p v-if="testCenterError" class="text-sm text-red-500">{{ testCenterError }}</p>
-              </div>
-              
-              <!-- Test Room Selection -->
-              <div class="space-y-3">
-                <label class="block text-sm font-medium text-gray-700">Test Room</label>
-                <div class="relative">
-                  <select 
-                    v-model="selectedTestRoom" 
-                    :disabled="!selectedTestCenter || loadingTestRooms"
-                    class="form-select block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    <option value="" disabled selected>Select a test room</option>
-                    <option v-for="room in filteredTestRooms" :key="room.id" :value="room.id">
-                      {{ room.name }} ({{ room.time_slot === 'morning' ? 'Morning' : 'Afternoon' }}, 
-                      {{ room.available_capacity }} available)
-                    </option>
-                  </select>
-                  <div v-if="loadingTestRooms" class="absolute right-10 top-3">
-                    <i class="fas fa-circle-notch fa-spin text-gray-400"></i>
-                  </div>
-                </div>
-                <p v-if="testRoomError" class="text-sm text-red-500">{{ testRoomError }}</p>
-              </div>
-            </div>
-            
-            <div class="flex justify-end mt-6">
-              <button 
-                @click="assignTestDetails"
-                :disabled="!selectedTestSession || !selectedTestCenter || !selectedTestRoom || submittingAssignment"
-                :class="['button', (!selectedTestSession || !selectedTestCenter || !selectedTestRoom || submittingAssignment) ? 'bg-gray-300 cursor-not-allowed' : 'button-primary']">
-                <i class="fas fa-save mr-2"></i>
-                <span v-if="submittingAssignment">Assigning...</span>
-                <span v-else>Assign Test Details</span>
-              </button>
             </div>
           </div>
         </div>
@@ -754,21 +786,6 @@ export default {
     const loading = ref(true)
     const error = ref(null)
     
-    // Test center and room assignment data
-    const testCenters = ref([])
-    const testRooms = ref([])
-    const testSessions = ref([])
-    const selectedTestCenter = ref('')
-    const selectedTestRoom = ref('')
-    const selectedTestSession = ref('')
-    const loadingTestCenters = ref(false)
-    const loadingTestRooms = ref(false)
-    const loadingTestSessions = ref(false)
-    const testCenterError = ref(null)
-    const testRoomError = ref(null)
-    const testSessionError = ref(null)
-    const submittingAssignment = ref(false)
-    
     // PDF export state
     const exportingPDF = ref(false)
     
@@ -778,165 +795,6 @@ export default {
       if (!appointment.value.assigned_test_time_slot) return true
       return appointment.value.assigned_test_time_slot === appointment.value.time_slot
     })
-    
-    // Filter test rooms based on the selected test center
-    const filteredTestRooms = computed(() => {
-      console.log('Filtering test rooms:', {
-        selectedTestCenter: selectedTestCenter.value,
-        testRooms: testRooms.value,
-        testRoomsLength: testRooms.value.length
-      })
-      
-      if (!selectedTestCenter.value || testRooms.value.length === 0) return []
-      
-      const centerIdAsNumber = parseInt(selectedTestCenter.value, 10)
-      
-      const filtered = testRooms.value.filter(room => {
-        // Check test_center both as direct property and as nested property
-        const roomCenterId = room.test_center?.id !== undefined ? 
-                             room.test_center.id : 
-                             room.test_center
-        
-        console.log('Room test_center:', room.test_center, 'Selected:', centerIdAsNumber)
-        return parseInt(roomCenterId, 10) === centerIdAsNumber
-      })
-      
-      console.log('Filtered rooms:', filtered)
-      return filtered
-    })
-    
-    const fetchTestCenters = async () => {
-      loadingTestCenters.value = true
-      testCenterError.value = null
-      
-      try {
-        const response = await axiosInstance.get('/api/admin/test-centers/')
-        testCenters.value = response.data
-      } catch (err) {
-        console.error('Error fetching test centers:', err)
-        testCenterError.value = 'Failed to load test centers. Please try again.'
-      } finally {
-        loadingTestCenters.value = false
-      }
-    }
-    
-    const fetchTestRooms = async () => {
-      loadingTestRooms.value = true
-      testRoomError.value = null
-      
-      try {
-        const response = await axiosInstance.get('/api/admin/test-rooms/')
-        testRooms.value = response.data
-        console.log('Test rooms loaded:', testRooms.value)
-      } catch (err) {
-        console.error('Error fetching test rooms:', err)
-        testRoomError.value = 'Failed to load test rooms. Please try again.'
-      } finally {
-        loadingTestRooms.value = false
-      }
-    }
-    
-    const fetchTestSessions = async () => {
-      loadingTestSessions.value = true
-      testSessionError.value = null
-      
-      try {
-        const response = await axiosInstance.get('/api/admin/test-sessions/')
-        testSessions.value = response.data
-        console.log('Test sessions loaded:', testSessions.value)
-      } catch (err) {
-        console.error('Error fetching test sessions:', err)
-        testSessionError.value = 'Failed to load test sessions. Please try again.'
-      } finally {
-        loadingTestSessions.value = false
-      }
-    }
-    
-    const onTestCenterChange = () => {
-      // Reset room selection when center changes
-      selectedTestRoom.value = ''
-    }
-    
-    const assignTestDetails = async () => {
-      if (!selectedTestSession.value || !selectedTestCenter.value || !selectedTestRoom.value) {
-        showToast('Please select a test session, test center, and test room', 'error')
-        return
-      }
-      
-      submittingAssignment.value = true
-      console.log('Before assignment - Appointment ID:', appointmentId.value)
-      console.log('Before assignment - Appointment status:', appointment.value?.status)
-      
-      try {
-        // First, assign the test details
-        const response = await axiosInstance.post('/api/admin/assign-test-details/', {
-          appointment_id: appointmentId.value,
-          test_session_id: selectedTestSession.value,
-          test_center_id: selectedTestCenter.value,
-          test_room_id: selectedTestRoom.value
-        })
-        
-        console.log('Assignment API response:', response.data)
-        
-        if (response.data.success) {
-          // Find the selected test center and room objects for display
-          const selectedTestCenterObj = testCenters.value.find(
-            center => center.id === parseInt(selectedTestCenter.value, 10)
-          )
-          const selectedTestRoomObj = testRooms.value.find(
-            room => room.id === parseInt(selectedTestRoom.value, 10)
-          )
-          
-          // Explicitly set status to approved with a separate API call
-          try {
-            console.log('Setting appointment status to approved explicitly')
-            const statusResponse = await axiosInstance.post(`/api/appointments/${appointmentId.value}/update-status/`, {
-              status: 'approved'
-            })
-            
-            if (statusResponse.data.success) {
-              console.log('Status successfully updated to approved via API')
-            } else {
-              console.warn('Status update API call succeeded but returned success=false', statusResponse.data)
-            }
-          } catch (statusError) {
-            console.error('Error explicitly setting status to approved:', statusError)
-          }
-          
-          showToast('Test details assigned successfully. Application has been approved!', 'success')
-          
-          // Update local state immediately
-          if (appointment.value) {
-            // Always set status to approved when both center and room are assigned
-            appointment.value.status = 'approved'
-            console.log('Status updated to:', appointment.value.status)
-            
-            // Update with proper center and room details
-            if (selectedTestCenterObj) {
-              appointment.value.test_center = selectedTestCenterObj.name
-              appointment.value.test_center_address = selectedTestCenterObj.address
-            }
-            
-            if (selectedTestRoomObj) {
-              appointment.value.test_room = selectedTestRoomObj.id
-              appointment.value.room_number = selectedTestRoomObj.name
-              appointment.value.assigned_test_time_slot = selectedTestRoomObj.time_slot
-            }
-          }
-          
-          // Refresh the appointment data to ensure all changes are reflected
-          fetchAppointmentDetails()
-          fetchTestDetails()
-        } else {
-          showToast(response.data.error || 'Failed to assign test details', 'error')
-        }
-      } catch (err) {
-        console.error('Error assigning test details:', err)
-        showToast('Error assigning test details: ' + (err.response?.data?.error || err.message), 'error')
-      } finally {
-        submittingAssignment.value = false
-      }
-    }
     
     const fetchAppointmentDetails = async () => {
       loading.value = true
@@ -952,12 +810,6 @@ export default {
         if (appointment.value) {
           console.log('After assignment and fetching - Appointment status:', appointment.value?.status)
           await fetchTestDetails()
-          
-          // If status is waiting_for_test_details or submitted, fetch test centers and rooms
-          if (appointment.value.status === 'waiting_for_test_details' || appointment.value.status === 'submitted') {
-            fetchTestCenters()
-            fetchTestRooms()
-          }
         }
       } catch (err) {
         console.error('Error fetching appointment details:', err)
@@ -989,9 +841,7 @@ export default {
     }
     
     const canApproveSubmitted = () => {
-      return appointment.value?.status === 'submitted' && 
-             appointment.value?.test_center && 
-             appointment.value?.room_number
+      return appointment.value?.status === 'submitted'
     }
     
     const canReject = () => {
@@ -1031,13 +881,35 @@ export default {
     
     const approveSubmittedApplication = async () => {
       try {
+        // First approve the application
         const response = await axiosInstance.post(`/api/appointments/${appointment.value.id}/update-status/`, {
           status: 'approved'
         })
         
         if (response.data.success) {
           appointment.value.status = 'approved'
-          showToast('Application approved successfully', 'success')
+          
+          // Then automatically assign test room if not already assigned
+          if (!appointment.value.test_room) {
+            try {
+              const autoAssignResponse = await axiosInstance.post('/api/admin/auto-assign/', {
+                appointment_id: appointment.value.id
+              })
+              
+              if (autoAssignResponse.data.success) {
+                showToast(`Application approved and automatically assigned to ${autoAssignResponse.data.assignment.test_room.name}`, 'success')
+                // Refresh the appointment details to show the new assignment
+                fetchAppointmentDetails()
+              } else {
+                showToast('Application approved, but auto-assignment failed', 'warning')
+              }
+            } catch (autoAssignErr) {
+              console.error('Auto-assignment failed:', autoAssignErr)
+              showToast('Application approved, but auto-assignment failed. Please assign manually if needed.', 'warning')
+            }
+          } else {
+            showToast('Application approved successfully', 'success')
+          }
         }
       } catch (error) {
         showToast('Failed to approve application: ' + (error.response?.data?.error || error.message), 'error')
@@ -1061,12 +933,28 @@ export default {
     
     const markAsSubmitted = async () => {
       try {
+        // First update the status to submitted
         await axiosInstance.post('/api/admin/update-appointment-status/', {
           appointment_ids: [appointmentId.value],
           new_status: 'submitted'
         })
         
-        showToast('Appointment marked as submitted', 'success')
+        // Then automatically assign test room based on selected test center and session
+        try {
+          const autoAssignResponse = await axiosInstance.post('/api/admin/auto-assign/', {
+            appointment_id: appointmentId.value
+          })
+          
+          if (autoAssignResponse.data.success) {
+            showToast(`Appointment marked as submitted and automatically assigned to ${autoAssignResponse.data.assignment.test_room.name}`, 'success')
+          } else {
+            showToast('Appointment marked as submitted, but auto-assignment failed', 'warning')
+          }
+        } catch (autoAssignErr) {
+          console.error('Auto-assignment failed:', autoAssignErr)
+          showToast('Appointment marked as submitted, but auto-assignment failed. Please assign manually if needed.', 'warning')
+        }
+        
         fetchAppointmentDetails()
       } catch (err) {
         showToast('Failed to update status', 'error')
@@ -1194,9 +1082,6 @@ export default {
     onMounted(() => {
       if (appointmentId.value) {
         fetchAppointmentDetails()
-        fetchTestCenters()
-        fetchTestRooms()
-        fetchTestSessions()
       } else {
         error.value = 'No appointment ID provided'
         loading.value = false
@@ -1490,6 +1375,54 @@ export default {
           
           <div style="margin-bottom: 25px;">
             <h3 style="background-color: #DC2626; color: white; padding: 8px; margin: 0 0 15px 0; font-size: 14px;">
+              Applicant's Registration Schedule Details
+            </h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold; width: 30%;">Preferred Date:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatDate(appointment.value.preferred_date)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Preferred Time Slot:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatTimeSlot(appointment.value.time_slot)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Selected Test Center:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.test_center_name || 'Not selected'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Test Session:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.test_session_name || 'Not selected'}</td>
+              </tr>
+              ${appointment.value.test_session_exam_date ? `
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Test Session Exam Date:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatDate(appointment.value.test_session_exam_date)}</td>
+              </tr>
+              ` : ''}
+              ${appointment.value.test_session_registration_start ? `
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Registration Start:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatDate(appointment.value.test_session_registration_start)}</td>
+              </tr>
+              ` : ''}
+              ${appointment.value.test_session_registration_end ? `
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Registration End:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatDate(appointment.value.test_session_registration_end)}</td>
+              </tr>
+              ` : ''}
+              ${appointment.value.test_session_description ? `
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd; font-weight: bold;">Test Session Description:</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${appointment.value.test_session_description}</td>
+              </tr>
+              ` : ''}
+            </table>
+          </div>
+          
+          <div style="margin-bottom: 25px;">
+            <h3 style="background-color: #DC2626; color: white; padding: 8px; margin: 0 0 15px 0; font-size: 14px;">
               Test Schedule Information
             </h3>
             <table style="width: 100%; border-collapse: collapse;">
@@ -1666,24 +1599,6 @@ export default {
       markAsClaimed,
       rescheduleAppointment,
       setWaitingForClaiming,
-      
-      // Test center and room assignment
-      testCenters,
-      testRooms,
-      testSessions,
-      selectedTestCenter,
-      selectedTestRoom,
-      selectedTestSession,
-      loadingTestCenters,
-      loadingTestRooms,
-      loadingTestSessions,
-      testCenterError,
-      testRoomError,
-      testSessionError,
-      submittingAssignment,
-      filteredTestRooms,
-      onTestCenterChange,
-      assignTestDetails,
       
       // PDF Export
       exportingPDF,
