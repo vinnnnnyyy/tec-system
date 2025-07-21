@@ -2888,6 +2888,57 @@ export default {
         // Don't set error.value here to avoid blocking the main flow
       }
     };
+
+    // Fetch user profile to get detailed user information
+    const fetchUserProfile = async () => {
+      try {
+        const response = await axios.get('/api/profile/');
+        const userProfile = response.data;
+        console.log('User profile loaded:', userProfile);
+        
+        // Parse and update form data with user profile information
+        if (userProfile.first_name) {
+          console.log('User first_name from profile:', userProfile.first_name);
+          const nameParts = userProfile.first_name.trim().split(' ');
+          formData.value.firstName = (nameParts[0] || '').toUpperCase();
+          markAsTouched('firstName'); // Mark firstName as touched after auto-fill
+          // If there are more than one parts, the rest is middle name
+          if (nameParts.length > 1) {
+            formData.value.middleName = nameParts.slice(1).join(' ').toUpperCase();
+            markAsTouched('middleName'); // Mark middleName as touched after auto-fill
+          }
+          console.log('Updated form - First:', formData.value.firstName, 'Middle:', formData.value.middleName);
+        }
+        
+        if (userProfile.last_name) {
+          formData.value.lastName = userProfile.last_name.toUpperCase();
+          markAsTouched('lastName'); // Mark lastName as touched after auto-fill
+          console.log('Updated form - Last name:', formData.value.lastName);
+        }
+        
+        if (userProfile.email) {
+          formData.value.email = userProfile.email;
+          markAsTouched('email'); // Mark email as touched after auto-fill
+        }
+        
+        // If there's additional info from previous appointments, use it
+        if (userProfile.contact_number) {
+          formData.value.contactNumber = userProfile.contact_number;
+          markAsTouched('contactNumber'); // Mark contactNumber as touched after auto-fill
+        }
+        
+        if (userProfile.school_name) {
+          formData.value.schoolName = userProfile.school_name;
+        }
+        
+        return userProfile;
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        // Fallback to localStorage data if API fails
+        const currentUser = AuthService.getCurrentUser();
+        return currentUser;
+      }
+    };
     
     // Watch for modal open/close
     watch(() => props.modelValue, (newVal) => {
@@ -2895,6 +2946,7 @@ export default {
         fetchData();
         fetchUserAppointments(); // Fetch user appointments to check for duplicates
         fetchTestCenters(); // Fetch test centers when modal opens
+        fetchUserProfile(); // Fetch user profile to populate form data
       }
       
       // Reset the form data when modal is opened
@@ -2903,14 +2955,38 @@ export default {
         const currentUser = AuthService.getCurrentUser();
         const userEmail = currentUser?.email || '';
         
+        console.log('Current user data:', currentUser);
+        
+        // Parse name data from user info
+        let firstName = '';
+        let lastName = '';
+        let middleName = '';
+        
+        if (currentUser?.first_name) {
+          console.log('User first_name from backend:', currentUser.first_name);
+          // Since we combined first and middle name in backend, split them here
+          const nameParts = currentUser.first_name.trim().split(' ');
+          firstName = (nameParts[0] || '').toUpperCase();
+          // If there are more than one parts, the rest is middle name
+          if (nameParts.length > 1) {
+            middleName = nameParts.slice(1).join(' ').toUpperCase();
+          }
+          console.log('Parsed names - First:', firstName, 'Middle:', middleName);
+        }
+        
+        if (currentUser?.last_name) {
+          lastName = currentUser.last_name.toUpperCase();
+          console.log('Last name:', lastName);
+        }
+        
         formData.value = {
           preferredDate: '',
           timeSlot: '',
           testCenter: '',
           testSession: '',
-          lastName: '',
-          firstName: '',
-          middleName: '',
+          lastName: lastName,
+          firstName: firstName,
+          middleName: middleName,
           contactNumber: '',
           email: userEmail, // Pre-populate with user's email
           schoolName: '',
@@ -3007,6 +3083,20 @@ export default {
         Object.keys(touchedFields.value).forEach(key => {
           touchedFields.value[key] = false;
         });
+        
+        // Mark auto-populated fields as touched so validation works properly
+        if (firstName) {
+          markAsTouched('firstName');
+        }
+        if (lastName) {
+          markAsTouched('lastName');
+        }
+        if (middleName) {
+          markAsTouched('middleName');
+        }
+        if (userEmail) {
+          markAsTouched('email');
+        }
       }
       
       // Close calendar when modal is closed
@@ -4071,6 +4161,7 @@ export default {
       fetchData,
       fetchTestSessions,
       fetchUserAppointments,
+      fetchUserProfile,
       formatDateForApi
     };
   }

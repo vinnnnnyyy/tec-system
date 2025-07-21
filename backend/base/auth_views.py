@@ -315,6 +315,8 @@ def get_user_profile(request):
             'id': user.id,
             'username': user.username,
             'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
             'full_name': f"{user.first_name} {user.last_name}".strip() or user.username,
         }
         

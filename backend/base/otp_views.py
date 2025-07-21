@@ -51,6 +51,13 @@ def signup_with_otp(request):
         otp = request.data.get('otp')
         first_name = request.data.get('first_name', '')
         last_name = request.data.get('last_name', '')
+        middle_name = request.data.get('middle_name', '')
+        
+        # Combine first and middle name if middle name is provided
+        if middle_name:
+            full_first_name = f"{first_name} {middle_name}".strip()
+        else:
+            full_first_name = first_name
         
         print(f"Signup attempt with OTP: {otp} for email: {email}")
         
@@ -92,7 +99,7 @@ def signup_with_otp(request):
             username=username,
             email=email,
             password=password,
-            first_name=first_name,
+            first_name=full_first_name,
             last_name=last_name
         )
         
