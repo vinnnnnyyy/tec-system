@@ -4130,6 +4130,7 @@ export default {
       wmsucourses,
       educationalAttainmentOptions,
       occupationOptions,
+      incomeOptions,
       loading,
       error,
       apiData,
