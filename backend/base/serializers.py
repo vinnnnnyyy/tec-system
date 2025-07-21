@@ -14,6 +14,14 @@ class AppointmentSerializer(serializers.ModelSerializer):
     test_center_name = serializers.CharField(source='test_center.name', read_only=True)
     test_room_name = serializers.CharField(source='test_room.name', read_only=True)
     test_session_date = serializers.DateField(source='test_session.exam_date', read_only=True)
+    
+    # Add test session details for frontend display
+    test_session_name = serializers.SerializerMethodField()
+    test_session_exam_date = serializers.DateField(source='test_session.exam_date', read_only=True)
+    test_session_registration_start = serializers.DateField(source='test_session.registration_start_date', read_only=True)
+    test_session_registration_end = serializers.DateField(source='test_session.registration_end_date', read_only=True)
+    test_session_description = serializers.CharField(source='test_session.description', read_only=True)
+    
     exam_score = serializers.SerializerMethodField()
     
     class Meta:
@@ -28,6 +36,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
             'test_session', 'test_center', 'test_room', 'test_center_name',
             'test_room_name', 'test_session_date', 'assigned_test_time_slot', 'is_time_slot_modified',
             'exam_date', 'exam_score',
+            # Test session details for registration schedule display
+            'test_session_name', 'test_session_exam_date', 'test_session_registration_start',
+            'test_session_registration_end', 'test_session_description',
             # Personal Information fields
             'birth_month', 'birth_day', 'birth_year', 'gender', 'age',
             'home_address', 'citizenship',
@@ -58,6 +69,12 @@ class AppointmentSerializer(serializers.ModelSerializer):
             'religious_affiliation', 'religious_affiliation_others'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'user']
+
+    def get_test_session_name(self, obj):
+        """Generate a descriptive test session name"""
+        if obj.test_session:
+            return f"{obj.test_session.exam_type} - {obj.test_session.exam_date}"
+        return None
 
     def get_exam_score(self, obj):
         try:

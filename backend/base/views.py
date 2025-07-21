@@ -207,6 +207,35 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             
             # Set initial status to waiting_for_submission
             serializer.validated_data['status'] = 'waiting_for_submission'
+            
+            # Handle test session assignment and exam date
+            test_session_id = request.data.get('test_session')
+            if test_session_id:
+                try:
+                    test_session = TestSession.objects.get(id=test_session_id)
+                    serializer.validated_data['test_session'] = test_session
+                    # Set the exam date based on the test session
+                    serializer.validated_data['exam_date'] = test_session.exam_date
+                    print(f"DEBUG: Setting exam_date to {test_session.exam_date} from test_session {test_session_id}")
+                except TestSession.DoesNotExist:
+                    print(f"DEBUG: Test session {test_session_id} not found")
+                    pass  # Continue without test session if not found
+            else:
+                print("DEBUG: No test_session provided in request data")
+            
+            # Handle test center assignment
+            test_center_id = request.data.get('test_center')
+            if test_center_id:
+                try:
+                    test_center = TestCenter.objects.get(id=test_center_id)
+                    serializer.validated_data['test_center'] = test_center
+                    print(f"DEBUG: Setting test_center to {test_center.name}")
+                except TestCenter.DoesNotExist:
+                    print(f"DEBUG: Test center {test_center_id} not found")
+                    pass  # Continue without test center if not found
+            else:
+                print("DEBUG: No test_center provided in request data")
+            
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -995,6 +1024,17 @@ def create_appointment(request):
             except TestCenter.DoesNotExist:
                 pass  # Continue without test center if not found
         
+        # Set test session if provided
+        test_session_id = data.get('test_session')
+        if test_session_id:
+            try:
+                test_session = TestSession.objects.get(id=test_session_id)
+                appointment.test_session = test_session
+                # Also set the exam date based on the session
+                appointment.exam_date = test_session.exam_date
+            except TestSession.DoesNotExist:
+                pass  # Continue without test session if not found
+        
         # Auto-approve if program has auto_approve_appointments enabled and no custom status was provided
         if program.auto_approve_appointments and not data.get('status'):
             appointment.status = 'waiting_for_submission'
@@ -1693,12 +1733,89 @@ def generate_pdf(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def auto_assign_test_details(request):
-    """Auto assign test details to appointments"""
+    """Auto assign test details to appointments based on their selected test center and session"""
     try:
-        # Implementation for auto assignment
-        return Response({'message': 'Auto assignment not implemented'}, status=501)
+        appointment_id = request.data.get('appointment_id')
+        if not appointment_id:
+            return Response({'error': 'appointment_id is required'}, status=400)
+        
+        appointment = Appointment.objects.get(id=appointment_id)
+        
+        # Check if appointment already has test room assigned
+        if appointment.test_room:
+            return Response({
+                'success': True,
+                'message': 'Appointment already has test room assigned',
+                'test_room': {
+                    'id': appointment.test_room.id,
+                    'name': appointment.test_room.name,
+                    'center_name': appointment.test_center.name if appointment.test_center else None
+                }
+            })
+        
+        # Get the test center and session from the appointment form data
+        test_center = appointment.test_center
+        test_session = appointment.test_session
+        preferred_time_slot = appointment.time_slot
+        
+        if not test_center or not test_session:
+            return Response({
+                'error': 'Appointment must have test center and test session selected'
+            }, status=400)
+        
+        # Find available test room with matching criteria
+        available_rooms = TestRoom.objects.filter(
+            test_center=test_center,
+            time_slot=preferred_time_slot,
+            is_active=True,
+            available_capacity__gt=0  # Room must have available capacity
+        ).order_by('-available_capacity')  # Prioritize rooms with more capacity
+        
+        if not available_rooms.exists():
+            return Response({
+                'error': f'No available rooms found for {test_center.name} during {preferred_time_slot} time slot'
+            }, status=404)
+        
+        # Assign the best available room (one with most capacity)
+        selected_room = available_rooms.first()
+        
+        # Update appointment with assigned room
+        appointment.test_room = selected_room
+        appointment.save()
+        
+        # Update room capacity
+        selected_room.assigned_count += 1
+        selected_room.available_capacity = selected_room.capacity - selected_room.assigned_count
+        selected_room.save()
+        
+        return Response({
+            'success': True,
+            'message': f'Test room automatically assigned: {selected_room.name}',
+            'assignment': {
+                'test_center': {
+                    'id': test_center.id,
+                    'name': test_center.name
+                },
+                'test_room': {
+                    'id': selected_room.id,
+                    'name': selected_room.name,
+                    'room_code': selected_room.room_code,
+                    'capacity': selected_room.capacity,
+                    'assigned_count': selected_room.assigned_count,
+                    'available_capacity': selected_room.available_capacity
+                },
+                'test_session': {
+                    'id': test_session.id,
+                    'exam_type': test_session.exam_type,
+                    'exam_date': test_session.exam_date
+                }
+            }
+        })
+        
+    except Appointment.DoesNotExist:
+        return Response({'error': 'Appointment not found'}, status=404)
     except Exception as e:
-        return Response({'error': str(e)}, status=500)
+        return Response({'error': f'Auto assignment failed: {str(e)}'}, status=500)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
