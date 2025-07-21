@@ -86,6 +86,7 @@ class Appointment(models.Model):
     last_name = models.CharField(max_length=100, blank=True, null=True)
     first_name = models.CharField(max_length=100, blank=True, null=True)
     middle_name = models.CharField(max_length=100, blank=True, null=True)
+    suffix = models.CharField(max_length=10, blank=True, null=True)
     
     email = models.EmailField()
     contact_number = models.CharField(max_length=20)

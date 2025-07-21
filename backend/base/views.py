@@ -91,6 +91,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             last_name = data.get('last_name', '').strip()
             first_name = data.get('first_name', '').strip()
             middle_name = data.get('middle_name', '').strip()
+            suffix = data.get('suffix', '').strip()
             
             # If individual components are not provided, parse from full_name
             if not (last_name and first_name):
@@ -99,15 +100,31 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 
                 # Parse name based on format
                 if ',' in full_name:
-                    # Format: "Last, First Middle"
+                    # Format: "Last, First Middle Suffix"
                     name_parts = full_name.split(',', 1)  # Split only on first comma
                     last_name = name_parts[0].strip()
-                    first_middle = name_parts[1].strip().split() if len(name_parts) > 1 else []
+                    first_middle_suffix = name_parts[1].strip().split() if len(name_parts) > 1 else []
+                    
+                    # Check if last element might be a suffix
+                    suffixes = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
+                    if first_middle_suffix and first_middle_suffix[-1] in suffixes:
+                        suffix = first_middle_suffix[-1]
+                        first_middle = first_middle_suffix[:-1]
+                    else:
+                        first_middle = first_middle_suffix
+                        
                     first_name = first_middle[0] if first_middle else ''
                     middle_name = ' '.join(first_middle[1:]) if len(first_middle) > 1 else ''
                 else:
-                    # Format: "First Middle Last" or just names separated by spaces
+                    # Format: "First Middle Last Suffix" or just names separated by spaces
                     name_parts = full_name.split()
+                    
+                    # Check if last element might be a suffix
+                    suffixes = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
+                    if name_parts and name_parts[-1] in suffixes:
+                        suffix = name_parts[-1]
+                        name_parts = name_parts[:-1]
+                    
                     if len(name_parts) >= 3:
                         first_name = name_parts[0]
                         middle_name = ' '.join(name_parts[1:-1])
@@ -127,6 +144,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             serializer.validated_data['last_name'] = last_name
             serializer.validated_data['first_name'] = first_name
             serializer.validated_data['middle_name'] = middle_name
+            serializer.validated_data['suffix'] = suffix
             
             # Normalize names for comparison (remove extra spaces, convert to lowercase)
             first_name_norm = first_name.strip().lower()
@@ -797,6 +815,7 @@ def create_appointment(request):
         last_name = data.get('last_name', '').strip()
         first_name = data.get('first_name', '').strip()
         middle_name = data.get('middle_name', '').strip()
+        suffix = data.get('suffix', '').strip()
         
         # If individual components are not provided, parse from full_name
         if not (last_name and first_name):
@@ -805,15 +824,31 @@ def create_appointment(request):
             
             # Parse name based on format
             if ',' in full_name:
-                # Format: "Last, First Middle"
+                # Format: "Last, First Middle Suffix"
                 name_parts = full_name.split(',', 1)  # Split only on first comma
                 last_name = name_parts[0].strip()
-                first_middle = name_parts[1].strip().split() if len(name_parts) > 1 else []
+                first_middle_suffix = name_parts[1].strip().split() if len(name_parts) > 1 else []
+                
+                # Check if last element might be a suffix
+                suffixes = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
+                if first_middle_suffix and first_middle_suffix[-1] in suffixes:
+                    suffix = first_middle_suffix[-1]
+                    first_middle = first_middle_suffix[:-1]
+                else:
+                    first_middle = first_middle_suffix
+                    
                 first_name = first_middle[0] if first_middle else ''
                 middle_name = ' '.join(first_middle[1:]) if len(first_middle) > 1 else ''
             else:
-                # Format: "First Middle Last" or just names separated by spaces
+                # Format: "First Middle Last Suffix" or just names separated by spaces
                 name_parts = full_name.split()
+                
+                # Check if last element might be a suffix
+                suffixes = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
+                if name_parts and name_parts[-1] in suffixes:
+                    suffix = name_parts[-1]
+                    name_parts = name_parts[:-1]
+                
                 if len(name_parts) >= 3:
                     first_name = name_parts[0]
                     middle_name = ' '.join(name_parts[1:-1])
@@ -915,6 +950,7 @@ def create_appointment(request):
             last_name=data.get('last_name', last_name),
             first_name=data.get('first_name', first_name),
             middle_name=data.get('middle_name', middle_name),
+            suffix=data.get('suffix', suffix),
             email=data.get('email'),
             contact_number=data.get('contact_number'),
             school_name=data.get('school_name'),

@@ -140,6 +140,33 @@
                         </p>
                       </div>
                       
+                      <!-- Suffix -->
+                      <div class="space-y-2">
+                        <label for="suffix" class="block text-sm font-medium text-gray-700 mb-1.5">Suffix</label>
+                        <div class="relative">
+                          <select 
+                            id="suffix"
+                            v-model="formData.suffix"
+                            @blur="markAsTouched('suffix')"
+                            :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('suffix')]"
+                          >
+                            <option value="">Select suffix (Optional)</option>
+                            <option value="Jr.">Jr.</option>
+                            <option value="Sr.">Sr.</option>
+                            <option value="II">II</option>
+                            <option value="III">III</option>
+                            <option value="IV">IV</option>
+                            <option value="V">V</option>
+                          </select>
+                          <div v-if="isFieldValid('suffix')" class="absolute inset-y-0 right-3 flex items-center text-green-500 animate-fadeIn">
+                            <i class="fas fa-check-circle"></i>
+                          </div>
+                        </div>
+                        <p v-if="isFieldInvalid('suffix')" class="text-sm text-red-600 mt-1 error-text">
+                          {{ validationErrors.suffix }}
+                        </p>
+                      </div>
+                      
                       <!-- Contact Number -->
                       <div class="space-y-2">
                         <label for="contactNumber" class="block text-sm font-medium text-gray-700 mb-1.5">Contact Number</label>
@@ -230,6 +257,22 @@
                         </p>
                       </div>
                       
+                      <!-- Age (Auto-calculated) -->
+                      <div class="space-y-2 md:col-span-full">
+                        <label for="calculatedAge" class="block text-sm font-medium text-gray-700 mb-1.5">Age</label>
+                        <input 
+                          id="calculatedAge"
+                          :value="formData.age" 
+                          type="text"
+                          class="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-base transition-all focus:ring-0 focus:border-gray-300 shadow-sm"
+                          readonly
+                          placeholder="Age (auto-calculated)"
+                        />
+                         <p v-if="validationErrors.age" class="text-sm text-red-600 mt-1 error-text">
+                          {{ validationErrors.age }}
+                        </p>
+                      </div>
+                      
                       <!-- Gender -->
                       <div class="space-y-2 md:col-span-full">
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Gender</label>
@@ -275,22 +318,6 @@
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                      <!-- Display Calculated Age (Readonly) -->
-                      <div class="space-y-2">
-                        <label for="calculatedAge" class="block text-sm font-medium text-gray-700 mb-1.5">Age</label>
-                        <input 
-                          id="calculatedAge"
-                          :value="formData.age" 
-                          type="text"
-                          class="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-base transition-all focus:ring-0 focus:border-gray-300 shadow-sm"
-                          readonly
-                          placeholder="Age (auto-calculated)"
-                        />
-                         <p v-if="validationErrors.age" class="text-sm text-red-600 mt-1 error-text">
-                          {{ validationErrors.age }}
-                        </p>
-                      </div>
-                      
                       <!-- Street/Purok -->
                       <div class="space-y-2">
                         <label for="streetPurok" class="block text-sm font-medium text-gray-700 mb-1.5">Street/Purok</label>
@@ -882,12 +909,15 @@
                           </div>
                           <div class="space-y-2 md:col-span-2 lg:col-span-1">
                             <label class="block text-sm font-medium text-gray-700">Monthly Income/Salary</label>
-                            <input 
+                            <select 
                               v-model="formData.socioEconomic.father.income"
-                              type="text"
                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
-                              placeholder="e.g., ₱15,000, ₱25,000"
-                            />
+                            >
+                              <option value="">Select income range</option>
+                              <option v-for="income in incomeOptions" :key="income" :value="income">
+                                {{ income }}
+                              </option>
+                            </select>
                           </div>
                         </div>
                       </div>
@@ -952,12 +982,15 @@
                           </div>
                           <div class="space-y-2 md:col-span-2 lg:col-span-1">
                             <label class="block text-sm font-medium text-gray-700">Monthly Income/Salary</label>
-                            <input 
+                            <select 
                               v-model="formData.socioEconomic.mother.income"
-                              type="text"
                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
-                              placeholder="e.g., ₱12,000, ₱20,000"
-                            />
+                            >
+                              <option value="">Select income range</option>
+                              <option v-for="income in incomeOptions" :key="income" :value="income">
+                                {{ income }}
+                              </option>
+                            </select>
                           </div>
                         </div>
                       </div>
@@ -1389,7 +1422,7 @@
                       <div v-if="formData.timeSlot" class="space-y-3">
                         <label class="block text-sm font-medium text-gray-700">Preferred Test Center</label>
                         <p class="text-sm text-gray-500 mb-4">
-                          Select your preferred test center. Room availability is shown for your selected time slot.
+                          Select your preferred test center. Total available slots are shown for your selected time slot.
                         </p>
                         
                         <div v-if="loadingTestCenters" class="flex justify-center py-8">
@@ -1431,33 +1464,28 @@
                                 
                                 <div class="ml-7">
                                   <div class="flex items-center gap-2 mb-2">
-                                    <i class="fas fa-door-open text-crimson-500"></i>
-                                    <span class="text-sm font-medium text-gray-700">Available Rooms for {{ formData.timeSlot === 'morning' ? 'Morning' : 'Afternoon' }}:</span>
+                                    <i class="fas fa-users text-crimson-500"></i>
+                                    <span class="text-sm font-medium text-gray-700">Available Slots for {{ formData.timeSlot === 'morning' ? 'Morning' : 'Afternoon' }}:</span>
                                   </div>
                                   
-                                  <div v-if="getRoomsForCenter(center.id, formData.timeSlot).length === 0" 
+                                  <div v-if="getTotalSlotsForCenter(center.id, formData.timeSlot) === 0" 
                                     class="text-sm text-red-600 flex items-center gap-2">
                                     <i class="fas fa-exclamation-triangle"></i>
-                                    <span>No rooms available for this time slot</span>
+                                    <span>No slots available for this time slot</span>
                                   </div>
                                   
-                                  <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    <div v-for="room in getRoomsForCenter(center.id, formData.timeSlot)" :key="room.id"
-                                      :class="[
-                                        'text-xs p-2 rounded border',
-                                        room.available_capacity > 0 
-                                          ? 'bg-green-50 border-green-200 text-green-800' 
-                                          : 'bg-red-50 border-red-200 text-red-800'
-                                      ]"
-                                    >
-                                      <div class="font-medium">{{ room.name }}</div>
-                                      <div class="flex items-center gap-1 mt-1">
-                                        <i :class="[
-                                          'fas fa-users text-xs',
-                                          room.available_capacity > 0 ? 'text-green-600' : 'text-red-600'
-                                        ]"></i>
-                                        <span>{{ room.available_capacity }}/{{ room.capacity }}</span>
-                                      </div>
+                                  <div v-else class="flex items-center gap-2">
+                                    <div :class="[
+                                      'px-3 py-2 rounded-lg font-semibold text-sm',
+                                      getTotalSlotsForCenter(center.id, formData.timeSlot) > 0 
+                                        ? 'bg-green-100 text-green-800 border border-green-200' 
+                                        : 'bg-red-100 text-red-800 border border-red-200'
+                                    ]">
+                                      <i :class="[
+                                        'fas fa-chair mr-2',
+                                        getTotalSlotsForCenter(center.id, formData.timeSlot) > 0 ? 'text-green-600' : 'text-red-600'
+                                      ]"></i>
+                                      {{ getTotalSlotsForCenter(center.id, formData.timeSlot) }} / {{ getTotalCapacityForCenter(center.id, formData.timeSlot) }} slots available
                                     </div>
                                   </div>
                                 </div>
@@ -1468,6 +1496,84 @@
                         
                         <p v-if="touchedFields.testCenter && validationErrors.testCenter" class="text-sm text-red-600 mt-2 error-text">
                           {{ validationErrors.testCenter }}
+                        </p>
+                      </div>
+                      
+                      <!-- Test Session Selection -->
+                      <div v-if="formData.testCenter" class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Select Test Session</label>
+                        <p class="text-sm text-gray-500 mb-4">
+                          Choose your preferred exam date from the available test sessions for {{ getExamTypeFromProgram }} exams.
+                        </p>
+                        
+                        <div v-if="availableTestSessions.length === 0" class="text-center py-8 text-gray-500">
+                          <i class="fas fa-calendar-times text-4xl mb-3"></i>
+                          <p>No test sessions available for this program at the moment.</p>
+                          <p class="text-sm mt-2">Please check back later or contact the registrar's office.</p>
+                        </div>
+                        
+                        <div v-else class="grid grid-cols-1 gap-4">
+                          <div v-for="session in availableTestSessions" :key="session.id"
+                            @click="formData.testSession = session.id; markAsTouched('testSession')"
+                            :class="[
+                              'border rounded-xl p-4 cursor-pointer transition-all duration-200 hover:shadow-md',
+                              formData.testSession === session.id 
+                                ? 'border-crimson-500 bg-crimson-50 shadow-md' 
+                                : 'border-gray-300 hover:border-crimson-300',
+                              touchedFields.testSession && validationErrors.testSession ? 'border-red-500' : ''
+                            ]"
+                          >
+                            <div class="flex items-start justify-between">
+                              <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-3">
+                                  <div :class="[
+                                    'w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all',
+                                    formData.testSession === session.id 
+                                      ? 'border-crimson-500 bg-crimson-500' 
+                                      : 'border-gray-300'
+                                  ]">
+                                    <div v-if="formData.testSession === session.id" class="w-2 h-2 bg-white rounded-full"></div>
+                                  </div>
+                                  <div class="flex-1">
+                                    <h4 class="font-semibold text-gray-900 text-lg">{{ session.exam_type }} Exam Session</h4>
+                                    <div class="flex items-center gap-4 mt-1">
+                                      <span :class="[
+                                        'px-2 py-1 text-xs font-medium rounded-full',
+                                        session.status === 'ONGOING' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                                      ]">
+                                        {{ session.status }}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div class="ml-7 space-y-2">
+                                  <div class="flex items-center gap-2">
+                                    <i class="fas fa-calendar-day text-crimson-500"></i>
+                                    <span class="text-sm font-medium text-gray-700">Exam Date:</span>
+                                    <span class="text-sm text-gray-900 font-semibold">{{ formatDate(session.exam_date) }}</span>
+                                  </div>
+                                  
+                                  <div class="flex items-center gap-2">
+                                    <i class="fas fa-calendar-plus text-green-500"></i>
+                                    <span class="text-sm font-medium text-gray-700">Registration Period:</span>
+                                    <span class="text-sm text-gray-900">
+                                      {{ formatDate(session.registration_start_date) }} - {{ formatDate(session.registration_end_date) }}
+                                    </span>
+                                  </div>
+                                  
+                                  <div v-if="session.description" class="flex items-start gap-2">
+                                    <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+                                    <span class="text-sm text-gray-600">{{ session.description }}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <p v-if="touchedFields.testSession && validationErrors.testSession" class="text-sm text-red-600 mt-2 error-text">
+                          {{ validationErrors.testSession }}
                         </p>
                       </div>
                     </div>
@@ -1597,6 +1703,7 @@ export default {
       wmsucetExperience: '',
       applicantType: '',
       testCenter: '',
+      testSession: '',
       age: '' // Added age here
     });
     
@@ -1619,16 +1726,19 @@ export default {
       applicantType: false,
       timeSlot: false,
       preferredDate: false,
-      testCenter: false
+      testCenter: false,
+      testSession: false
     });
     
     const formData = ref({
       preferredDate: '',
       timeSlot: '',
       testCenter: '',
+      testSession: '', // Add test session selection
       lastName: '',
       firstName: '',
       middleName: '',
+      suffix: '',
       contactNumber: '',
       email: '',
       schoolName: '',
@@ -1878,6 +1988,24 @@ export default {
       'Student',
       'Overseas Filipino Worker (OFW)',
       'Others'
+    ]);
+    
+    const incomeOptions = ref([
+      'Below ₱5,000',
+      '₱5,000 - ₱10,000',
+      '₱10,001 - ₱15,000',
+      '₱15,001 - ₱20,000',
+      '₱20,001 - ₱25,000',
+      '₱25,001 - ₱30,000',
+      '₱30,001 - ₱40,000',
+      '₱40,001 - ₱50,000',
+      '₱50,001 - ₱75,000',
+      '₱75,001 - ₱100,000',
+      '₱100,001 - ₱150,000',
+      '₱150,001 - ₱200,000',
+      'Above ₱200,000',
+      'No Income',
+      'Prefer not to say'
     ]);
     
     // Location data for the new LocationDropdowns component
@@ -2275,6 +2403,41 @@ export default {
       return dateInfo?.afternoon_available ?? false;
     });
     
+    // Get exam type based on program name for test session filtering
+    const getExamTypeFromProgram = computed(() => {
+      if (!props.program?.name) return null;
+      
+      const programName = props.program.name.toLowerCase();
+      
+      if (programName.includes('college entrance') || programName.includes('cet') || programName.includes('wmsu-cet') || programName.includes('wmsucet')) {
+        return 'CET';
+      } else if (programName.includes('nat') || programName.includes('nursing')) {
+        return 'NAT';
+      } else if (programName.includes('eat') || programName.includes('entrance')) {
+        return 'EAT';
+      }
+      
+      // Default to CET if no specific match is found
+      return 'CET';
+    });
+    
+    // Filter available test sessions based on program
+    const availableTestSessions = computed(() => {
+      if (!testSessions.value || testSessions.value.length === 0) return [];
+      
+      const examType = getExamTypeFromProgram.value;
+      if (!examType) return [];
+      
+      // Filter test sessions by exam type and status
+      const filteredSessions = testSessions.value.filter(session => {
+        return session.exam_type === examType && 
+               (session.status === 'ONGOING' || session.status === 'UPCOMING');
+      });
+      
+      // Sort by exam date
+      return filteredSessions.sort((a, b) => new Date(a.exam_date) - new Date(b.exam_date));
+    });
+    
     // Validate last name
     const validateLastName = () => {
       if (!formData.value.lastName.trim()) {
@@ -2552,49 +2715,13 @@ export default {
         validationErrors.value.secondChoiceCampus = '';
       }
       
-      // Socio-economic validation - Father
-      if (!formData.value.socioEconomic?.father?.citizenship || !formData.value.socioEconomic.father.citizenship.trim()) {
-        validationErrors.value.fatherCitizenship = "Father's citizenship is required";
-        isValid = false;
-      } else {
-        validationErrors.value.fatherCitizenship = '';
-      }
-      
-      if (!formData.value.socioEconomic?.father?.education || !formData.value.socioEconomic.father.education.trim()) {
-        validationErrors.value.fatherEducation = "Father's education is required";
-        isValid = false;
-      } else {
-        validationErrors.value.fatherEducation = '';
-      }
-      
-      if (!formData.value.socioEconomic?.father?.occupation || !formData.value.socioEconomic.father.occupation.trim()) {
-        validationErrors.value.fatherOccupation = "Father's occupation is required";
-        isValid = false;
-      } else {
-        validationErrors.value.fatherOccupation = '';
-      }
-      
-      // Socio-economic validation - Mother
-      if (!formData.value.socioEconomic?.mother?.citizenship || !formData.value.socioEconomic.mother.citizenship.trim()) {
-        validationErrors.value.motherCitizenship = "Mother's citizenship is required";
-        isValid = false;
-      } else {
-        validationErrors.value.motherCitizenship = '';
-      }
-      
-      if (!formData.value.socioEconomic?.mother?.education || !formData.value.socioEconomic.mother.education.trim()) {
-        validationErrors.value.motherEducation = "Mother's education is required";
-        isValid = false;
-      } else {
-        validationErrors.value.motherEducation = '';
-      }
-      
-      if (!formData.value.socioEconomic?.mother?.occupation || !formData.value.socioEconomic.mother.occupation.trim()) {
-        validationErrors.value.motherOccupation = "Mother's occupation is required";
-        isValid = false;
-      } else {
-        validationErrors.value.motherOccupation = '';
-      }
+      // Socio-economic validation - Now optional, clear any existing errors
+      validationErrors.value.fatherCitizenship = '';
+      validationErrors.value.fatherEducation = '';
+      validationErrors.value.fatherOccupation = '';
+      validationErrors.value.motherCitizenship = '';
+      validationErrors.value.motherEducation = '';
+      validationErrors.value.motherOccupation = '';
       
       // Additional information validation
       if (formData.value.additionalInfo?.hasDisability === null || formData.value.additionalInfo?.hasDisability === undefined) {
@@ -2642,9 +2769,14 @@ export default {
         validationErrors.value.testCenter = 'Please select a test center for your appointment';
         return false;
       }
+      if (!formData.value.testSession) {
+        validationErrors.value.testSession = 'Please select a test session for your appointment';
+        return false;
+      }
       
       dateError.value = '';
       validationErrors.value.testCenter = '';
+      validationErrors.value.testSession = '';
       return true;
     };
     
@@ -2738,6 +2870,11 @@ export default {
       validateDateTime();
     });
     
+    watch(() => formData.value.testSession, () => {
+      touchedFields.value.testSession = true;
+      validateDateTime();
+    });
+    
     // fetchData is now moved above the watch statement
     
     // Fetch user appointments to check for duplicates
@@ -2757,6 +2894,7 @@ export default {
       if (newVal && props.program?.id) {
         fetchData();
         fetchUserAppointments(); // Fetch user appointments to check for duplicates
+        fetchTestCenters(); // Fetch test centers when modal opens
       }
       
       // Reset the form data when modal is opened
@@ -2768,6 +2906,8 @@ export default {
         formData.value = {
           preferredDate: '',
           timeSlot: '',
+          testCenter: '',
+          testSession: '',
           lastName: '',
           firstName: '',
           middleName: '',
@@ -2858,7 +2998,9 @@ export default {
           city: '',
           citizenship: '',
           wmsucetExperience: '',
-          applicantType: ''
+          applicantType: '',
+          testCenter: '',
+          testSession: ''
         };
         
         // Reset touched fields
@@ -2957,6 +3099,9 @@ export default {
       console.log('First 5 cities:', philippineCities.value.slice(0, 5));
       console.log('First 5 citizenships:', citizenshipOptions.value.slice(0, 5));
       console.log('First 5 Zamboangan schools:', zamboanganSchools.value.slice(0, 5));
+      
+      // Fetch test centers on component mount to ensure they're always available
+      fetchTestCenters();
     });
     
     // Add cleanup for when the modal is closed
@@ -3101,6 +3246,18 @@ export default {
       return testRooms.value.filter(room => 
         room.test_center === centerId && room.time_slot === timeSlot && room.is_active
       );
+    };
+    
+    // Get total available slots for a specific test center and time slot
+    const getTotalSlotsForCenter = (centerId, timeSlot) => {
+      const rooms = getRoomsForCenter(centerId, timeSlot);
+      return rooms.reduce((total, room) => total + (room.available_capacity || 0), 0);
+    };
+    
+    // Get total capacity for a specific test center and time slot
+    const getTotalCapacityForCenter = (centerId, timeSlot) => {
+      const rooms = getRoomsForCenter(centerId, timeSlot);
+      return rooms.reduce((total, room) => total + (room.capacity || 0), 0);
     };
     
     // Add watcher to close calendar when time slot changes, as a backup
@@ -3383,10 +3540,11 @@ export default {
         const homeAddressString = `${formData.value.streetPurok}, ${formData.value.barangay}, ${formData.value.city}`.trim();
         const applicationData = {
           // Personal info
-          full_name: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName}`.trim(),
+          full_name: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName} ${formData.value.suffix}`.trim().replace(/\s+/g, ' '),
           last_name: formData.value.lastName.trim(),
           first_name: formData.value.firstName.trim(),
           middle_name: formData.value.middleName.trim(),
+          suffix: formData.value.suffix.trim(),
           contact_number: formData.value.contactNumber,
           email: formData.value.email,
           birth_month: formData.value.birthMonth,
@@ -3458,6 +3616,7 @@ export default {
           preferred_date: formData.value.preferredDate,
           time_slot: formData.value.timeSlot,
           test_center: formData.value.testCenter,
+          test_session: formData.value.testSession,
         };
         
         // Set school-related fields based on applicant type (remains the same)
@@ -3477,7 +3636,7 @@ export default {
         }
         
         ApplicationFormStore.setFormData({
-          fullName: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName}`,
+          fullName: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName} ${formData.value.suffix}`.trim().replace(/\s+/g, ' '),
           contactNumber: formData.value.contactNumber,
           email: formData.value.email,
           schoolName: formData.value.applicantType === 'senior_high_graduating' ? formData.value.seniorGraduating.schoolName : 
@@ -3512,7 +3671,7 @@ export default {
         ApplicationFormStore.setHasSubmittedData(true);
         
         const emitData = {
-          fullName: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName}`,
+          fullName: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName} ${formData.value.suffix}`.trim().replace(/\s+/g, ' '),
           contactNumber: formData.value.contactNumber,
           email: formData.value.email,
           preferredDate: formData.value.preferredDate,
@@ -3881,6 +4040,8 @@ export default {
       isMorningAvailable,
       isAfternoonAvailable,
       safeFormData,
+      getExamTypeFromProgram,
+      availableTestSessions,
       
       // Navigation functions
       nextStep,
@@ -3901,6 +4062,8 @@ export default {
       fetchTestCenters,
       fetchTestRooms,
       getRoomsForCenter,
+      getTotalSlotsForCenter,
+      getTotalCapacityForCenter,
       
       // Utility functions
       checkDuplicateRegistration,
