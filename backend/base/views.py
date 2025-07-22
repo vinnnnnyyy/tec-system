@@ -2955,3 +2955,111 @@ def test_bulk_gmail_notification(request):
             'success': False,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_unmatched_scores(request):
+    """Get all exam scores that haven't been matched to appointments"""
+    try:
+        # Get all exam scores without appointments
+        unmatched_scores = ExamScore.objects.filter(appointment__isnull=True)
+        
+        # Add some basic logging for debugging
+        print(f"Found {unmatched_scores.count()} unmatched scores")
+        
+        serializer = ExamScoreDetailSerializer(unmatched_scores, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        print(f"Error in get_unmatched_scores: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_candidate_appointments(request):
+    """Get appointments that could potentially match a score"""
+    try:
+        name = request.GET.get('name', '')
+        app_no = request.GET.get('app_no', '')
+        exam_type = request.GET.get('exam_type', '')
+        
+        queryset = Appointment.objects.all()
+        
+        # Filter by name if provided
+        if name:
+            queryset = queryset.filter(
+                Q(full_name__icontains=name) |
+                Q(first_name__icontains=name) |
+                Q(last_name__icontains=name)
+            )
+        
+        # Filter by program if exam type is provided
+        if exam_type:
+            # Try to find the program by exam type
+            try:
+                program = Program.objects.filter(code__icontains=exam_type).first()
+                if program:
+                    queryset = queryset.filter(program=program)
+            except:
+                pass
+        
+        # Limit results to prevent overwhelming the UI
+        appointments = queryset[:20]
+        serializer = AppointmentSerializer(appointments, many=True)
+        return Response(serializer.data)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def manual_match_score(request):
+    """Manually match a score to an appointment"""
+    try:
+        score_id = request.data.get('score_id')
+        appointment_id = request.data.get('appointment_id')
+        
+        if not score_id or not appointment_id:
+            return Response({
+                'error': 'Both score_id and appointment_id are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get the score and appointment
+        try:
+            score = ExamScore.objects.get(id=score_id)
+            appointment = Appointment.objects.get(id=appointment_id)
+        except (ExamScore.DoesNotExist, Appointment.DoesNotExist):
+            return Response({
+                'error': 'Score or appointment not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if appointment already has a score
+        if hasattr(appointment, 'exam_score') and appointment.exam_score:
+            return Response({
+                'error': 'This appointment already has a score assigned'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if score is already matched
+        if score.appointment:
+            return Response({
+                'error': 'This score is already matched to another appointment'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Perform the matching
+        score.appointment = appointment
+        score.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Score matched successfully',
+            'score_id': score_id,
+            'appointment_id': appointment_id
+        })
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
