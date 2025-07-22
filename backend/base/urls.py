@@ -19,7 +19,9 @@ from .views import (
 from .date_availability_view import program_availability
 from .auth_views import (
     register_user, admin_login, validate_admin, 
-    admin_users, delete_user, update_user, get_user_profile, verify_password
+    admin_users, delete_user, update_user, get_user_profile, verify_password,
+    change_password, get_active_sessions, terminate_session, logout_all_other_sessions,
+    get_login_logs, export_login_logs, security_settings, update_recovery_email, update_security_questions
 )
 from .otp_views import request_otp, signup_with_otp, verify_otp_endpoint
 
@@ -82,6 +84,17 @@ urlpatterns = [
     path('admin/users/<int:user_id>/update/', update_user, name='update_user'),
     path('profile/', get_user_profile, name='get_user_profile'),
     path('verify-password/', verify_password, name='verify_password'),
+    
+    # Security routes
+    path('auth/change-password/', change_password, name='change_password'),
+    path('auth/active-sessions/', get_active_sessions, name='get_active_sessions'),
+    path('auth/terminate-session/<int:session_id>/', terminate_session, name='terminate_session'),
+    path('auth/logout-all-other-sessions/', logout_all_other_sessions, name='logout_all_other_sessions'),
+    path('auth/login-logs/', get_login_logs, name='get_login_logs'),
+    path('auth/export-login-logs/', export_login_logs, name='export_login_logs'),
+    path('auth/security-settings/', security_settings, name='security_settings'),
+    path('auth/recovery-email/', update_recovery_email, name='update_recovery_email'),
+    path('auth/security-questions/', update_security_questions, name='update_security_questions'),
     
     # OTP verification routes
     path('request-otp/', request_otp, name='request_otp'),

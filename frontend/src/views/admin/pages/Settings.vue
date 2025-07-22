@@ -1011,7 +1011,7 @@
                 <div class="bg-gray-50 p-4 rounded-lg">
                   <h4 class="font-medium text-gray-800 mb-2">Change Password</h4>
                   <p class="text-sm text-gray-600 mb-3">Update your account password for enhanced security.</p>
-                  <button class="bg-crimson-600 text-white px-4 py-2 rounded-lg hover:bg-crimson-700 transition-colors text-sm">
+                  <button @click="openPasswordModal" class="bg-crimson-600 text-white px-4 py-2 rounded-lg hover:bg-crimson-700 transition-colors text-sm">
                     Change Password
                   </button>
                 </div>
@@ -1041,9 +1041,13 @@
                 <div class="bg-gray-50 p-4 rounded-lg">
                   <h4 class="font-medium text-gray-800 mb-2">Session Timeout</h4>
                   <p class="text-sm text-gray-600 mb-3">Automatically log out after period of inactivity</p>
-                  <select class="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500">
+                  <select 
+                    v-model="securitySettings.sessionTimeout" 
+                    @change="saveSecuritySettings"
+                    class="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+                  >
                     <option value="30">30 minutes</option>
-                    <option value="60" selected>1 hour</option>
+                    <option value="60">1 hour</option>
                     <option value="120">2 hours</option>
                     <option value="240">4 hours</option>
                     <option value="480">8 hours</option>
@@ -1057,14 +1061,27 @@
                       <i class="fas fa-map-marker-alt text-crimson-600 mr-2"></i>
                       Active Sessions
                     </h4>
-                    <button class="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors text-sm">
+                    <button 
+                      @click="logoutAllOtherSessions"
+                      :disabled="isLoadingSessions"
+                      class="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center"
+                    >
+                      <i v-if="isLoadingSessions" class="fas fa-spinner fa-spin mr-2"></i>
                       Log out of all other devices
                     </button>
                   </div>
                   <p class="text-sm text-gray-600 mb-4">Currently logged-in sessions across different devices and locations.</p>
                   
+                  <!-- Loading State -->
+                  <div v-if="isLoadingSessions" class="text-center py-8">
+                    <div class="inline-flex items-center">
+                      <i class="fas fa-spinner fa-spin text-gray-400 mr-2"></i>
+                      <span class="text-gray-500">Loading sessions...</span>
+                    </div>
+                  </div>
+                  
                   <!-- Sessions Table -->
-                  <div class="overflow-x-auto">
+                  <div v-else class="overflow-x-auto">
                     <table class="w-full text-sm">
                       <thead class="bg-gray-100">
                         <tr>
@@ -1077,39 +1094,31 @@
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-gray-200">
-                        <tr class="bg-green-50">
+                        <tr v-for="session in activeSessions" :key="session.id" :class="session.is_current ? 'bg-green-50' : ''">
                           <td class="px-3 py-2">
                             <div class="flex items-center">
-                              <i class="fas fa-desktop text-blue-500 mr-2"></i>
-                              <span class="font-medium">Chrome/Windows</span>
-                              <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Current</span>
+                              <i :class="getDeviceIcon(session.device)" class="mr-2"></i>
+                              <span :class="session.is_current ? 'font-medium' : ''">{{ session.device }}</span>
+                              <span v-if="session.is_current" class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Current</span>
                             </div>
                           </td>
-                          <td class="px-3 py-2 text-gray-600">192.168.1.10</td>
-                          <td class="px-3 py-2 text-gray-600">Zamboanga, Philippines</td>
-                          <td class="px-3 py-2 text-gray-600">Just now</td>
+                          <td class="px-3 py-2 text-gray-600">{{ session.ip_address }}</td>
+                          <td class="px-3 py-2 text-gray-600">{{ session.location }}</td>
+                          <td class="px-3 py-2 text-gray-600">{{ formatLastActive(session.last_active) }}</td>
                           <td class="px-3 py-2">
-                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Active</span>
+                            <span :class="getSessionStatusClass(session.status)" class="px-2 py-1 text-xs rounded-full">
+                              {{ session.status }}
+                            </span>
                           </td>
                           <td class="px-3 py-2">
-                            <span class="text-gray-400 text-xs">Current session</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td class="px-3 py-2">
-                            <div class="flex items-center">
-                              <i class="fas fa-mobile-alt text-green-500 mr-2"></i>
-                              <span>Safari/iPhone</span>
-                            </div>
-                          </td>
-                          <td class="px-3 py-2 text-gray-600">192.168.1.25</td>
-                          <td class="px-3 py-2 text-gray-600">Zamboanga, Philippines</td>
-                          <td class="px-3 py-2 text-gray-600">2 hours ago</td>
-                          <td class="px-3 py-2">
-                            <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">Idle</span>
-                          </td>
-                          <td class="px-3 py-2">
-                            <button class="text-red-600 hover:text-red-700 text-xs">Terminate</button>
+                            <button 
+                              v-if="!session.is_current"
+                              @click="terminateSession(session.id)"
+                              class="text-red-600 hover:text-red-700 text-xs"
+                            >
+                              Terminate
+                            </button>
+                            <span v-else class="text-gray-400 text-xs">Current session</span>
                           </td>
                         </tr>
                       </tbody>
@@ -1130,13 +1139,27 @@
               <div class="bg-gray-50 p-4 rounded-lg">
                 <div class="flex justify-between items-center mb-4">
                   <h4 class="font-medium text-gray-800">Recent Login Activity</h4>
-                  <button class="text-crimson-600 hover:text-crimson-700 text-sm">
-                    <i class="fas fa-download mr-1"></i>Export Logs
+                  <button 
+                    @click="exportLoginLogs"
+                    :disabled="isLoadingLogs"
+                    class="text-crimson-600 hover:text-crimson-700 text-sm flex items-center"
+                  >
+                    <i v-if="isLoadingLogs" class="fas fa-spinner fa-spin mr-1"></i>
+                    <i v-else class="fas fa-download mr-1"></i>
+                    Export Logs
                   </button>
                 </div>
                 
+                <!-- Loading State -->
+                <div v-if="isLoadingLogs" class="text-center py-8">
+                  <div class="inline-flex items-center">
+                    <i class="fas fa-spinner fa-spin text-gray-400 mr-2"></i>
+                    <span class="text-gray-500">Loading activity logs...</span>
+                  </div>
+                </div>
+                
                 <!-- Activity Table -->
-                <div class="overflow-x-auto">
+                <div v-else class="overflow-x-auto">
                   <table class="w-full text-sm">
                     <thead class="bg-gray-100">
                       <tr>
@@ -1148,49 +1171,20 @@
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
-                      <tr>
-                        <td class="px-3 py-2 text-gray-600">July 23, 2025 09:15 AM</td>
-                        <td class="px-3 py-2 text-gray-600">192.168.1.10</td>
-                        <td class="px-3 py-2 text-gray-600">Zamboanga, Philippines</td>
-                        <td class="px-3 py-2 text-gray-600">Chrome/Windows</td>
+                      <tr v-for="log in paginatedLoginLogs" :key="log.id">
+                        <td class="px-3 py-2 text-gray-600">{{ formatDateTime(log.timestamp) }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ log.ip_address }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ log.location }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ log.device }}</td>
                         <td class="px-3 py-2">
-                          <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Success</span>
+                          <span :class="getLoginStatusClass(log.status)" class="px-2 py-1 text-xs rounded-full">
+                            {{ log.status }}
+                          </span>
                         </td>
                       </tr>
-                      <tr>
-                        <td class="px-3 py-2 text-gray-600">July 22, 2025 08:30 PM</td>
-                        <td class="px-3 py-2 text-gray-600">192.168.1.25</td>
-                        <td class="px-3 py-2 text-gray-600">Zamboanga, Philippines</td>
-                        <td class="px-3 py-2 text-gray-600">Safari/iPhone</td>
-                        <td class="px-3 py-2">
-                          <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Success</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td class="px-3 py-2 text-gray-600">July 21, 2025 02:45 PM</td>
-                        <td class="px-3 py-2 text-gray-600">203.177.45.12</td>
-                        <td class="px-3 py-2 text-gray-600">Manila, Philippines</td>
-                        <td class="px-3 py-2 text-gray-600">Firefox/Windows</td>
-                        <td class="px-3 py-2">
-                          <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Failed</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td class="px-3 py-2 text-gray-600">July 20, 2025 11:20 AM</td>
-                        <td class="px-3 py-2 text-gray-600">192.168.1.10</td>
-                        <td class="px-3 py-2 text-gray-600">Zamboanga, Philippines</td>
-                        <td class="px-3 py-2 text-gray-600">Chrome/Windows</td>
-                        <td class="px-3 py-2">
-                          <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Success</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td class="px-3 py-2 text-gray-600">July 17, 2025 07:15 AM</td>
-                        <td class="px-3 py-2 text-gray-600">192.168.1.10</td>
-                        <td class="px-3 py-2 text-gray-600">Zamboanga, Philippines</td>
-                        <td class="px-3 py-2 text-gray-600">Chrome/Windows</td>
-                        <td class="px-3 py-2">
-                          <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Success</span>
+                      <tr v-if="loginLogs.length === 0">
+                        <td colspan="5" class="px-3 py-8 text-center text-gray-500">
+                          No login activity found
                         </td>
                       </tr>
                     </tbody>
@@ -1198,11 +1192,25 @@
                 </div>
                 
                 <!-- Pagination for logs -->
-                <div class="mt-4 flex justify-between items-center">
-                  <span class="text-sm text-gray-600">Showing 1-5 of 50 entries</span>
+                <div v-if="loginLogs.length > 0" class="mt-4 flex justify-between items-center">
+                  <span class="text-sm text-gray-600">
+                    Showing {{ ((loginLogsCurrentPage - 1) * loginLogsPageSize) + 1 }}-{{ Math.min(loginLogsCurrentPage * loginLogsPageSize, loginLogs.length) }} of {{ loginLogs.length }} entries
+                  </span>
                   <div class="flex space-x-2">
-                    <button class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">Previous</button>
-                    <button class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">Next</button>
+                    <button 
+                      @click="previousLoginLogsPage"
+                      :disabled="loginLogsCurrentPage === 1"
+                      class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <button 
+                      @click="nextLoginLogsPage"
+                      :disabled="loginLogsCurrentPage === totalLoginLogsPages"
+                      class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1223,11 +1231,17 @@
                   <p class="text-sm text-gray-600 mb-3">Set or update the email address used for account recovery.</p>
                   <div class="flex flex-col sm:flex-row gap-3">
                     <input 
+                      v-model="securitySettings.recoveryEmail"
                       type="email" 
                       placeholder="recovery@example.com" 
                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
                     >
-                    <button class="bg-crimson-600 text-white px-4 py-2 rounded-lg hover:bg-crimson-700 transition-colors text-sm">
+                    <button 
+                      @click="updateRecoveryEmail"
+                      :disabled="isLoadingRecovery"
+                      class="bg-crimson-600 text-white px-4 py-2 rounded-lg hover:bg-crimson-700 transition-colors text-sm flex items-center"
+                    >
+                      <i v-if="isLoadingRecovery" class="fas fa-spinner fa-spin mr-2"></i>
                       Update Email
                     </button>
                   </div>
@@ -1240,7 +1254,10 @@
                   <div class="space-y-3">
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">Question 1</label>
-                      <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500">
+                      <select 
+                        v-model="securitySettings.securityQuestion1"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+                      >
                         <option value="">Select a security question</option>
                         <option value="pet">What was the name of your first pet?</option>
                         <option value="school">What was the name of your elementary school?</option>
@@ -1251,13 +1268,19 @@
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">Answer</label>
                       <input 
+                        v-model="securitySettings.securityAnswer1"
                         type="password" 
                         placeholder="Your answer" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
                       >
                     </div>
                   </div>
-                  <button class="mt-3 bg-crimson-600 text-white px-4 py-2 rounded-lg hover:bg-crimson-700 transition-colors text-sm">
+                  <button 
+                    @click="saveSecurityQuestions"
+                    :disabled="isLoadingRecovery"
+                    class="mt-3 bg-crimson-600 text-white px-4 py-2 rounded-lg hover:bg-crimson-700 transition-colors text-sm flex items-center"
+                  >
+                    <i v-if="isLoadingRecovery" class="fas fa-spinner fa-spin mr-2"></i>
                     Save Security Questions
                   </button>
                 </div>
@@ -1273,7 +1296,12 @@
                         <p class="text-xs text-gray-500">Automatically lock account after multiple failed attempts</p>
                       </div>
                       <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" class="sr-only peer" checked>
+                        <input 
+                          v-model="securitySettings.accountLockoutEnabled"
+                          @change="saveSecuritySettings"
+                          type="checkbox" 
+                          class="sr-only peer"
+                        >
                         <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-crimson-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-crimson-600"></div>
                       </label>
                     </div>
@@ -1281,24 +1309,37 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Failed Attempts Threshold</label>
-                        <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500">
+                        <select 
+                          v-model="securitySettings.failedAttemptsThreshold"
+                          @change="saveSecuritySettings"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+                        >
                           <option value="3">3 attempts</option>
-                          <option value="5" selected>5 attempts</option>
+                          <option value="5">5 attempts</option>
                           <option value="10">10 attempts</option>
                         </select>
                       </div>
                       <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Lockout Duration</label>
-                        <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500">
+                        <select 
+                          v-model="securitySettings.lockoutDuration"
+                          @change="saveSecuritySettings"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+                        >
                           <option value="15">15 minutes</option>
-                          <option value="30" selected>30 minutes</option>
+                          <option value="30">30 minutes</option>
                           <option value="60">1 hour</option>
                           <option value="1440">24 hours</option>
                         </select>
                       </div>
                     </div>
                   </div>
-                  <button class="mt-3 bg-crimson-600 text-white px-4 py-2 rounded-lg hover:bg-crimson-700 transition-colors text-sm">
+                  <button 
+                    @click="saveSecuritySettings"
+                    :disabled="isLoadingRecovery"
+                    class="mt-3 bg-crimson-600 text-white px-4 py-2 rounded-lg hover:bg-crimson-700 transition-colors text-sm flex items-center"
+                  >
+                    <i v-if="isLoadingRecovery" class="fas fa-spinner fa-spin mr-2"></i>
                     Save Lockout Settings
                   </button>
                 </div>
@@ -1309,8 +1350,13 @@
           <!-- Save Button -->
           <div class="mt-8 pt-6 border-t border-gray-200">
             <div class="flex justify-end">
-              <button class="bg-crimson-600 text-white px-6 py-2 rounded-lg hover:bg-crimson-700 transition-colors flex items-center space-x-2">
-                <i class="fas fa-save"></i>
+              <button 
+                @click="saveSecuritySettings"
+                :disabled="isLoadingRecovery"
+                class="bg-crimson-600 text-white px-6 py-2 rounded-lg hover:bg-crimson-700 transition-colors flex items-center space-x-2"
+              >
+                <i v-if="isLoadingRecovery" class="fas fa-spinner fa-spin"></i>
+                <i v-else class="fas fa-save"></i>
                 <span>Save Security Settings</span>
               </button>
             </div>
@@ -1544,6 +1590,95 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div v-if="showPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-lg font-semibold">Change Password</h3>
+          <button @click="closePasswordModal" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <form @submit.prevent="changePassword" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+            <input 
+              v-model="passwordForm.currentPassword"
+              type="password" 
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+            >
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <input 
+              v-model="passwordForm.newPassword"
+              type="password" 
+              required
+              @input="validatePassword"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+            >
+            <!-- Password Requirements -->
+            <div class="mt-2 space-y-1">
+              <div class="flex items-center text-xs">
+                <i :class="passwordValidation.length ? 'fas fa-check text-green-500' : 'fas fa-times text-red-500'" class="mr-2"></i>
+                <span :class="passwordValidation.length ? 'text-green-600' : 'text-red-600'">At least 8 characters</span>
+              </div>
+              <div class="flex items-center text-xs">
+                <i :class="passwordValidation.uppercase ? 'fas fa-check text-green-500' : 'fas fa-times text-red-500'" class="mr-2"></i>
+                <span :class="passwordValidation.uppercase ? 'text-green-600' : 'text-red-600'">Contains uppercase letter</span>
+              </div>
+              <div class="flex items-center text-xs">
+                <i :class="passwordValidation.lowercase ? 'fas fa-check text-green-500' : 'fas fa-times text-red-500'" class="mr-2"></i>
+                <span :class="passwordValidation.lowercase ? 'text-green-600' : 'text-red-600'">Contains lowercase letter</span>
+              </div>
+              <div class="flex items-center text-xs">
+                <i :class="passwordValidation.number ? 'fas fa-check text-green-500' : 'fas fa-times text-red-500'" class="mr-2"></i>
+                <span :class="passwordValidation.number ? 'text-green-600' : 'text-red-600'">Contains number</span>
+              </div>
+              <div class="flex items-center text-xs">
+                <i :class="passwordValidation.special ? 'fas fa-check text-green-500' : 'fas fa-times text-red-500'" class="mr-2"></i>
+                <span :class="passwordValidation.special ? 'text-green-600' : 'text-red-600'">Contains special character</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+            <input 
+              v-model="passwordForm.confirmPassword"
+              type="password" 
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500"
+            >
+            <div v-if="passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword" class="mt-1 text-xs text-red-600">
+              Passwords do not match
+            </div>
+          </div>
+
+          <div class="flex justify-end space-x-3 pt-4">
+            <button 
+              type="button"
+              @click="closePasswordModal"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit"
+              :disabled="isLoadingPassword || !isPasswordValid"
+              class="px-4 py-2 text-sm font-medium text-white bg-crimson-600 rounded-lg hover:bg-crimson-700 flex items-center"
+            >
+              <i v-if="isLoadingPassword" class="fas fa-spinner fa-spin mr-2"></i>
+              Change Password
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -1833,6 +1968,399 @@ export default {
         const errorMessage = error.response?.data?.detail || 'Failed to save notification settings'
         alert(`Error: ${errorMessage}`)
         throw error
+      }
+    }
+
+    // Security Settings
+    const securitySettings = reactive({
+      sessionTimeout: 60,
+      recoveryEmail: '',
+      securityQuestion1: '',
+      securityAnswer1: '',
+      accountLockoutEnabled: true,
+      failedAttemptsThreshold: 5,
+      lockoutDuration: 30
+    })
+
+    const activeSessions = ref([])
+    const loginLogs = ref([])
+    const isLoadingSessions = ref(false)
+    const isLoadingLogs = ref(false)
+    const isLoadingRecovery = ref(false)
+
+    // Password Management
+    const showPasswordModal = ref(false)
+    const isLoadingPassword = ref(false)
+    const passwordForm = reactive({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    })
+
+    const passwordValidation = reactive({
+      length: false,
+      uppercase: false,
+      lowercase: false,
+      number: false,
+      special: false
+    })
+
+    const validatePassword = () => {
+      const password = passwordForm.newPassword
+      passwordValidation.length = password.length >= 8
+      passwordValidation.uppercase = /[A-Z]/.test(password)
+      passwordValidation.lowercase = /[a-z]/.test(password)
+      passwordValidation.number = /\d/.test(password)
+      passwordValidation.special = /[!@#$%^&*(),.?":{}|<>]/.test(password)
+    }
+
+    const isPasswordValid = computed(() => {
+      return passwordForm.newPassword && 
+             passwordForm.confirmPassword && 
+             passwordForm.newPassword === passwordForm.confirmPassword &&
+             passwordValidation.length &&
+             passwordValidation.uppercase &&
+             passwordValidation.lowercase &&
+             passwordValidation.number &&
+             passwordValidation.special
+    })
+
+    const openPasswordModal = () => {
+      passwordForm.currentPassword = ''
+      passwordForm.newPassword = ''
+      passwordForm.confirmPassword = ''
+      showPasswordModal.value = true
+    }
+
+    const closePasswordModal = () => {
+      showPasswordModal.value = false
+      passwordForm.currentPassword = ''
+      passwordForm.newPassword = ''
+      passwordForm.confirmPassword = ''
+    }
+
+    const changePassword = async () => {
+      if (!isPasswordValid.value) {
+        alert('Please ensure your password meets all requirements and matches the confirmation.')
+        return
+      }
+
+      isLoadingPassword.value = true
+      try {
+        await axiosInstance.post(API_ENDPOINT + 'auth/change-password/', {
+          current_password: passwordForm.currentPassword,
+          new_password: passwordForm.newPassword
+        })
+        alert('Password changed successfully')
+        closePasswordModal()
+      } catch (error) {
+        console.error('Failed to change password:', error)
+        const errorMessage = error.response?.data?.detail || 
+                           error.response?.data?.current_password?.[0] ||
+                           error.response?.data?.new_password?.[0] ||
+                           'Failed to change password'
+        alert(`Error: ${errorMessage}`)
+      } finally {
+        isLoadingPassword.value = false
+      }
+    }
+
+    // Session Management
+    const fetchActiveSessions = async () => {
+      isLoadingSessions.value = true
+      try {
+        const response = await axiosInstance.get(API_ENDPOINT + 'auth/active-sessions/')
+        activeSessions.value = response.data || []
+      } catch (error) {
+        console.error('Failed to fetch active sessions:', error)
+        // Add mock data for development
+        activeSessions.value = [
+          {
+            id: 1,
+            device: 'Chrome/Windows',
+            ip_address: '192.168.1.10',
+            location: 'Zamboanga, Philippines',
+            last_active: new Date(),
+            status: 'Active',
+            is_current: true
+          },
+          {
+            id: 2,
+            device: 'Safari/iPhone',
+            ip_address: '192.168.1.25',
+            location: 'Zamboanga, Philippines',
+            last_active: new Date(Date.now() - 2 * 60 * 60 * 1000),
+            status: 'Idle',
+            is_current: false
+          }
+        ]
+      } finally {
+        isLoadingSessions.value = false
+      }
+    }
+
+    const getDeviceIcon = (device) => {
+      if (device.toLowerCase().includes('iphone') || device.toLowerCase().includes('mobile')) {
+        return 'fas fa-mobile-alt text-green-500'
+      } else if (device.toLowerCase().includes('chrome')) {
+        return 'fas fa-desktop text-blue-500'
+      } else if (device.toLowerCase().includes('safari')) {
+        return 'fas fa-desktop text-gray-500'
+      } else if (device.toLowerCase().includes('firefox')) {
+        return 'fas fa-desktop text-orange-500'
+      }
+      return 'fas fa-desktop text-gray-500'
+    }
+
+    const getSessionStatusClass = (status) => {
+      switch (status?.toLowerCase()) {
+        case 'active':
+          return 'bg-green-100 text-green-700'
+        case 'idle':
+          return 'bg-yellow-100 text-yellow-700'
+        case 'expired':
+          return 'bg-red-100 text-red-700'
+        default:
+          return 'bg-gray-100 text-gray-700'
+      }
+    }
+
+    const formatLastActive = (timestamp) => {
+      if (!timestamp) return 'Unknown'
+      const date = new Date(timestamp)
+      const now = new Date()
+      const diffMs = now - date
+      const diffMins = Math.floor(diffMs / 60000)
+      const diffHours = Math.floor(diffMins / 60)
+      const diffDays = Math.floor(diffHours / 24)
+
+      if (diffMins < 1) return 'Just now'
+      if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+    }
+
+    const terminateSession = async (sessionId) => {
+      if (!confirm('Are you sure you want to terminate this session?')) return
+
+      try {
+        await axiosInstance.post(API_ENDPOINT + `auth/terminate-session/${sessionId}/`)
+        await fetchActiveSessions()
+        alert('Session terminated successfully')
+      } catch (error) {
+        console.error('Failed to terminate session:', error)
+        alert('Failed to terminate session')
+      }
+    }
+
+    const logoutAllOtherSessions = async () => {
+      if (!confirm('Are you sure you want to log out of all other devices? This will end all other active sessions.')) return
+
+      isLoadingSessions.value = true
+      try {
+        await axiosInstance.post(API_ENDPOINT + 'auth/logout-all-other-sessions/')
+        await fetchActiveSessions()
+        alert('All other sessions have been terminated')
+      } catch (error) {
+        console.error('Failed to logout all other sessions:', error)
+        alert('Failed to logout all other sessions')
+      } finally {
+        isLoadingSessions.value = false
+      }
+    }
+
+    // Login Activity Logs
+    const loginLogsCurrentPage = ref(1)
+    const loginLogsPageSize = ref(10)
+
+    const fetchLoginLogs = async () => {
+      isLoadingLogs.value = true
+      try {
+        const response = await axiosInstance.get(API_ENDPOINT + 'auth/login-logs/')
+        loginLogs.value = response.data || []
+      } catch (error) {
+        console.error('Failed to fetch login logs:', error)
+        // Add mock data for development
+        loginLogs.value = [
+          {
+            id: 1,
+            timestamp: '2025-07-23T09:15:00Z',
+            ip_address: '192.168.1.10',
+            location: 'Zamboanga, Philippines',
+            device: 'Chrome/Windows',
+            status: 'Success'
+          },
+          {
+            id: 2,
+            timestamp: '2025-07-22T20:30:00Z',
+            ip_address: '192.168.1.25',
+            location: 'Zamboanga, Philippines',
+            device: 'Safari/iPhone',
+            status: 'Success'
+          },
+          {
+            id: 3,
+            timestamp: '2025-07-21T14:45:00Z',
+            ip_address: '203.177.45.12',
+            location: 'Manila, Philippines',
+            device: 'Firefox/Windows',
+            status: 'Failed'
+          },
+          {
+            id: 4,
+            timestamp: '2025-07-20T11:20:00Z',
+            ip_address: '192.168.1.10',
+            location: 'Zamboanga, Philippines',
+            device: 'Chrome/Windows',
+            status: 'Success'
+          },
+          {
+            id: 5,
+            timestamp: '2025-07-17T07:15:00Z',
+            ip_address: '192.168.1.10',
+            location: 'Zamboanga, Philippines',
+            device: 'Chrome/Windows',
+            status: 'Success'
+          }
+        ]
+      } finally {
+        isLoadingLogs.value = false
+      }
+    }
+
+    const paginatedLoginLogs = computed(() => {
+      const start = (loginLogsCurrentPage.value - 1) * loginLogsPageSize.value
+      const end = start + loginLogsPageSize.value
+      return loginLogs.value.slice(start, end)
+    })
+
+    const totalLoginLogsPages = computed(() => {
+      return Math.ceil(loginLogs.value.length / loginLogsPageSize.value)
+    })
+
+    const previousLoginLogsPage = () => {
+      if (loginLogsCurrentPage.value > 1) {
+        loginLogsCurrentPage.value--
+      }
+    }
+
+    const nextLoginLogsPage = () => {
+      if (loginLogsCurrentPage.value < totalLoginLogsPages.value) {
+        loginLogsCurrentPage.value++
+      }
+    }
+
+    const formatDateTime = (timestamp) => {
+      if (!timestamp) return 'Unknown'
+      return new Date(timestamp).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    const getLoginStatusClass = (status) => {
+      switch (status?.toLowerCase()) {
+        case 'success':
+          return 'bg-green-100 text-green-700'
+        case 'failed':
+          return 'bg-red-100 text-red-700'
+        case 'blocked':
+          return 'bg-orange-100 text-orange-700'
+        default:
+          return 'bg-gray-100 text-gray-700'
+      }
+    }
+
+    const exportLoginLogs = async () => {
+      isLoadingLogs.value = true
+      try {
+        const response = await axiosInstance.get(API_ENDPOINT + 'auth/export-login-logs/', {
+          responseType: 'blob'
+        })
+        
+        const blob = new Blob([response.data], { type: 'text/csv' })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `login-logs-${new Date().toISOString().split('T')[0]}.csv`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      } catch (error) {
+        console.error('Failed to export login logs:', error)
+        alert('Failed to export login logs')
+      } finally {
+        isLoadingLogs.value = false
+      }
+    }
+
+    // Security Settings Functions
+    const fetchSecuritySettings = async () => {
+      try {
+        const response = await axiosInstance.get(API_ENDPOINT + 'auth/security-settings/')
+        if (response.data) {
+          Object.assign(securitySettings, response.data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch security settings:', error)
+      }
+    }
+
+    const saveSecuritySettings = async () => {
+      isLoadingRecovery.value = true
+      try {
+        await axiosInstance.put(API_ENDPOINT + 'auth/security-settings/', securitySettings)
+        alert('Security settings saved successfully')
+      } catch (error) {
+        console.error('Failed to save security settings:', error)
+        alert('Failed to save security settings')
+      } finally {
+        isLoadingRecovery.value = false
+      }
+    }
+
+    const updateRecoveryEmail = async () => {
+      if (!securitySettings.recoveryEmail) {
+        alert('Please enter a recovery email address')
+        return
+      }
+
+      isLoadingRecovery.value = true
+      try {
+        await axiosInstance.put(API_ENDPOINT + 'auth/recovery-email/', {
+          recovery_email: securitySettings.recoveryEmail
+        })
+        alert('Recovery email updated successfully')
+      } catch (error) {
+        console.error('Failed to update recovery email:', error)
+        alert('Failed to update recovery email')
+      } finally {
+        isLoadingRecovery.value = false
+      }
+    }
+
+    const saveSecurityQuestions = async () => {
+      if (!securitySettings.securityQuestion1 || !securitySettings.securityAnswer1) {
+        alert('Please select a security question and provide an answer')
+        return
+      }
+
+      isLoadingRecovery.value = true
+      try {
+        await axiosInstance.put(API_ENDPOINT + 'auth/security-questions/', {
+          question1: securitySettings.securityQuestion1,
+          answer1: securitySettings.securityAnswer1
+        })
+        alert('Security questions saved successfully')
+      } catch (error) {
+        console.error('Failed to save security questions:', error)
+        alert('Failed to save security questions')
+      } finally {
+        isLoadingRecovery.value = false
       }
     }
 
@@ -2609,6 +3137,9 @@ export default {
       fetchUsers()
       fetchFaqs()
       fetchAnnouncements()
+      fetchSecuritySettings()
+      fetchActiveSessions()
+      fetchLoginLogs()
     })
 
     return {
@@ -2704,7 +3235,43 @@ export default {
       // Notification settings
       notificationSettings,
       fetchNotificationSettings,
-      saveNotificationSettings
+      saveNotificationSettings,
+      // Security settings
+      securitySettings,
+      activeSessions,
+      loginLogs,
+      isLoadingSessions,
+      isLoadingLogs,
+      isLoadingRecovery,
+      showPasswordModal,
+      isLoadingPassword,
+      passwordForm,
+      passwordValidation,
+      isPasswordValid,
+      openPasswordModal,
+      closePasswordModal,
+      changePassword,
+      validatePassword,
+      fetchActiveSessions,
+      getDeviceIcon,
+      getSessionStatusClass,
+      formatLastActive,
+      terminateSession,
+      logoutAllOtherSessions,
+      loginLogsCurrentPage,
+      loginLogsPageSize,
+      fetchLoginLogs,
+      paginatedLoginLogs,
+      totalLoginLogsPages,
+      previousLoginLogsPage,
+      nextLoginLogsPage,
+      formatDateTime,
+      getLoginStatusClass,
+      exportLoginLogs,
+      fetchSecuritySettings,
+      saveSecuritySettings,
+      updateRecoveryEmail,
+      saveSecurityQuestions
     }
   }
 }
