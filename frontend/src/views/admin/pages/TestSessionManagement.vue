@@ -1266,16 +1266,15 @@ export default {
           time_slot: room.time_slot || 'morning'
         }));
         
-        // We'll no longer call an API that doesn't exist
-        // Instead, we'll load any existing assignments when they're needed
-        this.fetchRoomAssignmentCounts();
+        // Fetch assignment counts and wait for completion
+        await this.fetchRoomAssignmentCounts();
         
         // Update pagination total using the method to ensure consistency
         this.updateRoomsPagination();
         
-        this.loading.rooms = false;
       } catch (error) {
         console.error("Error fetching test rooms:", error);
+      } finally {
         this.loading.rooms = false;
       }
     },
@@ -1764,6 +1763,9 @@ export default {
         // Update pagination when adding new rooms
         this.updateRoomsPagination();
         
+        // Refresh assignment counts to ensure accuracy
+        await this.fetchRoomAssignmentCounts();
+        
         // Reset form
         this.newRoom = {
           test_center: '',
@@ -1963,6 +1965,18 @@ export default {
       if (this.pagination.rooms.currentPage > totalPages && totalPages > 0) {
         this.pagination.rooms.currentPage = 1;
       }
+    },
+
+    clearRoomFilters() {
+      this.roomFilters.centerId = '';
+      this.roomFilters.timeSlot = '';
+      // Update pagination after clearing filters
+      this.updateRoomsPagination();
+    },
+
+    getCenterName(centerId) {
+      const center = this.testCenters.find(c => c.id.toString() === centerId.toString());
+      return center ? center.name : 'Unknown Center';
     },
     
     cancelCenterModal() {
