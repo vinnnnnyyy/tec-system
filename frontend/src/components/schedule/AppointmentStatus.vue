@@ -97,214 +97,335 @@
           
           <!-- Appointment Details Grid - Improved responsiveness -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">          <!-- Schedule Information Card -->
-          <div class="bg-white rounded-xl p-5 shadow-md border border-gray-100 hover:border-crimson-200 transition-colors lg:col-span-2">
-            <div class="flex items-center mb-3">
+          <div class="bg-white rounded-xl p-6 shadow-md border border-gray-100 hover:border-crimson-200 transition-colors lg:col-span-2">
+            <div class="flex items-center mb-4">
               <div class="w-10 h-10 bg-crimson-100 rounded-full flex items-center justify-center">
                 <i class="fas fa-calendar-alt text-lg text-crimson-600"></i>
               </div>
-              <h3 class="ml-3 font-semibold text-base text-gray-900">Schedule Information</h3>
+              <h3 class="ml-3 font-semibold text-lg text-gray-900">Schedule Information</h3>
             </div>
             
             <!-- For 'submitted' and 'waiting_for_submission' status, show both requested and official schedules side by side -->
-            <div v-if="appointment.status === 'submitted' || appointment.status === 'waiting_for_submission'" class="space-y-4">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div v-if="appointment.status === 'submitted' || appointment.status === 'waiting_for_submission'" class="space-y-6">
+              <!-- Schedule Comparison Section -->
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Requested Schedule Card -->
-                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <h4 class="text-sm font-semibold text-crimson-600 mb-3 flex items-center">
+                <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-5 border border-gray-200 shadow-sm">
+                  <h4 class="text-base font-semibold text-crimson-600 mb-4 flex items-center">
                     <i class="fas fa-user-clock mr-2"></i>
-                    Your Requested Schedule
+                    Registration Schedule
                   </h4>
-                  <div class="space-y-2">
+                  <div class="space-y-3">
                     <div class="flex items-center text-gray-700">
-                      <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                        <i class="fas fa-calendar-day text-xs text-crimson-500"></i>
+                      <div class="w-8 h-8 bg-crimson-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-calendar-day text-sm text-crimson-600"></i>
                       </div>
                       <div>
-                        <p class="text-xs text-gray-500">Preferred Date</p>
-                        <p class="font-medium text-sm">{{ formatDate(appointment.preferred_date) }}</p>
+                        <p class="text-xs text-gray-500 font-medium">Preferred Date</p>
+                        <p class="font-semibold text-sm text-gray-800">{{ formatDate(appointment.preferred_date) }}</p>
                       </div>
                     </div>
                     <div class="flex items-center text-gray-700">
-                      <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                        <i class="fas fa-clock text-xs text-crimson-500"></i>
+                      <div class="w-8 h-8 bg-crimson-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-clock text-sm text-crimson-600"></i>
                       </div>
                       <div>
-                        <p class="text-xs text-gray-500">Preferred Time</p>
-                        <p class="font-medium text-sm">{{ formatTimeSlot(appointment.time_slot) }}</p>
+                        <p class="text-xs text-gray-500 font-medium">Preferred Time</p>
+                        <p class="font-semibold text-sm text-gray-800">{{ formatTimeSlot(appointment.time_slot) }}</p>
                       </div>
                     </div>
                   </div>
                 </div>
                 
                 <!-- Official Schedule Card -->
-                <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <h4 class="text-sm font-semibold text-blue-600 mb-3 flex items-center">
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-5 border border-blue-200 shadow-sm">
+                  <h4 class="text-base font-semibold text-blue-600 mb-4 flex items-center">
                     <i class="fas fa-calendar-check mr-2"></i>
                     Official Exam Schedule
                   </h4>
-                  <div v-if="loadingTestSessions" class="flex items-center justify-center py-4">
-                    <div class="animate-spin rounded-full h-6 w-6 border-2 border-blue-200 border-t-blue-600"></div>
-                    <span class="ml-2 text-sm text-blue-600">Loading...</span>
+                  <div v-if="loadingTestSessions" class="flex items-center justify-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-2 border-blue-200 border-t-blue-600"></div>
+                    <span class="ml-3 text-sm text-blue-600 font-medium">Loading...</span>
                   </div>
-                  <div v-else-if="getMatchingTestSession()" class="space-y-2">
+                  <div v-else-if="getMatchingTestSession()" class="space-y-3">
                     <div class="flex items-center text-gray-700">
-                      <div class="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                        <i class="fas fa-calendar-day text-xs text-blue-600"></i>
+                      <div class="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-calendar-day text-sm text-blue-600"></i>
                       </div>
                       <div>
-                        <p class="text-xs text-gray-500">Exam Date</p>
-                        <p class="font-medium text-sm">{{ formatDate(getMatchingTestSession().exam_date) }}</p>
+                        <p class="text-xs text-gray-500 font-medium">Exam Date</p>
+                        <p class="font-semibold text-sm text-gray-800">{{ formatDate(getTestSessionInfo().exam_date) }}</p>
                       </div>
                     </div>
                     <div class="flex items-center text-gray-700">
-                      <div class="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                        <i class="fas fa-list-alt text-xs text-blue-600"></i>
+                      <div class="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-list-alt text-sm text-blue-600"></i>
                       </div>
                       <div>
-                        <p class="text-xs text-gray-500">Exam Type</p>
-                        <p class="font-medium text-sm">{{ getMatchingTestSession().exam_type }}</p>
+                        <p class="text-xs text-gray-500 font-medium">Exam Type</p>
+                        <p class="font-semibold text-sm text-gray-800">{{ getMatchingTestSession().exam_type }} Exam Session</p>
                       </div>
                     </div>
                     <div class="flex items-center text-gray-700">
-                      <div class="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                        <i class="fas fa-info-circle text-xs text-blue-600"></i>
+                      <div class="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-calendar-plus text-sm text-blue-600"></i>
                       </div>
                       <div>
-                        <p class="text-xs text-gray-500">Status</p>
-                        <p class="font-medium text-sm">{{ getMatchingTestSession().status }}</p>
+                        <p class="text-xs text-gray-500 font-medium">Registration Period</p>
+                        <p class="font-semibold text-sm text-gray-800">{{ formatDate(getTestSessionInfo().registration_start_date) }} - {{ formatDate(getTestSessionInfo().registration_end_date) }}</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center text-gray-700">
+                      <div class="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-info-circle text-sm text-blue-600"></i>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500 font-medium">Session Status</p>
+                        <span :class="[
+                          'px-3 py-1 text-xs font-semibold rounded-full',
+                          getTestSessionInfo().status === 'ONGOING' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                        ]">
+                          {{ getTestSessionInfo().status }}
+                        </span>
+                      </div>
+                    </div>
+                    <div v-if="getMatchingTestSession().description" class="flex items-start text-gray-700">
+                      <div class="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
+                        <i class="fas fa-file-alt text-sm text-blue-600"></i>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500 font-medium">Description</p>
+                        <p class="text-sm text-gray-600">{{ getMatchingTestSession().description }}</p>
                       </div>
                     </div>
                   </div>
-                  <div v-else class="text-center py-4">
-                    <i class="fas fa-calendar-times text-gray-400 text-lg mb-2"></i>
-                    <p class="text-sm text-gray-500">No official schedule available yet</p>
+                  <div v-else class="text-center py-8">
+                    <i class="fas fa-calendar-times text-gray-400 text-2xl mb-2"></i>
+                    <p class="text-sm text-gray-500 font-medium">No official schedule available yet</p>
                   </div>
                 </div>
               </div>
             </div>
             
             <!-- For other statuses, show the original single schedule layout -->
-            <div v-else class="space-y-3">
-              <!-- Preferred Date Section -->
-              <div class="py-2 border-b border-gray-100">
-                <h4 class="text-sm font-semibold text-crimson-600 mb-2">Your Requested Schedule</h4>
-                <div class="flex items-center text-gray-700">
-                  <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                    <i class="fas fa-calendar-day text-sm text-crimson-500"></i>
+            <div v-else class="space-y-4">
+              <!-- Requested Schedule Section -->
+              <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h4 class="text-base font-semibold text-crimson-600 mb-3 flex items-center">
+                  <i class="fas fa-user-clock mr-2"></i>
+                  Your Requested Schedule
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="flex items-center text-gray-700">
+                    <div class="w-8 h-8 bg-crimson-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                      <i class="fas fa-calendar-day text-sm text-crimson-600"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-500 font-medium">Preferred Date</p>
+                      <p class="font-semibold text-sm text-gray-800">{{ formatDate(appointment.preferred_date) }}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p class="text-xs text-gray-500">Preferred Date</p>
-                    <p class="font-medium text-sm">{{ formatDate(appointment.preferred_date) }}</p>
-                  </div>
-                </div>
-                <div class="flex items-center text-gray-700 mt-2">
-                  <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                    <i class="fas fa-clock text-sm text-crimson-500"></i>
-                  </div>
-                  <div>
-                    <p class="text-xs text-gray-500">Preferred Time Slot</p>
-                    <p class="font-medium text-sm">{{ formatTimeSlot(appointment.time_slot) }}</p>
+                  <div class="flex items-center text-gray-700">
+                    <div class="w-8 h-8 bg-crimson-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                      <i class="fas fa-clock text-sm text-crimson-600"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-500 font-medium">Preferred Time Slot</p>
+                      <p class="font-semibold text-sm text-gray-800">{{ formatTimeSlot(appointment.time_slot) }}</p>
+                    </div>
                   </div>
                 </div>
               </div>
               
-              <!-- Assigned Date Section -->
-              <div class="py-2">
-                <h4 class="text-sm font-semibold text-crimson-600 mb-2">Official Test Schedule</h4>
-                <div class="flex items-center text-gray-700">
-                  <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                    <i class="fas fa-calendar-check text-sm text-crimson-500"></i>
+              <!-- Official Test Schedule Section -->
+              <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <h4 class="text-base font-semibold text-blue-600 mb-3 flex items-center">
+                  <i class="fas fa-calendar-check mr-2"></i>
+                  Official Test Schedule
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="flex items-center text-gray-700">
+                    <div class="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                      <i class="fas fa-calendar-check text-sm text-blue-600"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-500 font-medium">Assigned Test Date</p>
+                      <p class="font-semibold text-sm text-gray-800">{{ formatDate(appointment.test_date || appointment.preferred_date) }}</p>
+                      <p 
+                        v-if="appointment.test_date && appointment.test_date !== appointment.preferred_date" 
+                        class="text-xs text-orange-600 mt-1 flex items-center"
+                      >
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Date changed from your original request
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p class="text-xs text-gray-500">Assigned Test Date</p>
-                    <p class="font-medium text-sm">{{ formatDate(appointment.test_date || appointment.preferred_date) }}</p>
-                    <p 
-                      v-if="appointment.test_date && appointment.test_date !== appointment.preferred_date" 
-                      class="text-xs text-orange-500 mt-1"
-                    >
-                      <i class="fas fa-info-circle mr-1"></i>
-                      Your test date has been scheduled differently from your originally requested date.
-                    </p>
-                  </div>
-                </div>
-                <div class="flex items-center text-gray-700 mt-2">
-                  <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                    <i class="fas fa-clock text-sm text-crimson-500"></i>
-                  </div>
-                  <div>
-                    <p class="text-xs text-gray-500">Assigned Time Slot</p>
-                    <p class="font-medium text-sm">{{ formatTimeSlot(appointment.assigned_test_time_slot || appointment.time_slot) }}</p>
-                    <p 
-                      v-if="appointment.assigned_test_time_slot && appointment.assigned_test_time_slot !== appointment.time_slot" 
-                      class="text-xs text-orange-500 mt-1"
-                    >
-                      <i class="fas fa-info-circle mr-1"></i>
-                      Your test time has been scheduled differently from your originally requested time.
-                    </p>
+                  <div class="flex items-center text-gray-700">
+                    <div class="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                      <i class="fas fa-clock text-sm text-blue-600"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-500 font-medium">Assigned Time Slot</p>
+                      <p class="font-semibold text-sm text-gray-800">{{ formatTimeSlot(appointment.assigned_test_time_slot || appointment.time_slot) }}</p>
+                      <p 
+                        v-if="appointment.assigned_test_time_slot && appointment.assigned_test_time_slot !== appointment.time_slot" 
+                        class="text-xs text-orange-600 mt-1 flex items-center"
+                      >
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Time changed from your original request
+                      </p>
+                    </div>
                   </div>
                 </div>
                 
                 <!-- Test Center and Room Info (shown for approved status) -->
-                <div v-if="appointment.status === 'approved' && (appointment.test_center || appointment.room_number)" class="space-y-2 mt-3 bg-green-50 p-3 rounded-lg">
-                  <h5 class="text-sm font-semibold text-green-700">Your Test Location</h5>
-                  
-                  <div v-if="appointment.test_center" class="flex items-center text-gray-700">
-                    <div class="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                      <i class="fas fa-building text-sm text-green-600"></i>
+                <div v-if="appointment.status === 'approved' && (appointment.test_center || appointment.room_number)" class="mt-4 pt-4 border-t border-blue-200">
+                  <h5 class="text-sm font-semibold text-green-700 flex items-center mb-3">
+                    <i class="fas fa-map-marker-alt mr-2"></i>
+                    Your Test Location Details
+                  </h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div v-if="appointment.test_center" class="flex items-center text-gray-700">
+                      <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-building text-sm text-green-600"></i>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500 font-medium">Test Center</p>
+                        <p class="font-semibold text-sm text-gray-800">
+                          {{ appointment.test_center }}
+                          <span v-if="appointment.test_center_code && !String(appointment.test_center).includes(appointment.test_center_code)" 
+                                class="text-gray-500 text-xs ml-1">
+                            (ID: {{ appointment.test_center_code }})
+                          </span>
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p class="text-xs text-gray-500">Test Center</p>
-                      <p class="font-medium text-sm">
-                        {{ appointment.test_center }}
-                        <span v-if="appointment.test_center_code && !String(appointment.test_center).includes(appointment.test_center_code)" 
-                              class="text-gray-500 text-xs ml-1">
-                          (ID: {{ appointment.test_center_code }})
-                        </span>
-                      </p>
+                    
+                    <div v-if="appointment.room_number || appointment.room_code" class="flex items-center text-gray-700">
+                      <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-door-open text-sm text-green-600"></i>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500 font-medium">Test Room</p>
+                        <p class="font-semibold text-sm text-gray-800">
+                          {{ appointment.room_number }}
+                          <span v-if="appointment.room_code && !String(appointment.room_number).includes(appointment.room_code)" 
+                                class="text-gray-500 text-xs ml-1">
+                            (Code: {{ appointment.room_code }})
+                          </span>
+                        </p>
+                      </div>
                     </div>
                   </div>
                   
-                  <div v-if="appointment.room_number || appointment.room_code" class="flex items-center text-gray-700">
-                    <div class="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                      <i class="fas fa-door-open text-sm text-green-600"></i>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-500">Test Room</p>
-                      <p class="font-medium text-sm">
-                        {{ appointment.room_number }}
-                        <span v-if="appointment.room_code && !String(appointment.room_number).includes(appointment.room_code)" 
-                              class="text-gray-500 text-xs ml-1">
-                          (Code: {{ appointment.room_code }})
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div v-if="appointment.test_center_address" class="flex items-center text-gray-700">
-                    <div class="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                  <div v-if="appointment.test_center_address" class="flex items-center text-gray-700 mt-3">
+                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
                       <i class="fas fa-map-marker-alt text-sm text-green-600"></i>
                     </div>
                     <div>
-                      <p class="text-xs text-gray-500">Address</p>
-                      <p class="font-medium text-sm">{{ appointment.test_center_address }}</p>
+                      <p class="text-xs text-gray-500 font-medium">Address</p>
+                      <p class="font-semibold text-sm text-gray-800">{{ appointment.test_center_address }}</p>
                     </div>
+                  </div>
+                  
+                  <!-- Additional helpful information -->
+                  <div class="mt-4 pt-3 border-t border-green-200 bg-green-50 rounded-lg p-3">
+                    <p class="text-sm text-green-700 flex items-center font-medium">
+                      <i class="fas fa-info-circle mr-2"></i>
+                      Please arrive at least 30 minutes before your scheduled test time.
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
             
-            <!-- Default Venue Information (shown if no specific test center is assigned) -->
-            <div v-if="!(appointment.status === 'approved' && appointment.test_center)" class="flex items-center text-gray-700 mt-4 pt-3 border-t border-gray-100">
-              <div class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                <i class="fas fa-map-marker-alt text-sm text-crimson-500"></i>
+            <!-- Venue Information Section (for submission of requirements and general testing location) -->
+            <div class="mt-6 pt-4 border-t border-gray-200">
+              <h4 class="text-base font-semibold text-crimson-600 mb-4 flex items-center">
+                <i class="fas fa-map-marker-alt mr-2"></i>
+                Venue Information
+              </h4>
+              
+              <!-- Test Center Information (for approved appointments with assigned test center) -->
+              <div v-if="appointment.status === 'approved' && appointment.test_center" class="mb-4">
+                <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h5 class="text-sm font-semibold text-blue-600 mb-3 flex items-center">
+                    <i class="fas fa-building mr-2"></i>
+                    Your Assigned Test Center
+                  </h5>
+                  <div class="space-y-3">
+                    <div class="flex items-center text-gray-700">
+                      <div class="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-building text-sm text-blue-600"></i>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500 font-medium">Test Center</p>
+                        <p class="font-semibold text-sm text-gray-800">{{ getTestCenterName() }}</p>
+                        <span v-if="appointment.test_center_code" class="text-xs text-gray-500">
+                          ID: {{ appointment.test_center_code }}
+                        </span>
+                      </div>
+                    </div>
+                    <div v-if="appointment.test_center_address" class="flex items-center text-gray-700">
+                      <div class="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <i class="fas fa-map-marker-alt text-sm text-blue-600"></i>
+                      </div>
+                      <div>
+                        <p class="text-xs text-gray-500 font-medium">Address</p>
+                        <p class="font-semibold text-sm text-gray-800">{{ appointment.test_center_address }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p class="text-xs text-gray-500">Venue</p>
-                <p class="font-medium text-sm">Testing and Evaluation Center</p>
-                <p class="text-xs text-gray-500">Campus B, Old high school building</p>
+              
+              <!-- Default Venue Information (for all other cases including submission of requirements) -->
+              <div v-else class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h5 class="text-sm font-semibold text-gray-600 mb-3 flex items-center">
+                  <i class="fas fa-map-marker-alt mr-2"></i>
+                  <span v-if="appointment.status === 'waiting_for_submission'">
+                    Venue for Submission of Requirements
+                  </span>
+                  <span v-else>
+                    Default Test Venue
+                  </span>
+                </h5>
+                <div class="flex items-center text-gray-700">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                    <i class="fas fa-building text-sm text-gray-600"></i>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500 font-medium">Venue</p>
+                    <p class="font-semibold text-sm text-gray-800">Testing and Evaluation Center</p>
+                    <p class="text-xs text-gray-500">Campus B, Old high school building</p>
+                  </div>
+                </div>
+                
+                <!-- Additional information for submission status -->
+                <div v-if="appointment.status === 'waiting_for_submission'" class="mt-4 pt-3 border-t border-gray-200 bg-orange-50 rounded-lg p-3">
+                  <p class="text-sm text-orange-700 flex items-center font-medium">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Please bring all required documents to this location for submission.
+                  </p>
+                </div>
+                
+                <!-- General information for other statuses -->
+                <div v-else-if="!appointment.test_center" class="mt-4 pt-3 border-t border-gray-200 bg-blue-50 rounded-lg p-3">
+                  <p class="text-sm text-blue-700 flex items-center font-medium">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <span v-if="appointment.status === 'pending' || appointment.status === 'submitted'">
+                      Specific test center will be assigned once your appointment is approved.
+                    </span>
+                    <span v-else>
+                      This is the default testing location.
+                    </span>
+                  </p>
+                </div>
               </div>
             </div>
           </div>
+          
+          <!-- Test Center and Session Selection Information -->
           </div>
           
           <!-- Action Buttons - More compact and responsive -->
@@ -503,6 +624,29 @@ const fetchProgramDetails = async (programId) => {
 
 const getEffectiveTimeSlot = () => {
   return appointment.value.assigned_test_time_slot || appointment.value.time_slot
+}
+
+const getTestCenterName = () => {
+  return appointment.value.test_center_name || 
+         appointment.value.test_center || 
+         'Not assigned yet'
+}
+
+const getTestSessionInfo = () => {
+  // First try to get from the appointment's test session data
+  if (appointment.value.test_session_name || appointment.value.test_session_exam_date) {
+    return {
+      exam_type: appointment.value.test_session_name || 'Unknown',
+      exam_date: appointment.value.test_session_exam_date || appointment.value.test_date,
+      registration_start_date: appointment.value.test_session_registration_start,
+      registration_end_date: appointment.value.test_session_registration_end,
+      description: appointment.value.test_session_description,
+      status: 'ONGOING' // Default status
+    }
+  }
+  
+  // Fall back to matching test session
+  return getMatchingTestSession()
 }
 
 const fetchTestDetailsForAppointment = async (appointmentId) => {
@@ -836,7 +980,20 @@ const handleReschedule = () => {
   
   emit('reschedule', {
     appointmentId: appointment.value.id,
-    programId: programId
+    programId: programId,
+    originalAppointment: {
+      id: appointment.value.id,
+      full_name: appointment.value.full_name,
+      contact_number: appointment.value.contact_number,
+      email: appointment.value.email,
+      school_name: appointment.value.school_name,
+      preferred_date: appointment.value.preferred_date,
+      time_slot: appointment.value.time_slot,
+      test_center: appointment.value.test_center,
+      test_center_name: appointment.value.test_center_name,
+      test_session: appointment.value.test_session,
+      status: appointment.value.status
+    }
   })
 }
 
