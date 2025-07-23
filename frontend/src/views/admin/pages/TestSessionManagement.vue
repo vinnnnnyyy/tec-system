@@ -25,13 +25,6 @@
           <h2 class="text-lg font-semibold text-gray-900 mb-2">Pending Assignments</h2>
           <div class="text-3xl font-bold text-crimson-600 mb-2">{{ stats.pendingAssignments }}</div>
           <p class="text-sm text-gray-500">Applications waiting for assignment</p>
-          <button 
-            @click="showAutoAssignConfirmation"
-            class="mt-3 w-full px-4 py-2 bg-crimson-600 text-white rounded-lg hover:bg-crimson-700 transition"
-            :disabled="stats.pendingAssignments === 0"
-          >
-            <i class="fas fa-magic mr-2"></i> Auto-Assign
-          </button>
         </div>
       </div>
 
@@ -475,145 +468,6 @@
         </div>
       </div>
 
-      <!-- Auto-Assign Confirmation Modal -->
-      <div v-if="showAutoAssignConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
-          <div class="text-center">
-            <i class="fas fa-magic text-4xl text-purple-500 mb-4"></i>
-            <h3 class="text-lg font-semibold mb-2">Auto-Assign Students</h3>
-            <p class="text-gray-600 mb-6">
-              Are you sure you want to proceed with auto-assigning {{ stats.pendingAssignments }} student(s) to test rooms?
-              <span class="block mt-2 text-sm text-gray-500">
-                This will assign rooms to all eligible students who are waiting for placement.
-              </span>
-            </p>
-            
-            <div class="flex justify-center space-x-3">
-              <button 
-                @click="showAutoAssignConfirmModal = false" 
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button 
-                @click="openAutoAssignSettings" 
-                class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 flex items-center justify-center"
-              >
-                <i class="fas fa-cog mr-2"></i>
-                Configure Settings
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Auto-Assign Modal -->
-      <div v-if="showAutoAssignModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
-        <div class="bg-white rounded-lg max-w-xl w-full p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">
-            Auto-Assign Test Details
-          </h3>
-          <p class="text-gray-600 mb-6">
-            The system will automatically assign test details to all verified applications that don't already have test details assigned.
-          </p>
-          
-          <div class="space-y-6">
-            <!-- Test Session Selection -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Select Test Session</label>
-              <select 
-                v-model="autoAssign.testSessionId" 
-                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-crimson-500 focus:border-crimson-500"
-                @change="console.log('Selected test session ID:', autoAssign.testSessionId)"
-              >
-                <option value="">Select a test session</option>
-                <option 
-                  v-for="session in testSessions.filter(s => s.status !== 'COMPLETED' && s.status !== 'CANCELLED' && s.status !== 'SCHEDULED')" 
-                  :key="session.id" 
-                  :value="session.id"
-                >
-                  {{ session.exam_type }} - {{ formatDate(session.exam_date) }} ({{ session.status }})
-                </option>
-              </select>
-            </div>
-            
-            <!-- Additional Options -->
-            <div>
-              <h4 class="text-sm font-medium text-gray-700 mb-2">Assignment Options</h4>
-              
-              <div class="space-y-3">
-                <div class="flex items-center">
-                  <input 
-                    type="checkbox" 
-                    id="balanceRooms" 
-                    v-model="autoAssign.balanceRooms"
-                    class="h-4 w-4 text-crimson-600 focus:ring-crimson-500 border-gray-300 rounded"
-                  >
-                  <label for="balanceRooms" class="ml-2 block text-sm text-gray-700">
-                    Balance students across available rooms
-                  </label>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Time Slot Options -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Time Slot Assignment</label>
-              <div class="flex flex-col space-y-2">
-                <label class="inline-flex items-center">
-                  <input 
-                    type="radio" 
-                    v-model="autoAssign.timeSlot" 
-                    value="morning"
-                    class="h-4 w-4 text-crimson-600 focus:ring-crimson-500 border-gray-300"
-                  >
-                  <span class="ml-2 text-sm text-gray-700">Morning sessions only (8:00 AM - 12:00 PM)</span>
-                </label>
-                <label class="inline-flex items-center">
-                  <input 
-                    type="radio" 
-                    v-model="autoAssign.timeSlot" 
-                    value="afternoon"
-                    class="h-4 w-4 text-crimson-600 focus:ring-crimson-500 border-gray-300"
-                  >
-                  <span class="ml-2 text-sm text-gray-700">Afternoon sessions only (1:00 PM - 5:00 PM)</span>
-                </label>
-                <label class="inline-flex items-center">
-                  <input 
-                    type="radio" 
-                    v-model="autoAssign.timeSlot" 
-                    value="both"
-                    class="h-4 w-4 text-crimson-600 focus:ring-crimson-500 border-gray-300"
-                  >
-                  <span class="ml-2 text-sm text-gray-700">Use both morning and afternoon sessions</span>
-                </label>
-                <div class="mt-2 text-xs text-gray-500 bg-yellow-50 p-2 rounded-md border border-yellow-100" v-if="autoAssign.timeSlot === 'both'">
-                  <i class="fas fa-info-circle mr-1"></i> Students will be allocated between morning and afternoon rooms, balancing capacity across all available rooms.
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="mt-6 flex justify-end space-x-3">
-            <button 
-              @click="showAutoAssignModal = false" 
-              class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button 
-              @click="runAutoAssign" 
-              class="px-4 py-2 border border-transparent rounded-md shadow-sm text-white bg-crimson-600 hover:bg-crimson-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-crimson-500"
-              :disabled="!autoAssign.testSessionId || loading.autoAssign"
-            >
-              <i v-if="loading.autoAssign" class="fas fa-spinner fa-spin mr-2"></i>
-              <i v-else class="fas fa-magic mr-2"></i>
-              Run Auto-Assignment
-            </button>
-          </div>
-        </div>
-      </div>
-
       <!-- Create Test Session Modal -->
       <div v-if="showCreateSessionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
         <div class="bg-white rounded-lg max-w-xl w-full p-6">
@@ -972,7 +826,6 @@ export default {
         sessions: false,
         centers: false,
         rooms: false,
-        autoAssign: false,
         createSession: false,
         createCenter: false,
         createRoom: false,
@@ -984,7 +837,6 @@ export default {
         availableCenters: 0,
         pendingAssignments: 0
       },
-      showAutoAssignModal: false,
       showCreateSessionModal: false,
       showCreateCenterModal: false,
       showCreateRoomModal: false,
@@ -996,14 +848,6 @@ export default {
         loading: false,
         data: [],
         error: null
-      },
-      autoAssign: {
-        testSessionId: '',
-        groupBySchool: true,
-        balanceRooms: true,
-        timeSlot: 'both',
-        limit: 100,
-        ignorePreferences: true
       },
       roomFilters: {
         centerId: '',
@@ -1062,7 +906,6 @@ export default {
       },
       showApproveModal: false,
       showClaimModal: false,
-      showAutoAssignConfirmModal: false,
       selectedAppointment: null
     };
   },
@@ -1266,16 +1109,15 @@ export default {
           time_slot: room.time_slot || 'morning'
         }));
         
-        // We'll no longer call an API that doesn't exist
-        // Instead, we'll load any existing assignments when they're needed
-        this.fetchRoomAssignmentCounts();
+        // Fetch assignment counts and wait for completion
+        await this.fetchRoomAssignmentCounts();
         
         // Update pagination total using the method to ensure consistency
         this.updateRoomsPagination();
         
-        this.loading.rooms = false;
       } catch (error) {
         console.error("Error fetching test rooms:", error);
+      } finally {
         this.loading.rooms = false;
       }
     },
@@ -1448,14 +1290,6 @@ export default {
         item: session
       };
       this.showConfirmationModal = true;
-    },
-    
-    showAutoAssignConfirmation() {
-      if (this.stats.pendingAssignments === 0) {
-        this.showToast('No pending assignments to auto-assign', 'info');
-        return;
-      }
-      this.showAutoAssignConfirmModal = true;
     },
     
     async deleteSession(session) {
@@ -1764,6 +1598,9 @@ export default {
         // Update pagination when adding new rooms
         this.updateRoomsPagination();
         
+        // Refresh assignment counts to ensure accuracy
+        await this.fetchRoomAssignmentCounts();
+        
         // Reset form
         this.newRoom = {
           test_center: '',
@@ -1790,159 +1627,6 @@ export default {
       }
     },
     
-    /**
-     * Runs the auto-assign process for students
-     */
-    async runAutoAssign() {
-      if (!this.autoAssign.testSessionId) {
-        this.showToast('Invalid test session ID', 'error');
-        return;
-      }
-
-      this.loading.autoAssign = true;
-      
-      try {
-        // Check if rooms with selected time slot exist and have capacity
-        const timeSlotToCheck = this.autoAssign.timeSlot === 'both' ? null : this.autoAssign.timeSlot;
-        await this.checkRoomAvailability(timeSlotToCheck);
-
-        // Prepare request data for auto-assignment
-        const requestData = {
-          session_id: this.autoAssign.testSessionId,
-          test_session_id: this.autoAssign.testSessionId,
-          group_by_school: this.autoAssign.groupBySchool,
-          balance_rooms: this.autoAssign.balanceRooms,
-          time_slot: this.autoAssign.timeSlot,
-          respect_capacity: true,
-          ignore_student_preferences: this.autoAssign.ignorePreferences,
-          force_time_slot: this.autoAssign.timeSlot !== 'both'
-        };
-
-        console.log('Auto-assign request:', requestData);
-        
-        // Try the main auto-assign endpoint
-        const response = await axiosInstance.post('/api/admin/auto-assign-test-details/', requestData);
-        
-        if (response.data.success) {
-          console.log('Auto-assignment successful:', response.data);
-          const assignedCount = response.data.assigned_count || response.data.assignments_made || 0;
-          
-          if (assignedCount > 0) {
-            this.showToast(`Successfully assigned ${assignedCount} students to test rooms`, 'success');
-            
-            // Update room capacities based on the assignment results
-            if (response.data.room_assignments) {
-              await this.updateRoomCapacities(response.data.room_assignments);
-            }
-            
-            // Refresh data and close modal
-            await this.fetchRoomAssignmentCounts();  
-            await this.fetchPendingAssignments();
-            this.showAutoAssignModal = false;
-          } else {
-            this.showToast('No students were assigned. Check if there are available rooms and pending applications.', 'warning');
-          }
-        } else {
-          const message = response.data.message || 'Auto-assignment completed but no students were assigned';
-          this.showToast(message, 'warning');
-        }
-        
-      } catch (error) {
-        console.error('Auto-assignment error:', error);
-        
-        const errorMessage = error?.response?.data?.message || 
-                             error?.response?.data?.error ||
-                             error?.message ||
-                             'Error occurred during auto-assignment';
-                            
-        this.showToast(errorMessage, 'error');
-      } finally {
-        this.loading.autoAssign = false;
-      }
-    },
-    
-    /**
-     * Checks if rooms with the specified time slot exist and have capacity
-     * @param {String|null} timeSlot - 'morning', 'afternoon', or null for both
-     */
-    async checkRoomAvailability(timeSlot) {
-      try {
-        // First ensure we have fresh room data
-        if (this.testRooms.length === 0) {
-          await this.fetchTestRooms();
-        }
-        
-        // Filter rooms by time slot if specified
-        const availableRooms = this.testRooms.filter(room => {
-          // Only include active rooms
-          if (!room.is_active) return false;
-          
-          // Filter by time slot if specified
-          if (timeSlot && room.time_slot !== timeSlot) return false;
-          
-          // Check if the room has capacity
-          return (room.available_capacity || 0) > 0;
-        });
-        
-        console.log(`Available rooms for time slot ${timeSlot || 'both'}:`, availableRooms);
-        
-        // If no rooms available for the selected time slot, show warning
-        if (availableRooms.length === 0) {
-          const slotDisplay = timeSlot || 'any time slot';
-          const warningMessage = `No available rooms found for ${slotDisplay}. Create rooms with capacity for this time slot before assigning.`;
-          
-          this.showToast(warningMessage, 'warning');
-          
-          throw new Error(warningMessage);
-        }
-        
-        return true;
-      } catch (error) {
-        console.error('Error checking room availability:', error);
-        throw error;
-      }
-    },
-    
-    /**
-     * Updates room capacities based on assignment results
-     * Note: The actual counts are stored in the database and retrieved via API
-     * This method is just for immediate UI feedback until the next data refresh
-     * @param {Array} roomAssignments - Array of room assignment data 
-     */
-    async updateRoomCapacities(roomAssignments) {
-      if (!roomAssignments || !Array.isArray(roomAssignments)) {
-        console.log('No room assignments provided to update capacities');
-        return;
-      }
-      
-      try {
-        // Update local room capacities based on assignment results
-        roomAssignments.forEach(assignment => {
-          const room = this.testRooms.find(r => r.id === assignment.room_id);
-          if (room) {
-            // Update assigned count if provided
-            if (assignment.assigned_count !== undefined) {
-              room.assigned_count = assignment.assigned_count;
-              room.available_capacity = room.capacity - assignment.assigned_count;
-            }
-            // Or increment by 1 if this is a single assignment
-            else if (assignment.student_id || assignment.application_id) {
-              room.assigned_count = (room.assigned_count || 0) + 1;
-              room.available_capacity = room.capacity - room.assigned_count;
-            }
-          }
-        });
-        
-        console.log('Updated room capacities locally');
-        
-        // Also refresh from the server to ensure accuracy
-        await this.fetchRoomAssignmentCounts();
-        
-      } catch (error) {
-        console.error('Error updating room capacities:', error);
-      }
-    },
-    
     // Pagination methods
     changeSessionsPage(page) {
       this.pagination.sessions.currentPage = page;
@@ -1963,6 +1647,18 @@ export default {
       if (this.pagination.rooms.currentPage > totalPages && totalPages > 0) {
         this.pagination.rooms.currentPage = 1;
       }
+    },
+
+    clearRoomFilters() {
+      this.roomFilters.centerId = '';
+      this.roomFilters.timeSlot = '';
+      // Update pagination after clearing filters
+      this.updateRoomsPagination();
+    },
+
+    getCenterName(centerId) {
+      const center = this.testCenters.find(c => c.id.toString() === centerId.toString());
+      return center ? center.name : 'Unknown Center';
     },
     
     cancelCenterModal() {

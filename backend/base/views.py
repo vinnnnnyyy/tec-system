@@ -277,6 +277,29 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                         "error": "You already have an appointment scheduled for this date and time slot. Please select a different date or time slot."
                     }, status=status.HTTP_400_BAD_REQUEST)
             
+            # Handle test center and test session updates for rescheduling
+            test_center_id = request.data.get('test_center')
+            if test_center_id:
+                try:
+                    test_center = TestCenter.objects.get(id=test_center_id)
+                    request.data['test_center'] = test_center.id
+                except TestCenter.DoesNotExist:
+                    return Response({
+                        "error": "Selected test center not found."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            test_session_id = request.data.get('test_session')
+            if test_session_id:
+                try:
+                    test_session = TestSession.objects.get(id=test_session_id)
+                    request.data['test_session'] = test_session.id
+                    # Also update the exam date based on the session
+                    request.data['exam_date'] = test_session.exam_date
+                except TestSession.DoesNotExist:
+                    return Response({
+                        "error": "Selected test session not found."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
             # If no conflict, proceed with the update
             serializer = self.get_serializer(instance, data=request.data, partial=partial)
             if serializer.is_valid():
@@ -1960,11 +1983,14 @@ def get_room_assignment_counts(request):
         for room in rooms:
             assigned_count = Appointment.objects.filter(test_room=room).count()
             room_data.append({
-                'id': room.id,
+                'room_id': room.id,  # Changed from 'id' to 'room_id' to match frontend expectations
+                'id': room.id,       # Keep both for compatibility
                 'name': room.name,
                 'capacity': room.capacity,
                 'assigned_count': assigned_count,
-                'available_capacity': room.capacity - assigned_count
+                'available_capacity': room.capacity - assigned_count,
+                'test_center': room.test_center.id if room.test_center else None,
+                'time_slot': room.time_slot or 'morning'
             })
         
         return Response(room_data)

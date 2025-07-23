@@ -111,6 +111,99 @@
               </div>
             </div>
 
+            <!-- Test Center Selection -->
+            <div class="space-y-3">
+              <label class="block text-sm font-medium text-gray-700">Preferred Test Center</label>
+              <p class="text-sm text-gray-500">
+                Select your preferred test center for the rescheduled appointment.
+              </p>
+              
+              <div v-if="loadingTestCenters" class="flex justify-center py-8">
+                <div class="w-8 h-8 rounded-full border-4 border-gray-200 border-t-crimson-600 animate-spin"></div>
+              </div>
+              
+              <div v-else-if="testCenters.length === 0" class="text-center py-8 text-gray-500">
+                <i class="fas fa-building text-3xl mb-2"></i>
+                <p>No test centers available at the moment.</p>
+              </div>
+              
+              <div v-else class="grid grid-cols-1 gap-3">
+                <div v-for="center in testCenters" :key="center.id"
+                  @click="selectTestCenter(center)"
+                  :class="[
+                    'border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md',
+                    formData.testCenter === center.id 
+                      ? 'border-crimson-500 bg-crimson-50 shadow-md' 
+                      : 'border-gray-300 hover:border-crimson-300'
+                  ]"
+                >
+                  <div class="flex items-center gap-3">
+                    <div :class="[
+                      'w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all',
+                      formData.testCenter === center.id 
+                        ? 'border-crimson-500 bg-crimson-500' 
+                        : 'border-gray-300'
+                    ]">
+                      <div v-if="formData.testCenter === center.id" class="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
+                    <div class="flex-1">
+                      <h4 class="font-semibold text-gray-900">{{ center.name }}</h4>
+                      <p class="text-sm text-gray-600">{{ center.address }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Test Session Selection -->
+            <div v-if="formData.testCenter" class="space-y-3">
+              <label class="block text-sm font-medium text-gray-700">Select Test Session</label>
+              <p class="text-sm text-gray-500">
+                Choose your preferred exam date from the available test sessions for {{ getExamTypeFromProgram }} exams.
+              </p>
+              
+              <div v-if="availableTestSessions.length === 0" class="text-center py-8 text-gray-500">
+                <i class="fas fa-calendar-times text-3xl mb-2"></i>
+                <p>No test sessions available for this program at the moment.</p>
+              </div>
+              
+              <div v-else class="grid grid-cols-1 gap-3">
+                <div v-for="session in availableTestSessions" :key="session.id"
+                  @click="formData.testSession = session.id"
+                  :class="[
+                    'border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md',
+                    formData.testSession === session.id 
+                      ? 'border-crimson-500 bg-crimson-50 shadow-md' 
+                      : 'border-gray-300 hover:border-crimson-300'
+                  ]"
+                >
+                  <div class="flex items-center gap-3">
+                    <div :class="[
+                      'w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all',
+                      formData.testSession === session.id 
+                        ? 'border-crimson-500 bg-crimson-500' 
+                        : 'border-gray-300'
+                    ]">
+                      <div v-if="formData.testSession === session.id" class="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
+                    <div class="flex-1">
+                      <h4 class="font-semibold text-gray-900">{{ session.exam_type }} Exam Session</h4>
+                      <div class="text-sm text-gray-600 mt-1">
+                        <div class="flex items-center gap-2 mb-1">
+                          <i class="fas fa-calendar-day text-crimson-500"></i>
+                          <span>Exam Date: {{ formatDate(session.exam_date) }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <i class="fas fa-calendar-plus text-green-500"></i>
+                          <span>Registration: {{ formatDate(session.registration_start_date) }} - {{ formatDate(session.registration_end_date) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Form Submit Button -->
             <div class="flex justify-end mt-6 pt-3 border-t border-gray-100">
               <button 
@@ -153,6 +246,19 @@
                     <div>
                       <p class="text-xs text-gray-500">Program</p>
                       <p class="text-sm font-medium">{{ program?.name || 'N/A' }}</p>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-500">Test Center</p>
+                      <p class="text-sm font-medium text-crimson-700">
+                        {{ testCenters.find(c => c.id === formData.testCenter)?.name || 'N/A' }}
+                      </p>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-500">Test Session</p>
+                      <p class="text-sm font-medium text-crimson-700">
+                        {{ availableTestSessions.find(s => s.id === formData.testSession)?.exam_type || 'N/A' }} - 
+                        {{ formatDate(availableTestSessions.find(s => s.id === formData.testSession)?.exam_date) }}
+                      </p>
                     </div>
                     <div>
                       <p class="text-xs text-gray-500">Old Date</p>
@@ -246,7 +352,9 @@ export default {
   setup(props, { emit }) {
     const formData = ref({
       preferredDate: '',
-      timeSlot: ''
+      timeSlot: '',
+      testCenter: '',
+      testSession: ''
     });
 
     const showConfirmation = ref(false);
@@ -254,7 +362,48 @@ export default {
     const dateError = ref('');
     const dateInput = ref(null);
     const localTestSessions = ref([]);
+    const testCenters = ref([]);
+    const loadingTestCenters = ref(false);
     const { showToast } = useToast();
+
+    // Fetch test centers
+    const fetchTestCenters = async () => {
+      loadingTestCenters.value = true;
+      try {
+        const endpoints = [
+          '/api/test-centers/',       // Public endpoint (no auth required)
+          '/api/admin/test-centers/'  // Admin endpoint (auth required)
+        ];
+        
+        let response = null;
+        
+        for (const endpoint of endpoints) {
+          try {
+            const axiosInstance = (await import('../../plugins/axios')).default;
+            const result = await axiosInstance.get(endpoint);
+            response = result.data;
+            break;
+          } catch (err) {
+            console.log(`Failed to fetch from ${endpoint}:`, err.response?.status);
+          }
+        }
+        
+        if (!response) {
+          console.warn('No test centers available');
+          testCenters.value = [];
+          return;
+        }
+        
+        testCenters.value = response.filter(center => center.is_active);
+        console.log('Test centers loaded for reschedule modal:', testCenters.value.length);
+      } catch (err) {
+        console.error('Error fetching test centers for reschedule modal:', err);
+        testCenters.value = [];
+        showToast('Failed to load test centers', 'error');
+      } finally {
+        loadingTestCenters.value = false;
+      }
+    };
 
     // Fetch test sessions if they weren't passed as props
     const fetchTestSessions = async () => {
@@ -346,10 +495,53 @@ export default {
       return enhanced;
     });
 
-    // Watch for modal open to fetch test sessions
+    // Get exam type based on program name for test session filtering
+    const getExamTypeFromProgram = computed(() => {
+      const programName = props.program?.name?.toLowerCase() || '';
+      if (programName.includes('cet') || programName.includes('entrance')) {
+        return 'CET';
+      } else if (programName.includes('law') || programName.includes('philsat')) {
+        return 'PhilSAT';
+      } else if (programName.includes('graduate') || programName.includes('gmat')) {
+        return 'GMAT';
+      }
+      return 'CET'; // Default fallback
+    });
+
+    // Filter available test sessions based on program
+    const availableTestSessions = computed(() => {
+      if (!localTestSessions.value || localTestSessions.value.length === 0) return [];
+      
+      const examType = getExamTypeFromProgram.value;
+      const currentDate = new Date();
+      
+      // Filter sessions by exam type and ensure they're in the future
+      const filteredSessions = localTestSessions.value.filter(session => {
+        const examDate = new Date(session.exam_date);
+        const registrationEndDate = new Date(session.registration_end_date);
+        
+        return session.exam_type === examType && 
+               examDate > currentDate && 
+               registrationEndDate > currentDate &&
+               session.status === 'ONGOING';
+      });
+      
+      // Sort by exam date (earliest first)
+      return filteredSessions.sort((a, b) => new Date(a.exam_date) - new Date(b.exam_date));
+    });
+
+    // Function to select test center
+    const selectTestCenter = (center) => {
+      formData.value.testCenter = center.id;
+      // Reset test session when center changes
+      formData.value.testSession = '';
+    };
+
+    // Watch for modal open to fetch test sessions and centers
     watch(() => props.modelValue, (newValue) => {
       if (newValue) {
         fetchTestSessions();
+        fetchTestCenters();
       }
     });
 
@@ -427,9 +619,27 @@ export default {
     });
 
     const submitForm = () => {
-      // Validate date before showing confirmation
+      // Validate all required fields before showing confirmation
       validateDateSelection();
       if (dateError.value) return;
+      
+      // Validate test center selection
+      if (!formData.value.testCenter) {
+        showToast('Please select a test center', 'error');
+        return;
+      }
+      
+      // Validate test session selection
+      if (!formData.value.testSession) {
+        showToast('Please select a test session', 'error');
+        return;
+      }
+      
+      // Validate date and time slot selection
+      if (!formData.value.preferredDate || !formData.value.timeSlot) {
+        showToast('Please select both a date and time slot', 'error');
+        return;
+      }
       
       console.log('Reschedule form submitted, showing confirmation');
       showConfirmation.value = true;
@@ -442,7 +652,7 @@ export default {
       isSubmitting.value = true;
       
       try {
-        // Emit the submit event with date and time data
+        // Emit the submit event with all form data
         emit('submit', {
           // Include original appointment ID for proper updating
           appointmentId: props.originalAppointment.id,
@@ -453,7 +663,9 @@ export default {
           schoolName: props.originalAppointment.school_name,
           // Include new scheduling data
           preferredDate: formData.value.preferredDate,
-          timeSlot: formData.value.timeSlot
+          timeSlot: formData.value.timeSlot,
+          testCenter: formData.value.testCenter,
+          testSession: formData.value.testSession
         });
         
         // Close both modals
@@ -565,9 +777,10 @@ export default {
       // Add click outside listener
       document.addEventListener('click', handleClickOutside);
       
-      // Fetch test sessions if modal is already open
+      // Fetch test sessions and centers if modal is already open
       if (props.modelValue) {
         fetchTestSessions();
+        fetchTestCenters();
       }
     });
 
@@ -590,6 +803,8 @@ export default {
       dateError,
       dateInput,
       localTestSessions,
+      testCenters,
+      loadingTestCenters,
       submitForm,
       confirmSubmit,
       formatDate,
@@ -603,8 +818,11 @@ export default {
       programCapacity,
       halfProgramCapacity,
       selectTimeSlot,
+      selectTestCenter,
       toggleCalendar,
-      closeCalendarWithDelay
+      closeCalendarWithDelay,
+      getExamTypeFromProgram,
+      availableTestSessions
     };
   }
 }

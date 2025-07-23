@@ -45,6 +45,7 @@
           isDateToday(date) ? 'ring-2 ring-purple-400 ring-offset-1' : '',
           getExamDateClasses(date),
           getRegistrationDateClasses(date),
+          getSchedulingRestrictionClasses(date),
           // Fallback for selected dates without special highlighting
           isDateSelected(date) && !isExamDate(date) && !isRegistrationDate(date) ? 'bg-purple-600 text-white border-2 border-purple-700 shadow-lg' : ''
         ]"
@@ -52,6 +53,21 @@
       >
         <!-- Date number -->
         <span class="mb-0.5 md:mb-1 font-bold relative z-10 text-shadow-sm">{{ date }}</span>
+        
+        <!-- Scheduling restriction warning indicator -->
+        <div v-if="!isWithinSchedulingWindow(new Date(currentYear, currentMonth, date)) && !isDateToday(date) && new Date(currentYear, currentMonth, date) > new Date()" 
+             class="absolute top-1 left-1 group">
+          <span class="h-3 w-3 md:h-4 md:w-4 rounded-full bg-red-500 border-2 border-white shadow-lg flex items-center justify-center">
+            <i class="fas fa-lock text-xs text-white"></i>
+          </span>
+          <!-- Enhanced tooltip for scheduling restriction -->
+          <div class="absolute z-30 bottom-full left-0 mb-2 px-3 py-2 bg-red-600 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl max-w-xs">
+            <div class="font-semibold">Scheduling Restricted</div>
+            <div class="text-red-200">{{ getSchedulingWindowInfo(date).reason }}</div>
+            <!-- Arrow pointing down -->
+            <div class="absolute top-full left-2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-red-600"></div>
+          </div>
+        </div>
         
         <!-- Date type indicators with enhanced styling -->
         <div class="absolute top-1 right-1 flex flex-col gap-0.5">
@@ -186,6 +202,14 @@
           <div class="h-3 w-3 rounded-sm ring-2 ring-purple-400 ring-offset-1 mr-1"></div>
           <span>Today</span>
         </div>
+        
+        <!-- Scheduling restriction legend -->
+        <div class="flex items-center">
+          <div class="h-3 w-3 rounded-sm bg-red-50 border-2 border-red-300 mr-1 relative">
+            <i class="fas fa-lock text-xs text-red-500 absolute top-0 left-0 transform translate-x-0.5 -translate-y-0.5"></i>
+          </div>
+          <span>Restricted (2+ months)</span>
+        </div>
       </div>
     </div>
     
@@ -195,6 +219,38 @@
       
       <!-- Enhanced test session information for selected date -->
       <div v-if="selectedDate" class="mt-2 space-y-2">
+        <!-- Scheduling window validation information -->
+        <div v-if="!isWithinSchedulingWindow(new Date(currentYear, currentMonth, selectedDate))" 
+             class="p-3 bg-red-50 border-l-4 border-l-red-500 rounded-lg shadow-sm">
+          <div class="flex items-center text-sm text-red-800 font-semibold">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <span>Scheduling Restricted</span>
+          </div>
+          <div class="text-xs text-red-700 mt-1">
+            {{ getSchedulingWindowInfo(selectedDate).reason }}
+          </div>
+          <div class="text-xs text-red-600 mt-2 font-medium">
+            Appointments can only be scheduled within 2 months of the registration start date.
+          </div>
+        </div>
+
+        <!-- Valid scheduling window information -->
+        <div v-else-if="getValidSchedulingPeriods(selectedDate).length > 0" 
+             class="p-3 bg-blue-50 border-l-4 border-l-blue-500 rounded-lg shadow-sm">
+          <div class="flex items-center text-sm text-blue-800 font-semibold">
+            <i class="fas fa-shield-check mr-2"></i>
+            <span>Valid Scheduling Window</span>
+          </div>
+          <div class="text-xs text-blue-700 mt-1">
+            This date is within the allowed scheduling period
+          </div>
+          <div class="mt-2 space-y-1">
+            <div v-for="period in getValidSchedulingPeriods(selectedDate)" :key="period.id" class="text-xs text-blue-700">
+              • {{ period.exam_type }} (Registration: {{ formatDateForDisplay(new Date(period.registration_start_date)) }})
+            </div>
+          </div>
+        </div>
+        
         <!-- Exam date notification with enhanced styling -->
         <div v-if="isExamDate(selectedDate)" :class="[
           'p-3 rounded-lg border-l-4 shadow-sm',
@@ -311,6 +367,7 @@
 
 <script>
 import { ref, computed, watch, onMounted } from 'vue';
+import { useToast } from '../../composables/useToast';
 
 export default {
   name: 'CustomCalendar',
@@ -335,6 +392,8 @@ export default {
   emits: ['update:modelValue', 'update:timeSlotValue', 'date-selected', 'time-slot-selected'],
   
   setup(props, { emit }) {
+    const { showToast } = useToast();
+    
     const currentMonth = ref(new Date().getMonth());
     const currentYear = ref(new Date().getFullYear());
     const selectedDate = ref(null);
@@ -379,7 +438,7 @@ export default {
       return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
     });
     
-    // Check if a date is selectable (not a Sunday and has availability)
+    // Check if a date is selectable (not a Sunday, has availability, and within scheduling limits)
     const isDateSelectable = (day) => {
       // Get today's date
       const today = new Date();
@@ -396,6 +455,11 @@ export default {
         return false;
       }
       
+      // SECURITY VALIDATION: Check if date is within allowed scheduling window
+      if (!isWithinSchedulingWindow(dateToCheck)) {
+        return false;
+      }
+      
       // Check if date is available in the availability data
       const dateStr = formatDateForApi(new Date(currentYear.value, currentMonth.value, day));
       if (props.dateAvailability && props.dateAvailability[dateStr]) {
@@ -404,8 +468,115 @@ export default {
                props.dateAvailability[dateStr].afternoon_available;
       }
       
-      // If no availability data, assume available (except Sundays)
+      // If no availability data, assume available (except Sundays and scheduling window restrictions)
       return true;
+    };
+
+    // SECURITY FUNCTION: Check if a date is within the allowed scheduling window
+    const isWithinSchedulingWindow = (dateToCheck) => {
+      // Get all active registration periods
+      const activeRegistrationPeriods = props.testSessions.filter(session => {
+        const regStart = new Date(session.registration_start_date);
+        const regEnd = new Date(session.registration_end_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Check if registration period is currently active or will be active in the future
+        return regEnd >= today;
+      });
+
+      // If no active registration periods, don't allow any scheduling
+      if (activeRegistrationPeriods.length === 0) {
+        console.log('🔒 No active registration periods found - blocking all scheduling');
+        return false;
+      }
+
+      // Check if the date is within 2 months from the start of any active registration period
+      for (const session of activeRegistrationPeriods) {
+        const regStart = new Date(session.registration_start_date);
+        const examDate = new Date(session.exam_date);
+        
+        // Calculate 2 months after registration start date
+        const twoMonthsFromRegStart = new Date(regStart);
+        twoMonthsFromRegStart.setMonth(twoMonthsFromRegStart.getMonth() + 2);
+        
+        // The appointment date should be:
+        // 1. After the registration start date
+        // 2. Within 2 months of the registration start date
+        // 3. Before or on the exam date
+        if (dateToCheck >= regStart && 
+            dateToCheck <= twoMonthsFromRegStart && 
+            dateToCheck <= examDate) {
+          console.log(`✅ Date ${formatDateForApi(dateToCheck)} is within scheduling window for session ${session.exam_type} (${session.exam_date})`);
+          return true;
+        }
+      }
+
+      console.log(`🔒 Date ${formatDateForApi(dateToCheck)} is OUTSIDE allowed scheduling window (max 2 months from registration start)`);
+      return false;
+    };
+
+    // Get scheduling window info for display
+    const getSchedulingWindowInfo = (day) => {
+      const dateToCheck = new Date(currentYear.value, currentMonth.value, day);
+      const dateStr = formatDateForApi(dateToCheck);
+      
+      // Find the relevant registration period for this date
+      const relevantSession = props.testSessions.find(session => {
+        const regStart = new Date(session.registration_start_date);
+        const regEnd = new Date(session.registration_end_date);
+        const examDate = new Date(session.exam_date);
+        
+        return dateToCheck >= regStart && dateToCheck <= examDate;
+      });
+
+      if (!relevantSession) {
+        return {
+          isRestricted: true,
+          reason: 'No active registration period covers this date'
+        };
+      }
+
+      const regStart = new Date(relevantSession.registration_start_date);
+      const twoMonthsFromRegStart = new Date(regStart);
+      twoMonthsFromRegStart.setMonth(twoMonthsFromRegStart.getMonth() + 2);
+
+      if (dateToCheck > twoMonthsFromRegStart) {
+        return {
+          isRestricted: true,
+          reason: `Scheduling window closed. Maximum 2 months from registration start (${formatDateForDisplay(regStart)})`
+        };
+      }
+
+      return {
+        isRestricted: false,
+        reason: `Valid scheduling window for ${relevantSession.exam_type}`
+      };
+    };
+
+    // Helper function to format date for display
+    const formatDateForDisplay = (date) => {
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    };
+
+    // Get valid scheduling periods for a date
+    const getValidSchedulingPeriods = (day) => {
+      const dateToCheck = new Date(currentYear.value, currentMonth.value, day);
+      
+      return props.testSessions.filter(session => {
+        const regStart = new Date(session.registration_start_date);
+        const examDate = new Date(session.exam_date);
+        const twoMonthsFromRegStart = new Date(regStart);
+        twoMonthsFromRegStart.setMonth(twoMonthsFromRegStart.getMonth() + 2);
+        
+        return dateToCheck >= regStart && 
+               dateToCheck <= twoMonthsFromRegStart && 
+               dateToCheck <= examDate;
+      });
     };
     
     // Check if a date is an exam date
@@ -553,6 +724,23 @@ export default {
       
       return `bg-green-50 border-4 border-green-400 shadow-md hover:shadow-lg hover:bg-green-100 transform hover:scale-102 transition-all duration-200`;
     };
+
+    // Get scheduling restriction styling classes
+    const getSchedulingRestrictionClasses = (day) => {
+      const dateToCheck = new Date(currentYear.value, currentMonth.value, day);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Only apply restriction styling to future dates that are outside the window
+      if (dateToCheck <= today) return '';
+      if (isExamDate(day) || isRegistrationDate(day)) return ''; // Exam/registration dates take priority
+      
+      if (!isWithinSchedulingWindow(dateToCheck)) {
+        return `bg-red-50 border-2 border-red-300 text-red-600 cursor-not-allowed hover:bg-red-100`;
+      }
+      
+      return '';
+    };
     const isDateToday = (day) => {
       const today = new Date();
       return (
@@ -675,7 +863,32 @@ export default {
     
     // Date selection
     const selectDate = (day) => {
-      if (!isDateSelectable(day)) return;
+      if (!isDateSelectable(day)) {
+        // Provide specific feedback for why the date cannot be selected
+        const dateToCheck = new Date(currentYear.value, currentMonth.value, day);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (dateToCheck <= today) {
+          showToast('Cannot select past dates or today. Please choose a future date.', 'error', 4000);
+          return;
+        }
+        
+        if (dateToCheck.getDay() === 0) {
+          showToast('Sundays are not available for appointments. Please choose a weekday.', 'warning', 4000);
+          return;
+        }
+        
+        if (!isWithinSchedulingWindow(dateToCheck)) {
+          const windowInfo = getSchedulingWindowInfo(day);
+          showToast(`Scheduling Restricted: ${windowInfo.reason}. Appointments can only be scheduled within 2 months of the registration start date for security purposes.`, 'error', 6000);
+          return;
+        }
+        
+        // Generic availability message
+        showToast('This date is not available for appointments. Please choose another date.', 'warning', 4000);
+        return;
+      }
       
       selectedDate.value = day;
       const formattedDate = formatDateForApi(new Date(currentYear.value, currentMonth.value, day));
@@ -684,6 +897,12 @@ export default {
       // Reset time slot if previously selected
       selectedTimeSlot.value = '';
       emit('update:timeSlotValue', '');
+      
+      // Show success toast for valid selection
+      showToast(`Date selected: ${formattedDate}`, 'success', 3000);
+      
+      // Log successful selection with security validation
+      console.log(`✅ Date selected: ${formattedDate} (within valid scheduling window)`);
       
       // Removed the date-selected event emission to prevent calendar from closing after date selection
       // This ensures the calendar stays open for time slot selection
@@ -754,6 +973,11 @@ export default {
       isDateSelected,
       isExamDate,
       isRegistrationDate,
+      isWithinSchedulingWindow,
+      getSchedulingWindowInfo,
+      getValidSchedulingPeriods,
+      getSchedulingRestrictionClasses,
+      formatDateForDisplay,
       getTestSessionForDate,
       getRegistrationSessionsForDate,
       getExamTypeColors,
