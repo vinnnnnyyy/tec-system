@@ -1696,6 +1696,8 @@ export default {
   },
   emits: ['update:modelValue', 'submit'],
   setup(props, { emit }) {
+    const { showToast } = useToast();
+    
     const loading = ref(false);
     const error = ref(null);
     const apiData = ref(null);
@@ -2470,10 +2472,11 @@ export default {
     
     // Validate last name
     const validateLastName = () => {
-      if (!formData.value.lastName.trim()) {
+      const lastName = formData.value.lastName || '';
+      if (!lastName.trim()) {
         validationErrors.value.lastName = 'Last name is required';
         return false;
-      } else if (formData.value.lastName.trim().length < 2) { // Adjusted min length
+      } else if (lastName.trim().length < 2) { // Adjusted min length
         validationErrors.value.lastName = 'Last name must be at least 2 characters';
         return false;
       } else {
@@ -2484,10 +2487,11 @@ export default {
     
     // Validate first name
     const validateFirstName = () => {
-      if (!formData.value.firstName.trim()) {
+      const firstName = formData.value.firstName || '';
+      if (!firstName.trim()) {
         validationErrors.value.firstName = 'First name is required';
         return false;
-      } else if (formData.value.firstName.trim().length < 2) { // Adjusted min length
+      } else if (firstName.trim().length < 2) { // Adjusted min length
         validationErrors.value.firstName = 'First name must be at least 2 characters';
         return false;
       } else {
@@ -2500,7 +2504,8 @@ export default {
     const validateMiddleName = () => {
       // Middle name is optional, so no error if empty.
       // If provided, it can have a min length, e.g., 1 character if not just an initial.
-      if (formData.value.middleName.trim() && formData.value.middleName.trim().length < 1) {
+      const middleName = formData.value.middleName || '';
+      if (middleName.trim() && middleName.trim().length < 1) {
         validationErrors.value.middleName = 'Middle name seems to short';
         return false; // Or true if partial validation is acceptable for optional fields
       }
@@ -2510,10 +2515,11 @@ export default {
     
     // Validate contact number
     const validateContactNumber = () => {
-      if (!formData.value.contactNumber.trim()) {
+      const contactNumber = formData.value.contactNumber || '';
+      if (!contactNumber.trim()) {
         validationErrors.value.contactNumber = 'Contact number is required';
         return false;
-      } else if (!/^[0-9+\-\s()]{7,15}$/.test(formData.value.contactNumber.trim())) {
+      } else if (!/^[0-9+\-\s()]{7,15}$/.test(contactNumber.trim())) {
         validationErrors.value.contactNumber = 'Please enter a valid phone number';
         return false;
       } else {
@@ -2524,10 +2530,11 @@ export default {
     
     // Validate email
     const validateEmail = () => {
-      if (!formData.value.email.trim()) {
+      const email = formData.value.email || '';
+      if (!email.trim()) {
         validationErrors.value.email = 'Email address is required';
         return false;
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.value.email.trim())) {
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
         validationErrors.value.email = 'Please enter a valid email address';
         return false;
       } else {
@@ -3677,71 +3684,89 @@ export default {
       }
       
       try {
-        const homeAddressString = `${formData.value.streetPurok}, ${formData.value.barangay}, ${formData.value.city}`.trim();
+        // Add defensive logging to help diagnose issues
+        console.log('Form data structure check:', {
+          hasFormData: !!formData.value,
+          keys: formData.value ? Object.keys(formData.value) : [],
+          lastName: formData.value?.lastName,
+          firstName: formData.value?.firstName
+        });
+
+        // Safely handle undefined values with fallbacks
+        const streetPurok = formData.value.streetPurok || '';
+        const barangay = formData.value.barangay || '';
+        const city = formData.value.city || '';
+        const homeAddressString = `${streetPurok}, ${barangay}, ${city}`.trim();
+        
+        const lastName = formData.value.lastName || '';
+        const firstName = formData.value.firstName || '';
+        const middleName = formData.value.middleName || '';
+        const suffix = formData.value.suffix || '';
+        
         const applicationData = {
           // Personal info
-          full_name: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName} ${formData.value.suffix}`.trim().replace(/\s+/g, ' '),
-          last_name: formData.value.lastName.trim(),
-          first_name: formData.value.firstName.trim(),
-          middle_name: formData.value.middleName.trim(),
-          suffix: formData.value.suffix.trim(),
+          full_name: `${lastName}, ${firstName} ${middleName} ${suffix}`.trim().replace(/\s+/g, ' '),
+          last_name: lastName.trim(),
+          first_name: firstName.trim(),
+          middle_name: middleName.trim(),
+          suffix: suffix.trim(),
           contact_number: formData.value.contactNumber,
           email: formData.value.email,
           birth_month: formData.value.birthMonth,
           birth_day: formData.value.birthDay,
           birth_year: formData.value.birthYear,
           gender: formData.value.gender,
-          age: parseInt(formData.value.age),
+          age: parseInt(formData.value.age) || 0,
           home_address: homeAddressString, // Combined address
-          street_purok: formData.value.streetPurok, // Added
-          barangay: formData.value.barangay,       // Added
-          city: formData.value.city,             // Added
+          street_purok: streetPurok, // Use safe variable
+          barangay: barangay,       // Use safe variable
+          city: city,             // Use safe variable
           citizenship: formData.value.citizenship,
           high_school_code: formData.value.highSchoolCode || '',
           
           // WMSUCET experience
-          is_first_time: formData.value.wmsucetExperience.firstTime,
-          times_taken: formData.value.wmsucetExperience.notFirstTime ? parseInt(formData.value.wmsucetExperience.timesTaken) || 0 : 0,
+          is_first_time: formData.value.wmsucetExperience?.firstTime || true,
+          times_taken: formData.value.wmsucetExperience?.notFirstTime ? parseInt(formData.value.wmsucetExperience.timesTaken) || 0 : 0,
           
           // Applicant type
           applicant_type: formData.value.applicantType,
           
           // Course choices and campus information
-          first_choice_course: formData.value.courseChoices.firstChoice,
-          first_choice_campus: formData.value.courseChoices.firstChoiceCampus,
-          second_choice_course: formData.value.courseChoices.secondChoice,
-          second_choice_campus: formData.value.courseChoices.secondChoiceCampus,
-          third_choice_course: formData.value.courseChoices.thirdChoice,
-          third_choice_campus: formData.value.courseChoices.thirdChoiceCampus,
+          first_choice_course: formData.value.courseChoices?.firstChoice || '',
+          first_choice_campus: formData.value.courseChoices?.firstChoiceCampus || '',
+          second_choice_course: formData.value.courseChoices?.secondChoice || '',
+          second_choice_campus: formData.value.courseChoices?.secondChoiceCampus || '',
+          third_choice_course: formData.value.courseChoices?.thirdChoice || '',
+          third_choice_campus: formData.value.courseChoices?.thirdChoiceCampus || '',
           
           // Socio-economic data - Father information
-          father_citizenship: formData.value.socioEconomic.father.citizenship,
-          father_education: formData.value.socioEconomic.father.education,
-          father_work_occupation: formData.value.socioEconomic.father.occupation,
-          father_employer: formData.value.socioEconomic.father.employer,
-          father_monthly_income: formData.value.socioEconomic.father.income,
+          father_citizenship: formData.value.socioEconomic?.father?.citizenship || '',
+          father_education: formData.value.socioEconomic?.father?.education || '',
+          father_work_occupation: formData.value.socioEconomic?.father?.occupation || '',
+          father_employer: formData.value.socioEconomic?.father?.employer || '',
+          father_monthly_income: formData.value.socioEconomic?.father?.income || '',
           
           // Socio-economic data - Mother information
-          mother_citizenship: formData.value.socioEconomic.mother.citizenship,
-          mother_education: formData.value.socioEconomic.mother.education,
-          mother_work_occupation: formData.value.socioEconomic.mother.occupation,
-          mother_employer: formData.value.socioEconomic.mother.employer,
-          mother_monthly_income: formData.value.socioEconomic.mother.income,
+          mother_citizenship: formData.value.socioEconomic?.mother?.citizenship || '',
+          mother_education: formData.value.socioEconomic?.mother?.education || '',
+          mother_work_occupation: formData.value.socioEconomic?.mother?.occupation || '',
+          mother_employer: formData.value.socioEconomic?.mother?.employer || '',
+          mother_monthly_income: formData.value.socioEconomic?.mother?.income || '',
           
           // Physical disability information
-          has_physical_disability: formData.value.additionalInfo.hasDisability,
-          disability_description: formData.value.additionalInfo.disabilityDescription,
+          has_physical_disability: formData.value.additionalInfo?.hasDisability || false,
+          disability_description: formData.value.additionalInfo?.disabilityDescription || '',
           
           // Computer usage knowledge
-          knows_computer_usage: formData.value.additionalInfo.knowsComputer,
+          knows_computer_usage: formData.value.additionalInfo?.knowsComputer || false,
           
           // Indigenous Peoples Group membership
-          is_indigenous_member: formData.value.additionalInfo.isIndigenous,
-          indigenous_group_specify: formData.value.additionalInfo.indigenousGroup,
+          is_indigenous_member: formData.value.additionalInfo?.isIndigenous || false,
+          indigenous_group_specify: formData.value.additionalInfo?.indigenousGroup || '',
           
           // Religious affiliation
-          religious_affiliation: formData.value.additionalInfo.religion,
-          religious_affiliation_others: formData.value.additionalInfo.religionOthers,
+          religious_affiliation: formData.value.additionalInfo?.religion || '',
+          religious_affiliation_others: formData.value.additionalInfo?.religionOthers || '',
           
           // School info - will be populated based on applicant type
           school_name: formData.value.schoolName || '',
@@ -3839,7 +3864,14 @@ export default {
         close();
       } catch (error) {
         console.error('Error during form submission:', error);
-        alert('An error occurred while submitting the form. Please try again.');
+        
+        // More specific error message based on the error type
+        let errorMessage = 'An error occurred while submitting the form. Please try again.';
+        if (error.message && error.message.includes('trim')) {
+          errorMessage = 'Please ensure all required fields are filled out correctly.';
+        }
+        
+        showToast(errorMessage, 'error', 5000);
       }
     };
     
@@ -4043,9 +4075,6 @@ export default {
           firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         
-        // Use the toast composable for notifications
-        const { showToast } = useToast();
-        
         // Customize message based on the error type
         let notificationMessage = 'Please complete all required fields for this step.';
         let notificationType = 'error';
@@ -4173,6 +4202,7 @@ export default {
       validateApplicantType,
       validateCourseChoicesAndSocioEconomic,
       validateDateTime,
+      validatePrivacyPolicy,
       validateCurrentStep,
       
       // Computed properties
