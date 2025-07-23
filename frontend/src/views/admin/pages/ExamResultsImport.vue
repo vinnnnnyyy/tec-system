@@ -216,7 +216,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import axiosInstance from '../../../services/axios.interceptor';
 import { useToast } from '../../../composables/useToast';
 
 export default {
@@ -279,10 +279,8 @@ export default {
       }
       
       try {
-        // Try to access a protected endpoint to verify token is valid
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-        // Simplified auth check - just verify we have a token
-        return true;
+        // Use axiosInstance which handles authentication and API URL
+        await axiosInstance.get('/api/admin/test-sessions/');
         return true;
       } catch (error) {
         console.error('Auth error:', error);
@@ -302,8 +300,8 @@ export default {
       this.loading = true;
       this.error = null;
       try {
-        // Use the full API URL
-        const response = await axios.get('http://localhost:8000/api/programs/');
+        // Use the axios interceptor which handles API URL and authentication
+        const response = await axiosInstance.get('/api/programs/');
         console.log('API Response:', response.data); // Debug log
         
         // Check if response.data is an array
@@ -418,17 +416,11 @@ export default {
         console.log('- Year:', this.selectedExamYear);
         
         // Send to the exam results import API endpoint (NOT scores import)
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const token = localStorage.getItem('token') || 
-                     localStorage.getItem('access_token') || 
-                     localStorage.getItem('authToken');
-        
-        const response = await axios.post(
-          `${apiUrl}/api/admin/results/import/`,
+        const response = await axiosInstance.post(
+          '/api/admin/results/import/',
           formData,
           {
             headers: {
-              'Authorization': token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '',
               'Content-Type': 'multipart/form-data'
             }
           }

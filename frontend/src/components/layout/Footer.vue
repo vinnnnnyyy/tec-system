@@ -3,7 +3,7 @@
     <!-- Background WMSU Logo Pattern -->
     <div 
       class="absolute inset-0 z-0 opacity-[0.08] bg-repeat bg-center transform rotate-12 scale-125"
-      style="background-image: url('/src/assets/images/wmsu-logo.png'); background-size: 300px 300px;"
+      style="background-image: url('../../assets/images/wmsu-logo.png'); background-size: 300px 300px;"
     ></div>
     <!-- Subtle Gradient Overlay -->
     <div class="absolute inset-0 z-1 bg-gradient-to-t via-gray-900/85 to-gray-900/80"></div>
@@ -15,7 +15,7 @@
         <!-- Brand Section -->
         <div class="md:col-span-2 lg:col-span-1">
           <div class="flex items-center mb-4 transform hover:scale-105 transition-transform duration-300">
-            <img src="/public/images/wmsu-logo.png" alt="WMSU Logo" class="h-12 w-auto mr-3 filter brightness-0 invert">
+            <img src="../../assets/images/wmsu-logo.png" alt="WMSU Logo" class="h-12 w-auto mr-3 filter brightness-0 invert">
             <h3 class="text-2xl font-bold text-white">WMSU TEC</h3>
           </div>
           <p class="text-sm leading-relaxed mb-6 text-gray-300">
@@ -101,7 +101,7 @@
         <p class="hover:text-crimson-400 transition-colors duration-300">&copy; {{ currentYear }} Western Mindanao State University - Testing Evaluation Center. All rights reserved.</p>
         <div class="flex items-center gap-2 group">
           <span class="group-hover:text-crimson-400 transition-colors duration-300">Powered by WMSU</span>
-          <img src="/src/assets/images/wmsu-logo.png" alt="WMSU Logo" class="h-6 w-auto filter brightness-0 invert opacity-70 group-hover:opacity-100 transition-opacity duration-300">
+          <img src="../../assets/images/wmsu-logo.png" alt="WMSU Logo" class="h-6 w-auto filter brightness-0 invert opacity-70 group-hover:opacity-100 transition-opacity duration-300">
         </div>
       </div>
     </div>

@@ -91,6 +91,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             last_name = data.get('last_name', '').strip()
             first_name = data.get('first_name', '').strip()
             middle_name = data.get('middle_name', '').strip()
+            suffix = data.get('suffix', '').strip()
             
             # If individual components are not provided, parse from full_name
             if not (last_name and first_name):
@@ -99,15 +100,31 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 
                 # Parse name based on format
                 if ',' in full_name:
-                    # Format: "Last, First Middle"
+                    # Format: "Last, First Middle Suffix"
                     name_parts = full_name.split(',', 1)  # Split only on first comma
                     last_name = name_parts[0].strip()
-                    first_middle = name_parts[1].strip().split() if len(name_parts) > 1 else []
+                    first_middle_suffix = name_parts[1].strip().split() if len(name_parts) > 1 else []
+                    
+                    # Check if last element might be a suffix
+                    suffixes = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
+                    if first_middle_suffix and first_middle_suffix[-1] in suffixes:
+                        suffix = first_middle_suffix[-1]
+                        first_middle = first_middle_suffix[:-1]
+                    else:
+                        first_middle = first_middle_suffix
+                        
                     first_name = first_middle[0] if first_middle else ''
                     middle_name = ' '.join(first_middle[1:]) if len(first_middle) > 1 else ''
                 else:
-                    # Format: "First Middle Last" or just names separated by spaces
+                    # Format: "First Middle Last Suffix" or just names separated by spaces
                     name_parts = full_name.split()
+                    
+                    # Check if last element might be a suffix
+                    suffixes = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
+                    if name_parts and name_parts[-1] in suffixes:
+                        suffix = name_parts[-1]
+                        name_parts = name_parts[:-1]
+                    
                     if len(name_parts) >= 3:
                         first_name = name_parts[0]
                         middle_name = ' '.join(name_parts[1:-1])
@@ -127,6 +144,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             serializer.validated_data['last_name'] = last_name
             serializer.validated_data['first_name'] = first_name
             serializer.validated_data['middle_name'] = middle_name
+            serializer.validated_data['suffix'] = suffix
             
             # Normalize names for comparison (remove extra spaces, convert to lowercase)
             first_name_norm = first_name.strip().lower()
@@ -189,6 +207,35 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             
             # Set initial status to waiting_for_submission
             serializer.validated_data['status'] = 'waiting_for_submission'
+            
+            # Handle test session assignment and exam date
+            test_session_id = request.data.get('test_session')
+            if test_session_id:
+                try:
+                    test_session = TestSession.objects.get(id=test_session_id)
+                    serializer.validated_data['test_session'] = test_session
+                    # Set the exam date based on the test session
+                    serializer.validated_data['exam_date'] = test_session.exam_date
+                    print(f"DEBUG: Setting exam_date to {test_session.exam_date} from test_session {test_session_id}")
+                except TestSession.DoesNotExist:
+                    print(f"DEBUG: Test session {test_session_id} not found")
+                    pass  # Continue without test session if not found
+            else:
+                print("DEBUG: No test_session provided in request data")
+            
+            # Handle test center assignment
+            test_center_id = request.data.get('test_center')
+            if test_center_id:
+                try:
+                    test_center = TestCenter.objects.get(id=test_center_id)
+                    serializer.validated_data['test_center'] = test_center
+                    print(f"DEBUG: Setting test_center to {test_center.name}")
+                except TestCenter.DoesNotExist:
+                    print(f"DEBUG: Test center {test_center_id} not found")
+                    pass  # Continue without test center if not found
+            else:
+                print("DEBUG: No test_center provided in request data")
+            
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -316,7 +363,7 @@ class FAQViewSet(viewsets.ModelViewSet):
         return [permissions.IsAdminUser()]  # Only admin users can create/update/delete FAQs
 
 class TestCenterViewSet(viewsets.ModelViewSet):
-    queryset = TestCenter.objects.all()
+    queryset = TestCenter.objects.filter(is_active=True)
     serializer_class = TestCenterSerializer
     permission_classes = [IsAuthenticated]
 
@@ -331,6 +378,10 @@ class TestCenterViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
 
+    def get_queryset(self):
+        """Only return active test centers"""
+        return TestCenter.objects.filter(is_active=True)
+
     def perform_create(self, serializer):
         serializer.save()
 
@@ -338,14 +389,38 @@ class TestCenterViewSet(viewsets.ModelViewSet):
     def rooms(self, request, pk=None):
         """Get rooms for a specific test center"""
         test_center = self.get_object()
-        rooms = TestRoom.objects.filter(test_center=test_center)
-        serializer = TestRoomSerializer(rooms, many=True)
+        rooms = TestRoom.objects.filter(test_center=test_center, is_active=True)
+        serializer = TestRoomSerializer(rooms, many=True, context={'request': request})
         return Response(serializer.data)
+
+    @action(detail=False, methods=['GET'])
+    def debug(self, request):
+        """Debug endpoint to check test centers"""
+        test_centers = TestCenter.objects.all()
+        active_centers = TestCenter.objects.filter(is_active=True)
+        return Response({
+            'total_centers': test_centers.count(),
+            'active_centers': active_centers.count(),
+            'centers': [{'id': tc.id, 'name': tc.name, 'code': tc.code, 'is_active': tc.is_active} for tc in test_centers]
+        })
 
 class TestRoomViewSet(viewsets.ModelViewSet):
     queryset = TestRoom.objects.all()
     serializer_class = TestRoomSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter rooms based on query parameters"""
+        queryset = TestRoom.objects.filter(is_active=True)
+        test_center = self.request.query_params.get('test_center', None)
+        time_slot = self.request.query_params.get('time_slot', None)
+        
+        if test_center is not None:
+            queryset = queryset.filter(test_center=test_center)
+        if time_slot is not None:
+            queryset = queryset.filter(time_slot=time_slot)
+            
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save()
@@ -769,6 +844,7 @@ def create_appointment(request):
         last_name = data.get('last_name', '').strip()
         first_name = data.get('first_name', '').strip()
         middle_name = data.get('middle_name', '').strip()
+        suffix = data.get('suffix', '').strip()
         
         # If individual components are not provided, parse from full_name
         if not (last_name and first_name):
@@ -777,15 +853,31 @@ def create_appointment(request):
             
             # Parse name based on format
             if ',' in full_name:
-                # Format: "Last, First Middle"
+                # Format: "Last, First Middle Suffix"
                 name_parts = full_name.split(',', 1)  # Split only on first comma
                 last_name = name_parts[0].strip()
-                first_middle = name_parts[1].strip().split() if len(name_parts) > 1 else []
+                first_middle_suffix = name_parts[1].strip().split() if len(name_parts) > 1 else []
+                
+                # Check if last element might be a suffix
+                suffixes = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
+                if first_middle_suffix and first_middle_suffix[-1] in suffixes:
+                    suffix = first_middle_suffix[-1]
+                    first_middle = first_middle_suffix[:-1]
+                else:
+                    first_middle = first_middle_suffix
+                    
                 first_name = first_middle[0] if first_middle else ''
                 middle_name = ' '.join(first_middle[1:]) if len(first_middle) > 1 else ''
             else:
-                # Format: "First Middle Last" or just names separated by spaces
+                # Format: "First Middle Last Suffix" or just names separated by spaces
                 name_parts = full_name.split()
+                
+                # Check if last element might be a suffix
+                suffixes = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
+                if name_parts and name_parts[-1] in suffixes:
+                    suffix = name_parts[-1]
+                    name_parts = name_parts[:-1]
+                
                 if len(name_parts) >= 3:
                     first_name = name_parts[0]
                     middle_name = ' '.join(name_parts[1:-1])
@@ -887,6 +979,7 @@ def create_appointment(request):
             last_name=data.get('last_name', last_name),
             first_name=data.get('first_name', first_name),
             middle_name=data.get('middle_name', middle_name),
+            suffix=data.get('suffix', suffix),
             email=data.get('email'),
             contact_number=data.get('contact_number'),
             school_name=data.get('school_name'),
@@ -921,6 +1014,26 @@ def create_appointment(request):
             # Link to user if authenticated
             user=request.user if request.user.is_authenticated else None
         )
+        
+        # Set test center if provided
+        test_center_id = data.get('test_center')
+        if test_center_id:
+            try:
+                test_center = TestCenter.objects.get(id=test_center_id)
+                appointment.test_center = test_center
+            except TestCenter.DoesNotExist:
+                pass  # Continue without test center if not found
+        
+        # Set test session if provided
+        test_session_id = data.get('test_session')
+        if test_session_id:
+            try:
+                test_session = TestSession.objects.get(id=test_session_id)
+                appointment.test_session = test_session
+                # Also set the exam date based on the session
+                appointment.exam_date = test_session.exam_date
+            except TestSession.DoesNotExist:
+                pass  # Continue without test session if not found
         
         # Auto-approve if program has auto_approve_appointments enabled and no custom status was provided
         if program.auto_approve_appointments and not data.get('status'):
@@ -1620,12 +1733,89 @@ def generate_pdf(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def auto_assign_test_details(request):
-    """Auto assign test details to appointments"""
+    """Auto assign test details to appointments based on their selected test center and session"""
     try:
-        # Implementation for auto assignment
-        return Response({'message': 'Auto assignment not implemented'}, status=501)
+        appointment_id = request.data.get('appointment_id')
+        if not appointment_id:
+            return Response({'error': 'appointment_id is required'}, status=400)
+        
+        appointment = Appointment.objects.get(id=appointment_id)
+        
+        # Check if appointment already has test room assigned
+        if appointment.test_room:
+            return Response({
+                'success': True,
+                'message': 'Appointment already has test room assigned',
+                'test_room': {
+                    'id': appointment.test_room.id,
+                    'name': appointment.test_room.name,
+                    'center_name': appointment.test_center.name if appointment.test_center else None
+                }
+            })
+        
+        # Get the test center and session from the appointment form data
+        test_center = appointment.test_center
+        test_session = appointment.test_session
+        preferred_time_slot = appointment.time_slot
+        
+        if not test_center or not test_session:
+            return Response({
+                'error': 'Appointment must have test center and test session selected'
+            }, status=400)
+        
+        # Find available test room with matching criteria
+        available_rooms = TestRoom.objects.filter(
+            test_center=test_center,
+            time_slot=preferred_time_slot,
+            is_active=True,
+            available_capacity__gt=0  # Room must have available capacity
+        ).order_by('-available_capacity')  # Prioritize rooms with more capacity
+        
+        if not available_rooms.exists():
+            return Response({
+                'error': f'No available rooms found for {test_center.name} during {preferred_time_slot} time slot'
+            }, status=404)
+        
+        # Assign the best available room (one with most capacity)
+        selected_room = available_rooms.first()
+        
+        # Update appointment with assigned room
+        appointment.test_room = selected_room
+        appointment.save()
+        
+        # Update room capacity
+        selected_room.assigned_count += 1
+        selected_room.available_capacity = selected_room.capacity - selected_room.assigned_count
+        selected_room.save()
+        
+        return Response({
+            'success': True,
+            'message': f'Test room automatically assigned: {selected_room.name}',
+            'assignment': {
+                'test_center': {
+                    'id': test_center.id,
+                    'name': test_center.name
+                },
+                'test_room': {
+                    'id': selected_room.id,
+                    'name': selected_room.name,
+                    'room_code': selected_room.room_code,
+                    'capacity': selected_room.capacity,
+                    'assigned_count': selected_room.assigned_count,
+                    'available_capacity': selected_room.available_capacity
+                },
+                'test_session': {
+                    'id': test_session.id,
+                    'exam_type': test_session.exam_type,
+                    'exam_date': test_session.exam_date
+                }
+            }
+        })
+        
+    except Appointment.DoesNotExist:
+        return Response({'error': 'Appointment not found'}, status=404)
     except Exception as e:
-        return Response({'error': str(e)}, status=500)
+        return Response({'error': f'Auto assignment failed: {str(e)}'}, status=500)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -2763,5 +2953,113 @@ def test_bulk_gmail_notification(request):
     except Exception as e:
         return Response({
             'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_unmatched_scores(request):
+    """Get all exam scores that haven't been matched to appointments"""
+    try:
+        # Get all exam scores without appointments
+        unmatched_scores = ExamScore.objects.filter(appointment__isnull=True)
+        
+        # Add some basic logging for debugging
+        print(f"Found {unmatched_scores.count()} unmatched scores")
+        
+        serializer = ExamScoreDetailSerializer(unmatched_scores, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        print(f"Error in get_unmatched_scores: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_candidate_appointments(request):
+    """Get appointments that could potentially match a score"""
+    try:
+        name = request.GET.get('name', '')
+        app_no = request.GET.get('app_no', '')
+        exam_type = request.GET.get('exam_type', '')
+        
+        queryset = Appointment.objects.all()
+        
+        # Filter by name if provided
+        if name:
+            queryset = queryset.filter(
+                Q(full_name__icontains=name) |
+                Q(first_name__icontains=name) |
+                Q(last_name__icontains=name)
+            )
+        
+        # Filter by program if exam type is provided
+        if exam_type:
+            # Try to find the program by exam type
+            try:
+                program = Program.objects.filter(code__icontains=exam_type).first()
+                if program:
+                    queryset = queryset.filter(program=program)
+            except:
+                pass
+        
+        # Limit results to prevent overwhelming the UI
+        appointments = queryset[:20]
+        serializer = AppointmentSerializer(appointments, many=True)
+        return Response(serializer.data)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def manual_match_score(request):
+    """Manually match a score to an appointment"""
+    try:
+        score_id = request.data.get('score_id')
+        appointment_id = request.data.get('appointment_id')
+        
+        if not score_id or not appointment_id:
+            return Response({
+                'error': 'Both score_id and appointment_id are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get the score and appointment
+        try:
+            score = ExamScore.objects.get(id=score_id)
+            appointment = Appointment.objects.get(id=appointment_id)
+        except (ExamScore.DoesNotExist, Appointment.DoesNotExist):
+            return Response({
+                'error': 'Score or appointment not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if appointment already has a score
+        if hasattr(appointment, 'exam_score') and appointment.exam_score:
+            return Response({
+                'error': 'This appointment already has a score assigned'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if score is already matched
+        if score.appointment:
+            return Response({
+                'error': 'This score is already matched to another appointment'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Perform the matching
+        score.appointment = appointment
+        score.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Score matched successfully',
+            'score_id': score_id,
+            'appointment_id': appointment_id
+        })
+        
+    except Exception as e:
+        return Response({
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

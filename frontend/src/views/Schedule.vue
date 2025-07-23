@@ -365,29 +365,38 @@ export default {
         query: {}
       });
     },
-    handleSchedule(programData) {
+    async handleSchedule(programData) {
       // Reset scheduling state first to ensure modal works properly
       this.resetSchedulingState();
       
-      // Check if this is a full program object or just program data with rescheduling info
-      if (programData.reschedulingInfo) {
-        // Store rescheduling information
-        this.reschedulingInfo = programData.reschedulingInfo;
-        this.isRescheduling = true;
-        this.selectedProgram = programData.program;
-        
-        // Fetch availability data before showing the modal
-        this.fetchDateAvailability(this.selectedProgram.id).then(() => {
+      try {
+        // Check if this is a full program object or just program data with rescheduling info
+        if (programData.reschedulingInfo) {
+          // Store rescheduling information
+          this.reschedulingInfo = programData.reschedulingInfo;
+          this.isRescheduling = true;
+          this.selectedProgram = programData.program;
+          
+          // Fetch availability data before showing the modal
+          await this.fetchDateAvailability(this.selectedProgram.id);
           this.showRescheduleModal = true;
-        });
-      } else {
-        // Regular scheduling (no rescheduling info provided)
-        this.selectedProgram = programData;
-        
-        // Fetch availability data before showing the modal
-        this.fetchDateAvailability(this.selectedProgram.id).then(() => {
+        } else {
+          // Regular scheduling (no rescheduling info provided)
+          this.selectedProgram = programData;
+          
+          // Fetch availability data before showing the modal
+          await this.fetchDateAvailability(this.selectedProgram.id);
           this.showScheduleModal = true;
-        });
+        }
+      } catch (error) {
+        console.error('Error in handleSchedule:', error);
+        const { showToast } = useToast();
+        showToast('Failed to load scheduling information. Please try again.', 'error');
+        
+        // Reset state on error
+        this.selectedProgram = null;
+        this.showScheduleModal = false;
+        this.showRescheduleModal = false;
       }
     },
     async handleScheduleSubmit(formData) {
@@ -763,6 +772,9 @@ export default {
         // Store the set of programs with only claimed appointments
         this.claimedProgramIds = claimedProgramIds;
         
+        // Check program eligibility after appointments are loaded
+        this.checkProgramEligibility();
+        
       } catch (error) {
         // Handle unauthorized errors
         if (error.response && error.response.status === 401) {
@@ -935,43 +947,89 @@ export default {
       this.restrictedPrograms = {};
       const { showToast } = useToast();
       
-      // Find the College Entrance Exam program ID and NAT program ID
-      const collegeEntranceProgram = this.programs.find(p => 
+      // Find all relevant programs
+      const cetPrograms = this.programs.filter(p => 
         p.name.toLowerCase().includes('college entrance') || 
-        p.code.toLowerCase().includes('cee'));
+        p.code.toLowerCase().includes('cet') ||
+        p.code.toLowerCase().includes('special-cet'));
       
-      const natProgram = this.programs.find(p => 
+      const natPrograms = this.programs.filter(p => 
         p.name.toLowerCase().includes('nursing aptitude test') || 
         p.code.toLowerCase().includes('nat'));
+        
+      const eatPrograms = this.programs.filter(p => 
+        p.name.toLowerCase().includes('engineering aptitude test') || 
+        p.code.toLowerCase().includes('eat'));
       
-      if (!collegeEntranceProgram || !natProgram) {
-        console.log('College Entrance Exam or NAT program not found');
-        return;
+      // Get all non-CET programs that require CET prerequisite
+      const specializedPrograms = [...natPrograms, ...eatPrograms];
+      
+      // Check if user has taken CET or SPECIAL-CET (prerequisite programs)
+      const hasCETAppointment = cetPrograms.some(program => {
+        return this.scheduledProgramIds.has(program.id);
+      });
+      
+      // Check if user has a completed/scored CET exam
+      const hasCETScore = cetPrograms.some(program => {
+        return this.userExamScores[program.id];
+      });
+      
+      console.log('CET Eligibility Check:', {
+        cetPrograms: cetPrograms.map(p => ({ id: p.id, name: p.name, code: p.code })),
+        hasCETAppointment,
+        hasCETScore,
+        scheduledProgramIds: Array.from(this.scheduledProgramIds),
+        userExamScores: this.userExamScores
+      });
+      
+      // If user hasn't taken CET, restrict all specialized programs
+      if (!hasCETAppointment && !hasCETScore) {
+        specializedPrograms.forEach(program => {
+          const restrictionReason = `You must schedule and complete the College Entrance Test (CET) or SPECIAL-CET first before taking specialized programs like ${program.name}.`;
+          
+          this.restrictedPrograms[program.id] = {
+            reason: restrictionReason,
+            type: 'prerequisite',
+            prerequisite: 'CET or SPECIAL-CET'
+          };
+          
+          console.log(`Restricted program ${program.name} (ID: ${program.id}) - requires CET prerequisite`);
+        });
+        
+        // Show a general notification about the prerequisite requirement
+        if (specializedPrograms.length > 0) {
+          showToast(
+            'Note: You must complete the College Entrance Test (CET) or SPECIAL-CET before scheduling specialized programs like NAT or EAT.', 
+            'info', 
+            8000
+          );
+        }
       }
       
-      const collegeEntranceProgramId = collegeEntranceProgram.id;
-      const natProgramId = natProgram.id;
+      // Additional score-based restrictions (existing logic)
+      const collegeEntranceProgram = cetPrograms[0]; // Use first CET program found
+      const natProgram = natPrograms[0]; // Use first NAT program found
       
-      // Check if the user has a score for the College Entrance Exam
-      if (this.userExamScores[collegeEntranceProgramId]) {
-        const score = this.userExamScores[collegeEntranceProgramId].score;
+      if (collegeEntranceProgram && natProgram && this.userExamScores[collegeEntranceProgram.id]) {
+        const score = this.userExamScores[collegeEntranceProgram.id].score;
         const scoreValue = parseInt(score, 10);
         
-        // If the score is below 90%, restrict NAT program
-        if (!isNaN(scoreValue) && scoreValue < 90) {
+        // If the score is below 90%, restrict NAT program (but only if not already restricted by prerequisite)
+        if (!isNaN(scoreValue) && scoreValue < 90 && !this.restrictedPrograms[natProgram.id]) {
           const restrictionReason = `Your College Entrance Exam score (${score}%) is below the required 90% to qualify for the Nursing Aptitude Test program.`;
           
-          this.restrictedPrograms[natProgramId] = {
+          this.restrictedPrograms[natProgram.id] = {
             reason: restrictionReason,
+            type: 'score',
             requiredScore: 90,
             actualScore: scoreValue
           };
           
-          // Show a toast notification for the restriction
-          showToast(restrictionReason, 'warning', 8000); // Show for 8 seconds
+          // Show a toast notification for the score restriction
+          showToast(restrictionReason, 'warning', 8000);
           
           console.log(`User restricted from NAT program due to low score: ${score}%`);
-        } else {
+        } else if (!isNaN(scoreValue) && scoreValue >= 90) {
           console.log(`User eligible for NAT program with score: ${score}%`);
         }
       }

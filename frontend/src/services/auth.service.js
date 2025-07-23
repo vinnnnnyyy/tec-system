@@ -102,7 +102,7 @@ class AuthService {
   }
 
   // Complete registration with OTP
-  async registerWithOTP(firstName, lastName, email, password, otp) {
+  async registerWithOTP(firstName, lastName, middleName, email, password, otp) {
     try {
       const response = await axios.post(API_ENDPOINT + 'signup-with-otp/', {
         username: email,  // Using email as username
@@ -110,7 +110,8 @@ class AuthService {
         password: password,
         otp: otp,
         first_name: firstName,
-        last_name: lastName
+        last_name: lastName,
+        middle_name: middleName || ''  // Include middle name, default to empty string if not provided
       });
 
       // If registration is successful, set the user session

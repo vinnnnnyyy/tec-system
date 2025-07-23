@@ -340,7 +340,7 @@
           </div>
           
           <!-- Test Results Filters -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Program</label>
               <select 
@@ -367,6 +367,19 @@
               </select>
             </div>
             
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
+              <select 
+                v-model="testResultsFilters.status"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-crimson-500 focus:border-crimson-500 text-sm"
+              >
+                <option value="">All Status</option>
+                <option v-for="status in uniqueTestStatuses" :key="status" :value="status">
+                  {{ status }}
+                </option>
+              </select>
+            </div>
+            
             <div class="flex items-end space-x-2">
               <button 
                 @click="resetTestResultsFilters"
@@ -374,13 +387,6 @@
               >
                 <i class="fas fa-redo mr-1"></i>
                 Reset
-              </button>
-              <button 
-                @click="filterTestResults"
-                class="flex-1 px-3 py-2 bg-crimson-600 text-white rounded-md hover:bg-crimson-700 transition-colors duration-200 text-sm"
-              >
-                <i class="fas fa-filter mr-1"></i>
-                Filter
               </button>
               <button 
                 @click="exportTestResultsToPDF"
@@ -511,7 +517,8 @@ export default {
     
     const testResultsFilters = reactive({
       program: '',
-      year: ''
+      year: '',
+      status: ''
     })
     
     const statistics = reactive({
@@ -590,6 +597,11 @@ export default {
       return years.sort().reverse() // Most recent years first
     })
     
+    const uniqueTestStatuses = computed(() => {
+      const statuses = [...new Set(testResults.value.map(result => result.status).filter(Boolean))]
+      return statuses.sort()
+    })
+    
     const filteredTestResults = computed(() => {
       let filtered = [...testResults.value]
       
@@ -605,6 +617,10 @@ export default {
           }
           return false
         })
+      }
+      
+      if (testResultsFilters.status) {
+        filtered = filtered.filter(result => result.status === testResultsFilters.status)
       }
       
       return filtered
@@ -887,6 +903,7 @@ export default {
     const resetTestResultsFilters = () => {
       testResultsFilters.program = ''
       testResultsFilters.year = ''
+      testResultsFilters.status = ''
     }
     
     const filterTestResults = () => {
@@ -996,11 +1013,12 @@ export default {
         element.style.fontFamily = 'Arial, sans-serif'
         
         // Add title and filters info
-        let filtersText = 'All Programs, All Years'
-        if (testResultsFilters.program || testResultsFilters.year) {
+        let filtersText = 'All Programs, All Years, All Status'
+        if (testResultsFilters.program || testResultsFilters.year || testResultsFilters.status) {
           const programText = testResultsFilters.program || 'All Programs'
           const yearText = testResultsFilters.year || 'All Years'
-          filtersText = `${programText}, ${yearText}`
+          const statusText = testResultsFilters.status || 'All Status'
+          filtersText = `${programText}, ${yearText}, ${statusText}`
         }
         
         element.innerHTML = `
@@ -1059,15 +1077,15 @@ export default {
           
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
             <p>Total Results: ${filteredTestResults.value.length}</p>
-            <p>Passed: ${filteredTestResults.value.filter(r => r.status === 'PASSED').length}</p>
-            <p>Failed: ${filteredTestResults.value.filter(r => r.status === 'FAILED').length}</p>
+            <p>Passed/Approved: ${filteredTestResults.value.filter(r => r.status === 'PASSED' || r.status === 'Approved').length}</p>
+            <p>Failed/Rejected: ${filteredTestResults.value.filter(r => r.status === 'FAILED' || r.status === 'Rejected').length}</p>
           </div>
         `
         
         // PDF options
         const options = {
           margin: 1,
-          filename: `test-results-${testResultsFilters.program || 'all-programs'}-${testResultsFilters.year || 'all-years'}-${new Date().toISOString().split('T')[0]}.pdf`,
+          filename: `test-results-${testResultsFilters.program || 'all-programs'}-${testResultsFilters.year || 'all-years'}-${testResultsFilters.status || 'all-status'}-${new Date().toISOString().split('T')[0]}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { 
             scale: 2, 
@@ -1117,6 +1135,7 @@ export default {
       testResultsFilters,
       uniqueTestPrograms,
       uniqueTestYears,
+      uniqueTestStatuses,
       filteredTestResults,
       resetTestResultsFilters,
       filterTestResults,

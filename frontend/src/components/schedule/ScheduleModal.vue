@@ -14,14 +14,14 @@
            class="fixed inset-0 items-center justify-center z-50 flex">
         <div :class="[
           'bg-white p-6 md:p-8 lg:p-10 rounded-xl shadow-xl w-full mx-2 md:mx-auto my-2 md:my-4 overflow-y-auto',
-          currentStep === 3 ? 'max-w-sm md:max-w-5xl lg:max-w-6xl xl:max-w-7xl max-h-[95vh]' : 'max-w-sm md:max-w-4xl lg:max-w-5xl max-h-[92vh]'
+          currentStep === 5 ? 'max-w-sm md:max-w-5xl lg:max-w-6xl xl:max-w-7xl max-h-[95vh]' : 'max-w-sm md:max-w-4xl lg:max-w-5xl max-h-[92vh]'
         ]">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-crimson-100 flex items-center justify-center">
                 <i class="fas fa-calendar-alt text-xl text-crimson-600"></i>
               </div>
-              {{ program?.name || 'Schedule an Appointment' }} - Step {{ currentStep }} of 3
+              {{ program?.name || 'Schedule an Appointment' }} - Step {{ currentStep }} of 5
             </h3>
             <button @click="close" class="text-gray-400 hover:text-gray-500 p-2 hover:bg-gray-100 rounded-lg transition-all">
               <i class="fas fa-times text-xl"></i>
@@ -140,6 +140,33 @@
                         </p>
                       </div>
                       
+                      <!-- Suffix -->
+                      <div class="space-y-2">
+                        <label for="suffix" class="block text-sm font-medium text-gray-700 mb-1.5">Suffix</label>
+                        <div class="relative">
+                          <select 
+                            id="suffix"
+                            v-model="formData.suffix"
+                            @blur="markAsTouched('suffix')"
+                            :class="['w-full px-4 py-2.5 border rounded-lg text-base transition-all shadow-sm focus:ring-2 focus:ring-offset-0', getInputClasses('suffix')]"
+                          >
+                            <option value="">Select suffix (Optional)</option>
+                            <option value="JR.">JR.</option>
+                            <option value="SR.">SR.</option>
+                            <option value="II">II</option>
+                            <option value="III">III</option>
+                            <option value="IV">IV</option>
+                            <option value="V">V</option>
+                          </select>
+                          <div v-if="isFieldValid('suffix')" class="absolute inset-y-0 right-3 flex items-center text-green-500 animate-fadeIn">
+                            <i class="fas fa-check-circle"></i>
+                          </div>
+                        </div>
+                        <p v-if="isFieldInvalid('suffix')" class="text-sm text-red-600 mt-1 error-text">
+                          {{ validationErrors.suffix }}
+                        </p>
+                      </div>
+                      
                       <!-- Contact Number -->
                       <div class="space-y-2">
                         <label for="contactNumber" class="block text-sm font-medium text-gray-700 mb-1.5">Contact Number</label>
@@ -230,6 +257,22 @@
                         </p>
                       </div>
                       
+                      <!-- Age (Auto-calculated) -->
+                      <div class="space-y-2 md:col-span-full">
+                        <label for="calculatedAge" class="block text-sm font-medium text-gray-700 mb-1.5">Age</label>
+                        <input 
+                          id="calculatedAge"
+                          :value="formData.age" 
+                          type="text"
+                          class="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-base transition-all focus:ring-0 focus:border-gray-300 shadow-sm"
+                          readonly
+                          placeholder="Age (auto-calculated)"
+                        />
+                         <p v-if="validationErrors.age" class="text-sm text-red-600 mt-1 error-text">
+                          {{ validationErrors.age }}
+                        </p>
+                      </div>
+                      
                       <!-- Gender -->
                       <div class="space-y-2 md:col-span-full">
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Gender</label>
@@ -275,24 +318,8 @@
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                      <!-- Display Calculated Age (Readonly) -->
-                      <div class="space-y-2">
-                        <label for="calculatedAge" class="block text-sm font-medium text-gray-700 mb-1.5">Age</label>
-                        <input 
-                          id="calculatedAge"
-                          :value="formData.age" 
-                          type="text"
-                          class="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-base transition-all focus:ring-0 focus:border-gray-300 shadow-sm"
-                          readonly
-                          placeholder="Age (auto-calculated)"
-                        />
-                         <p v-if="validationErrors.age" class="text-sm text-red-600 mt-1 error-text">
-                          {{ validationErrors.age }}
-                        </p>
-                      </div>
-                      
                       <!-- Street/Purok -->
-                      <div class="space-y-2">
+                      <div class="space-y-2 md:col-span-2">
                         <label for="streetPurok" class="block text-sm font-medium text-gray-700 mb-1.5">Street/Purok</label>
                         <div class="relative">
                           <input 
@@ -323,7 +350,7 @@
                       </div>
                       
                       <!-- Citizenship -->
-                      <div class="space-y-2">
+                      <div class="space-y-2 md:col-span-2">
                         <label for="citizenship" class="block text-sm font-medium text-gray-700 mb-1.5">Citizenship</label>
                         <div class="relative">
                           <input 
@@ -351,7 +378,7 @@
                       
                       <!-- High School Code -->
                       <div class="space-y-2 md:col-span-full">
-                        <label for="highSchoolCode" class="block text-sm font-medium text-gray-700 mb-1.5">High School Code (if known)</label>
+                        <label for="highSchoolCode" class="block text-sm font-medium text-gray-700 mb-1.5">High School Code / LRN (if known)</label>
                         <input 
                           id="highSchoolCode"
                           v-model="formData.highSchoolCode"
@@ -704,14 +731,630 @@
                   </div>
                 </div>
 
-                <!-- STEP 3: Schedule Details Section (Spans 2 columns on LG) -->
-                <div v-if="currentStep === 3" class="lg:col-span-2">
+                <!-- STEP 3: Course Choices & Additional Information (Spans 2 columns on LG) -->
+                <div v-if="currentStep === 3" class="space-y-8 lg:col-span-2">
+                  <!-- Course Choices Section -->
+                  <div class="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                      <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
+                        <i class="fas fa-graduation-cap text-crimson-500"></i>
+                      </div>
+                      <h4>Course to take up (Choose from the list of WMSU Campuses and undergraduate degree programs/courses offered by WMSU posted in your school's bulletin board.)</h4>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                      <!-- 1st Choice -->
+                      <div class="space-y-2">
+                        <label for="firstChoiceCourse" class="block text-sm font-medium text-gray-700 mb-1.5">1st Choice:</label>
+                        <input 
+                          id="firstChoiceCourse"
+                          v-model="formData.courseChoices.firstChoice"
+                          type="text"
+                          list="wmsu-courses-list-first"
+                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                          placeholder="Enter your first choice course"
+                          autocomplete="off"
+                        />
+                        <datalist id="wmsu-courses-list-first">
+                          <option v-for="course in wmsucourses" :key="course" :value="course">{{ course }}</option>
+                        </datalist>
+                      </div>
+                      
+                      <div class="space-y-2">
+                        <label for="firstChoiceCampus" class="block text-sm font-medium text-gray-700 mb-1.5">Campus:</label>
+                        <select 
+                          id="firstChoiceCampus"
+                          v-model="formData.courseChoices.firstChoiceCampus"
+                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                        >
+                          <option value="">Select a campus</option>
+                          <option v-for="campus in campusOptions" :key="campus" :value="campus">
+                            {{ campus }}
+                          </option>
+                        </select>
+                      </div>
+                      
+                      <!-- 2nd Choice -->
+                      <div class="space-y-2">
+                        <label for="secondChoiceCourse" class="block text-sm font-medium text-gray-700 mb-1.5">2nd Choice:</label>
+                        <input 
+                          id="secondChoiceCourse"
+                          v-model="formData.courseChoices.secondChoice"
+                          type="text"
+                          list="wmsu-courses-list-second"
+                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                          placeholder="Enter your second choice course"
+                          autocomplete="off"
+                        />
+                        <datalist id="wmsu-courses-list-second">
+                          <option v-for="course in wmsucourses" :key="course" :value="course">{{ course }}</option>
+                        </datalist>
+                      </div>
+                      
+                      <div class="space-y-2">
+                        <label for="secondChoiceCampus" class="block text-sm font-medium text-gray-700 mb-1.5">Campus:</label>
+                        <select 
+                          id="secondChoiceCampus"
+                          v-model="formData.courseChoices.secondChoiceCampus"
+                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                        >
+                          <option value="">Select a campus</option>
+                          <option v-for="campus in campusOptions" :key="campus" :value="campus">
+                            {{ campus }}
+                          </option>
+                        </select>
+                      </div>
+                      
+                      <!-- 3rd Choice -->
+                      <div class="space-y-2">
+                        <label for="thirdChoiceCourse" class="block text-sm font-medium text-gray-700 mb-1.5">3rd Choice:</label>
+                        <input 
+                          id="thirdChoiceCourse"
+                          v-model="formData.courseChoices.thirdChoice"
+                          type="text"
+                          list="wmsu-courses-list-third"
+                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                          placeholder="Enter your third choice course"
+                          autocomplete="off"
+                        />
+                        <datalist id="wmsu-courses-list-third">
+                          <option v-for="course in wmsucourses" :key="course" :value="course">{{ course }}</option>
+                        </datalist>
+                      </div>
+                      
+                      <div class="space-y-2">
+                        <label for="thirdChoiceCampus" class="block text-sm font-medium text-gray-700 mb-1.5">Campus:</label>
+                        <select 
+                          id="thirdChoiceCampus"
+                          v-model="formData.courseChoices.thirdChoiceCampus"
+                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                        >
+                          <option value="">Select a campus</option>
+                          <option v-for="campus in campusOptions" :key="campus" :value="campus">
+                            {{ campus }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Socio Economic Data Section -->
+                  <div class="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                      <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
+                        <i class="fas fa-users text-crimson-500"></i>
+                      </div>
+                      <h4>Socio Economic Data: Furnish all required information. Under the column "Highest Educational Attainment" indicate the educational level actually completed (eg. Grade III, Third year high school, High School Graduate, Second Year, College Graduate, etc)</h4>
+                    </div>
+                    
+                    <!-- Responsive Card Layout -->
+                    <div class="space-y-6">
+                      <!-- Father Information Card -->
+                      <div class="bg-blue-50 border border-blue-200 rounded-lg p-5">
+                        <h5 class="font-semibold text-blue-800 mb-4 flex items-center">
+                          <i class="fas fa-male mr-2"></i>
+                          Father's Information
+                        </h5>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Citizenship</label>
+                            <input 
+                              v-model="formData.socioEconomic.father.citizenship"
+                              type="text"
+                              list="citizenship-options-father"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., Filipino"
+                              autocomplete="off"
+                            />
+                            <datalist id="citizenship-options-father">
+                              <option v-for="citizenship in citizenshipOptions" :key="citizenship" :value="citizenship">{{ citizenship }}</option>
+                            </datalist>
+                          </div>
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Highest Educational Attainment</label>
+                            <input 
+                              v-model="formData.socioEconomic.father.education"
+                              type="text"
+                              list="education-options-father"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., High School Graduate, College Graduate"
+                              autocomplete="off"
+                            />
+                            <datalist id="education-options-father">
+                              <option v-for="education in educationalAttainmentOptions" :key="education" :value="education">{{ education }}</option>
+                            </datalist>
+                          </div>
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Work/Occupation</label>
+                            <input 
+                              v-model="formData.socioEconomic.father.occupation"
+                              type="text"
+                              list="occupation-options-father"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., Teacher, Farmer, Engineer"
+                              autocomplete="off"
+                            />
+                            <datalist id="occupation-options-father">
+                              <option v-for="occupation in occupationOptions" :key="occupation" :value="occupation">{{ occupation }}</option>
+                            </datalist>
+                          </div>
+                          <div class="space-y-2 md:col-span-2 lg:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700">Employer/Place of Work</label>
+                            <input 
+                              v-model="formData.socioEconomic.father.employer"
+                              type="text"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., Company name, School name"
+                            />
+                          </div>
+                          <div class="space-y-2 md:col-span-2 lg:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700">Monthly Income/Salary</label>
+                            <select 
+                              v-model="formData.socioEconomic.father.income"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                            >
+                              <option value="">Select income range</option>
+                              <option v-for="income in incomeOptions" :key="income" :value="income">
+                                {{ income }}
+                              </option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Mother Information Card -->
+                      <div class="bg-pink-50 border border-pink-200 rounded-lg p-5">
+                        <h5 class="font-semibold text-pink-800 mb-4 flex items-center">
+                          <i class="fas fa-female mr-2"></i>
+                          Mother's Information
+                        </h5>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Citizenship</label>
+                            <input 
+                              v-model="formData.socioEconomic.mother.citizenship"
+                              type="text"
+                              list="citizenship-options-mother"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., Filipino"
+                              autocomplete="off"
+                            />
+                            <datalist id="citizenship-options-mother">
+                              <option v-for="citizenship in citizenshipOptions" :key="citizenship" :value="citizenship">{{ citizenship }}</option>
+                            </datalist>
+                          </div>
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Highest Educational Attainment</label>
+                            <input 
+                              v-model="formData.socioEconomic.mother.education"
+                              type="text"
+                              list="education-options-mother"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., High School Graduate, College Graduate"
+                              autocomplete="off"
+                            />
+                            <datalist id="education-options-mother">
+                              <option v-for="education in educationalAttainmentOptions" :key="education" :value="education">{{ education }}</option>
+                            </datalist>
+                          </div>
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Work/Occupation</label>
+                            <input 
+                              v-model="formData.socioEconomic.mother.occupation"
+                              type="text"
+                              list="occupation-options-mother"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., Housewife, Nurse, Business Owner"
+                              autocomplete="off"
+                            />
+                            <datalist id="occupation-options-mother">
+                              <option v-for="occupation in occupationOptions" :key="occupation" :value="occupation">{{ occupation }}</option>
+                            </datalist>
+                          </div>
+                          <div class="space-y-2 md:col-span-2 lg:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700">Employer/Place of Work</label>
+                            <input 
+                              v-model="formData.socioEconomic.mother.employer"
+                              type="text"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                              placeholder="e.g., Hospital name, Own business"
+                            />
+                          </div>
+                          <div class="space-y-2 md:col-span-2 lg:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700">Monthly Income/Salary</label>
+                            <select 
+                              v-model="formData.socioEconomic.mother.income"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-sm transition-all"
+                            >
+                              <option value="">Select income range</option>
+                              <option v-for="income in incomeOptions" :key="income" :value="income">
+                                {{ income }}
+                              </option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Additional Questions Section -->
+                  <div class="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                      <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
+                        <i class="fas fa-question-circle text-crimson-500"></i>
+                      </div>
+                      <h4>Additional Information</h4>
+                    </div>
+                    
+                    <div class="space-y-6">
+                      <!-- Physical Disability Question -->
+                      <div class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Do you have a physical disability or condition that requires special attention or would make it difficult for you to take a regular test?</label>
+                        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-6">
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.hasDisability" 
+                              :value="false"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">No</span>
+                          </label>
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.hasDisability" 
+                              :value="true"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Yes (If yes, please submit a medical certificate/documentation of disability together with this form.)</span>
+                          </label>
+                        </div>
+                        
+                        <!-- Disability Description -->
+                        <div v-if="formData.additionalInfo.hasDisability" class="mt-3">
+                          <textarea 
+                            v-model="formData.additionalInfo.disabilityDescription"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                            rows="3"
+                            placeholder="Please describe your disability or special attention needed"
+                          ></textarea>
+                        </div>
+                      </div>
+
+                      <!-- Computer Usage Question -->
+                      <div class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Do you know how to use a computer?</label>
+                        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-6">
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.knowsComputer" 
+                              :value="false"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">No</span>
+                          </label>
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.knowsComputer" 
+                              :value="true"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Yes</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <!-- Indigenous Peoples Group Question -->
+                      <div class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Are you a member of an Indigenous Peoples Group (IPG)?</label>
+                        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-6">
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.isIndigenous" 
+                              :value="false"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">No</span>
+                          </label>
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.isIndigenous" 
+                              :value="true"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Yes</span>
+                          </label>
+                        </div>
+                        
+                        <!-- Indigenous Group Specification -->
+                        <div v-if="formData.additionalInfo.isIndigenous" class="mt-3">
+                          <input 
+                            v-model="formData.additionalInfo.indigenousGroup"
+                            type="text"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                            placeholder="Please specify the Indigenous Peoples Group"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Religious Affiliation Question -->
+                      <div class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Religious affiliation:</label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.religion" 
+                              value="roman_catholic"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Roman Catholic</span>
+                          </label>
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.religion" 
+                              value="protestant"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Protestant</span>
+                          </label>
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.religion" 
+                              value="islam"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Islam</span>
+                          </label>
+                          <label class="inline-flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <input 
+                              type="radio" 
+                              v-model="formData.additionalInfo.religion" 
+                              value="others"
+                              class="form-radio text-crimson-600 focus:ring-crimson-500 h-5 w-5 border-gray-300"
+                            >
+                            <span class="ml-2 text-gray-700 text-base">Others</span>
+                          </label>
+                        </div>
+                        
+                        <!-- Religion Others Specification -->
+                        <div v-if="formData.additionalInfo.religion === 'others'" class="mt-3">
+                          <input 
+                            v-model="formData.additionalInfo.religionOthers"
+                            type="text"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-crimson-500/50 focus:border-crimson-500 text-base transition-all shadow-sm"
+                            placeholder="Please specify your religion"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- STEP 4: Review Details Section (Spans 2 columns on LG) -->
+                <div v-if="currentStep === 4" class="lg:col-span-2">
+                  <div class="space-y-6 bg-white rounded-xl p-6 md:p-8 border border-gray-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                      <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
+                        <i class="fas fa-clipboard-check text-crimson-500"></i>
+                      </div>
+                      <h4>Review Your Information</h4>
+                    </div>
+                    
+                    <p class="text-gray-600 mb-6">Please review all the information you've entered before scheduling your appointment.</p>
+                    
+                    <!-- Personal Information Review -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                      <h5 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-user text-blue-500"></i>
+                        Personal Information
+                      </h5>
+                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                        <div><span class="font-medium">Name:</span> {{ formData.firstName }} {{ formData.middleName }} {{ formData.lastName }}</div>
+                        <div><span class="font-medium">Email:</span> {{ formData.email }}</div>
+                        <div><span class="font-medium">Contact:</span> {{ formData.contactNumber }}</div>
+                        <div><span class="font-medium">Birth Date:</span> {{ formData.birthMonth }}/{{ formData.birthDay }}/{{ formData.birthYear }}</div>
+                        <div><span class="font-medium">Age:</span> {{ formData.age }}</div>
+                        <div><span class="font-medium">Gender:</span> {{ formData.gender }}</div>
+                        <div><span class="font-medium">Address:</span> {{ formData.streetPurok }}, {{ formData.barangay }}, {{ formData.city }}</div>
+                        <div><span class="font-medium">Citizenship:</span> {{ formData.citizenship }}</div>
+                      </div>
+                    </div>
+
+                    <!-- Educational Background Review -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                      <h5 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-graduation-cap text-green-500"></i>
+                        Educational Background
+                      </h5>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div><span class="font-medium">Applicant Type:</span> 
+                          {{ formData.applicantType === 'senior_high_graduating' ? 'Senior High School Graduating Student' :
+                             formData.applicantType === 'senior_high_graduate' ? 'Senior High School Graduate' :
+                             formData.applicantType === 'college' ? 'College Student' : formData.applicantType }}
+                        </div>
+                        <div><span class="font-medium">WMSUCET Experience:</span> 
+                          {{ formData.wmsucetExperience.firstTime ? 'First Time' : `${formData.wmsucetExperience.timesTaken} times taken` }}
+                        </div>
+                        
+                        <!-- Applicant Type Specific Details -->
+                        <template v-if="formData.applicantType === 'senior_high_graduating'">
+                          <div><span class="font-medium">School:</span> {{ formData.seniorGraduating.schoolName }}</div>
+                          <div><span class="font-medium">School Address:</span> {{ formData.seniorGraduating.schoolAddress }}</div>
+                          <div><span class="font-medium">Expected Graduation:</span> {{ formData.seniorGraduating.graduationDate }}</div>
+                        </template>
+                        
+                        <template v-if="formData.applicantType === 'senior_high_graduate'">
+                          <div><span class="font-medium">School:</span> {{ formData.seniorGraduate.schoolName }}</div>
+                          <div><span class="font-medium">School Address:</span> {{ formData.seniorGraduate.schoolAddress }}</div>
+                          <div><span class="font-medium">Graduation Date:</span> {{ formData.seniorGraduate.graduationDate }}</div>
+                        </template>
+                        
+                        <template v-if="formData.applicantType === 'college'">
+                          <div><span class="font-medium">School:</span> {{ formData.college.schoolName }}</div>
+                          <div><span class="font-medium">School Address:</span> {{ formData.college.schoolAddress }}</div>
+                          <div><span class="font-medium">Course:</span> {{ formData.college.course }}</div>
+                          <div><span class="font-medium">College Type:</span> {{ formData.college.collegeType }}</div>
+                        </template>
+                      </div>
+                    </div>
+
+                    <!-- Course Choices Review -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                      <h5 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-list-ol text-purple-500"></i>
+                        Course Choices
+                      </h5>
+                      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div class="bg-white p-3 rounded border">
+                          <div class="font-medium text-purple-600 mb-1">1st Choice</div>
+                          <div>{{ formData.courseChoices?.firstChoice || 'Not specified' }}</div>
+                          <div class="text-xs text-gray-500 mt-1">{{ formData.courseChoices?.firstChoiceCampus || 'No campus specified' }}</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                          <div class="font-medium text-purple-600 mb-1">2nd Choice</div>
+                          <div>{{ formData.courseChoices?.secondChoice || 'Not specified' }}</div>
+                          <div class="text-xs text-gray-500 mt-1">{{ formData.courseChoices?.secondChoiceCampus || 'No campus specified' }}</div>
+                        </div>
+                        <div class="bg-white p-3 rounded border">
+                          <div class="font-medium text-purple-600 mb-1">3rd Choice</div>
+                          <div>{{ formData.courseChoices?.thirdChoice || 'Not specified' }}</div>
+                          <div class="text-xs text-gray-500 mt-1">{{ formData.courseChoices?.thirdChoiceCampus || 'No campus specified' }}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Socio-Economic Information Review -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                      <h5 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-users text-orange-500"></i>
+                        Family Information
+                      </h5>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Father's Information -->
+                        <div class="bg-white p-3 rounded border">
+                          <div class="font-medium text-blue-600 mb-2">Father's Information</div>
+                          <div class="space-y-1 text-sm">
+                            <div><span class="font-medium">Citizenship:</span> {{ formData.socioEconomic?.father?.citizenship || 'Not specified' }}</div>
+                            <div><span class="font-medium">Education:</span> {{ formData.socioEconomic?.father?.education || 'Not specified' }}</div>
+                            <div><span class="font-medium">Occupation:</span> {{ formData.socioEconomic?.father?.occupation || 'Not specified' }}</div>
+                            <div><span class="font-medium">Employer:</span> {{ formData.socioEconomic?.father?.employer || 'Not specified' }}</div>
+                            <div><span class="font-medium">Income:</span> {{ formData.socioEconomic?.father?.income || 'Not specified' }}</div>
+                          </div>
+                        </div>
+                        
+                        <!-- Mother's Information -->
+                        <div class="bg-white p-3 rounded border">
+                          <div class="font-medium text-pink-600 mb-2">Mother's Information</div>
+                          <div class="space-y-1 text-sm">
+                            <div><span class="font-medium">Citizenship:</span> {{ formData.socioEconomic?.mother?.citizenship || 'Not specified' }}</div>
+                            <div><span class="font-medium">Education:</span> {{ formData.socioEconomic?.mother?.education || 'Not specified' }}</div>
+                            <div><span class="font-medium">Occupation:</span> {{ formData.socioEconomic?.mother?.occupation || 'Not specified' }}</div>
+                            <div><span class="font-medium">Employer:</span> {{ formData.socioEconomic?.mother?.employer || 'Not specified' }}</div>
+                            <div><span class="font-medium">Income:</span> {{ formData.socioEconomic?.mother?.income || 'Not specified' }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Additional Information Review -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                      <h5 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-indigo-500"></i>
+                        Additional Information
+                      </h5>
+                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                        <div><span class="font-medium">Physical Disability:</span> {{ formData.additionalInfo?.hasDisability ? 'Yes' : 'No' }}</div>
+                        <div v-if="formData.additionalInfo?.hasDisability"><span class="font-medium">Disability Description:</span> {{ formData.additionalInfo?.disabilityDescription || 'Not specified' }}</div>
+                        <div><span class="font-medium">Computer Knowledge:</span> {{ formData.additionalInfo?.knowsComputer ? 'Yes' : 'No' }}</div>
+                        <div><span class="font-medium">Indigenous Group:</span> {{ formData.additionalInfo?.isIndigenous ? 'Yes' : 'No' }}</div>
+                        <div v-if="formData.additionalInfo?.isIndigenous"><span class="font-medium">Indigenous Group:</span> {{ formData.additionalInfo?.indigenousGroup || 'Not specified' }}</div>
+                        <div><span class="font-medium">Religion:</span> 
+                          {{ formData.additionalInfo?.religion === 'roman_catholic' ? 'Roman Catholic' :
+                             formData.additionalInfo?.religion === 'protestant' ? 'Protestant' :
+                             formData.additionalInfo?.religion === 'islam' ? 'Islam' :
+                             formData.additionalInfo?.religion === 'others' ? (formData.additionalInfo?.religionOthers || 'Others') :
+                             'Not specified' }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Privacy Policy Agreement -->
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                      <div class="flex items-start gap-3">
+                        <input 
+                          type="checkbox" 
+                          id="privacyPolicyAgreement" 
+                          v-model="formData.privacyPolicyAgreed"
+                          @change="markAsTouched('privacyPolicyAgreed'); validatePrivacyPolicy()"
+                          :class="['h-5 w-5 text-crimson-600 focus:ring-crimson-500 border-gray-300 rounded mt-0.5', 
+                            isFieldInvalid('privacyPolicyAgreed') ? 'border-red-500' : '']"
+                        >
+                        <div class="flex-1">
+                          <label for="privacyPolicyAgreement" class="text-sm font-medium text-gray-900 cursor-pointer">
+                            <i class="fas fa-shield-alt text-yellow-600 mr-2"></i>
+                            Privacy Policy Agreement
+                          </label>
+                          <p class="text-sm text-gray-700 mt-1">
+                            ☑ I agree to the <a href="#" class="text-crimson-600 hover:text-crimson-700 font-medium underline">Privacy Policy</a> and allow the collection and processing of my personal data in accordance with the Data Privacy Act of 2012.
+                          </p>
+                          <p v-if="isFieldInvalid('privacyPolicyAgreed')" class="text-sm text-red-600 mt-1">
+                            {{ validationErrors.privacyPolicyAgreed }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Edit Information Notice -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div class="flex items-start gap-3">
+                        <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+                        <div>
+                          <h6 class="font-medium text-blue-900">Need to make changes?</h6>
+                          <p class="text-sm text-blue-700 mt-1">
+                            Use the "Previous" button below to go back and edit any information. Once you proceed to schedule your appointment, this information will be submitted.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- STEP 5: Schedule Details Section (Spans 2 columns on LG) -->
+                <div v-if="currentStep === 5" class="lg:col-span-2">
                   <div class="space-y-6 bg-white rounded-xl p-6 md:p-8 border border-gray-200 shadow-sm">
                     <div class="flex items-center gap-3 text-lg font-semibold text-gray-900 mb-4 pb-3 border-b border-gray-200">
                       <div class="w-8 h-8 rounded-lg bg-crimson-100 flex items-center justify-center">
                         <i class="fas fa-calendar-alt text-crimson-500"></i>
                       </div>
-                      <h4>Schedule Details</h4>
+                      <h4>Registration Schedule Details</h4>
                     </div>
                     
                     <div class="grid grid-cols-1 gap-x-6 gap-y-6">
@@ -800,6 +1443,165 @@
                           </button>
                         </div>
                       </div>
+                      
+                      <!-- Test Center Selection -->
+                      <div v-if="formData.timeSlot" class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Preferred Test Center</label>
+                        <p class="text-sm text-gray-500 mb-4">
+                          Select your preferred test center. Total available slots are shown for your selected time slot.
+                        </p>
+                        
+                        <div v-if="loadingTestCenters" class="flex justify-center py-8">
+                          <div class="animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-crimson-600"></div>
+                        </div>
+                        
+                        <div v-else-if="testCenters.length === 0" class="text-center py-8 text-gray-500">
+                          <i class="fas fa-building text-4xl mb-3"></i>
+                          <p>No test centers available at the moment.</p>
+                        </div>
+                        
+                        <div v-else class="grid grid-cols-1 gap-4">
+                          <div v-for="center in testCenters" :key="center.id"
+                            @click="selectTestCenter(center); markAsTouched('testCenter')"
+                            :class="[
+                              'border rounded-xl p-4 cursor-pointer transition-all duration-200 hover:shadow-md',
+                              formData.testCenter === center.id 
+                                ? 'border-crimson-500 bg-crimson-50 shadow-md' 
+                                : 'border-gray-300 hover:border-crimson-300',
+                              touchedFields.testCenter && validationErrors.testCenter ? 'border-red-500' : ''
+                            ]"
+                          >
+                            <div class="flex items-start justify-between">
+                              <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                  <div :class="[
+                                    'w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all',
+                                    formData.testCenter === center.id 
+                                      ? 'border-crimson-500 bg-crimson-500' 
+                                      : 'border-gray-300'
+                                  ]">
+                                    <div v-if="formData.testCenter === center.id" class="w-2 h-2 bg-white rounded-full"></div>
+                                  </div>
+                                  <h4 class="font-semibold text-gray-900">{{ center.name }}</h4>
+                                  <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ center.code }}</span>
+                                </div>
+                                
+                                <p v-if="center.address" class="text-sm text-gray-600 mb-3 ml-7">{{ center.address }}</p>
+                                
+                                <div class="ml-7">
+                                  <div class="flex items-center gap-2 mb-2">
+                                    <i class="fas fa-users text-crimson-500"></i>
+                                    <span class="text-sm font-medium text-gray-700">Available Slots for {{ formData.timeSlot === 'morning' ? 'Morning' : 'Afternoon' }}:</span>
+                                  </div>
+                                  
+                                  <div v-if="getTotalSlotsForCenter(center.id, formData.timeSlot) === 0" 
+                                    class="text-sm text-red-600 flex items-center gap-2">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>No slots available for this time slot</span>
+                                  </div>
+                                  
+                                  <div v-else class="flex items-center gap-2">
+                                    <div :class="[
+                                      'px-3 py-2 rounded-lg font-semibold text-sm',
+                                      getTotalSlotsForCenter(center.id, formData.timeSlot) > 0 
+                                        ? 'bg-green-100 text-green-800 border border-green-200' 
+                                        : 'bg-red-100 text-red-800 border border-red-200'
+                                    ]">
+                                      <i :class="[
+                                        'fas fa-chair mr-2',
+                                        getTotalSlotsForCenter(center.id, formData.timeSlot) > 0 ? 'text-green-600' : 'text-red-600'
+                                      ]"></i>
+                                      {{ getTotalSlotsForCenter(center.id, formData.timeSlot) }} / {{ getTotalCapacityForCenter(center.id, formData.timeSlot) }} slots available
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <p v-if="touchedFields.testCenter && validationErrors.testCenter" class="text-sm text-red-600 mt-2 error-text">
+                          {{ validationErrors.testCenter }}
+                        </p>
+                      </div>
+                      
+                      <!-- Test Session Selection -->
+                      <div v-if="formData.testCenter" class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Select Test Session</label>
+                        <p class="text-sm text-gray-500 mb-4">
+                          Choose your preferred exam date from the available test sessions for {{ getExamTypeFromProgram }} exams.
+                        </p>
+                        
+                        <div v-if="availableTestSessions.length === 0" class="text-center py-8 text-gray-500">
+                          <i class="fas fa-calendar-times text-4xl mb-3"></i>
+                          <p>No test sessions available for this program at the moment.</p>
+                          <p class="text-sm mt-2">Please check back later or contact the registrar's office.</p>
+                        </div>
+                        
+                        <div v-else class="grid grid-cols-1 gap-4">
+                          <div v-for="session in availableTestSessions" :key="session.id"
+                            @click="formData.testSession = session.id; markAsTouched('testSession')"
+                            :class="[
+                              'border rounded-xl p-4 cursor-pointer transition-all duration-200 hover:shadow-md',
+                              formData.testSession === session.id 
+                                ? 'border-crimson-500 bg-crimson-50 shadow-md' 
+                                : 'border-gray-300 hover:border-crimson-300',
+                              touchedFields.testSession && validationErrors.testSession ? 'border-red-500' : ''
+                            ]"
+                          >
+                            <div class="flex items-start justify-between">
+                              <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-3">
+                                  <div :class="[
+                                    'w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all',
+                                    formData.testSession === session.id 
+                                      ? 'border-crimson-500 bg-crimson-500' 
+                                      : 'border-gray-300'
+                                  ]">
+                                    <div v-if="formData.testSession === session.id" class="w-2 h-2 bg-white rounded-full"></div>
+                                  </div>
+                                  <div class="flex-1">
+                                    <h4 class="font-semibold text-gray-900 text-lg">{{ session.exam_type }} Exam Session</h4>
+                                    <div class="flex items-center gap-4 mt-1">
+                                      <span :class="[
+                                        'px-2 py-1 text-xs font-medium rounded-full',
+                                        session.status === 'ONGOING' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                                      ]">
+                                        {{ session.status }}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div class="ml-7 space-y-2">
+                                  <div class="flex items-center gap-2">
+                                    <i class="fas fa-calendar-day text-crimson-500"></i>
+                                    <span class="text-sm font-medium text-gray-700">Exam Date:</span>
+                                    <span class="text-sm text-gray-900 font-semibold">{{ formatDate(session.exam_date) }}</span>
+                                  </div>
+                                  
+                                  <div class="flex items-center gap-2">
+                                    <i class="fas fa-calendar-plus text-green-500"></i>
+                                    <span class="text-sm font-medium text-gray-700">Registration Period:</span>
+                                    <span class="text-sm text-gray-900">
+                                      {{ formatDate(session.registration_start_date) }} - {{ formatDate(session.registration_end_date) }}
+                                    </span>
+                                  </div>
+                                  
+                                  <div v-if="session.description" class="flex items-start gap-2">
+                                    <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+                                    <span class="text-sm text-gray-600">{{ session.description }}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <p v-if="touchedFields.testSession && validationErrors.testSession" class="text-sm text-red-600 mt-2 error-text">
+                          {{ validationErrors.testSession }}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -810,7 +1612,7 @@
                 <button 
                   type="button" 
                   @click="close" 
-                  class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-all text-base font-medium flex items-center justify-center gap-2 order-1 sm:order-none"
+                  class="flex-1 sm:w-40 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-all text-base font-medium flex items-center justify-center gap-2 order-1 sm:order-none"
                 >
                   <i class="fas fa-times"></i>
                   Cancel
@@ -820,7 +1622,7 @@
                   type="button" 
                   v-if="currentStep > 1"
                   @click="prevStep"
-                  class="bg-gray-200 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-300 transition-all text-base font-medium flex items-center justify-center gap-2 order-2 sm:order-none"
+                  class="flex-1 sm:w-40 bg-gray-200 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-300 transition-all text-base font-medium flex items-center justify-center gap-2 order-2 sm:order-none"
                 >
                   <i class="fas fa-arrow-left"></i>
                   Previous
@@ -828,24 +1630,25 @@
 
                 <button 
                   type="button" 
-                  v-if="currentStep < 3"
+                  v-if="currentStep < 5"
                   @click="nextStep"
                   :disabled="currentStep === 1 && !checkDuplicateRegistration()"
                   :class="[
-                    'flex-1 text-white px-6 py-3 rounded-lg transition-all text-base font-medium flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto',
+                    'flex-1 sm:w-40 text-white px-6 py-3 rounded-lg transition-all text-base font-medium flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto',
                     (currentStep === 1 && !checkDuplicateRegistration()) 
                       ? 'bg-gray-400 cursor-not-allowed' 
                       : 'bg-crimson-500 hover:bg-crimson-600'
                   ]"
                 >
-                  Next
+                  <span v-if="currentStep === 4">Review & Continue</span>
+                  <span v-else>Next</span>
                   <i class="fas fa-arrow-right"></i>
                 </button>
                 
                 <button 
                   type="submit"
-                  v-if="currentStep === 3"
-                  class="flex-1 bg-gradient-to-r from-crimson-600 to-crimson-700 text-white px-6 py-3 rounded-lg hover:from-crimson-700 hover:to-crimson-800 transition-all text-base font-medium shadow-sm flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto"
+                  v-if="currentStep === 5"
+                  class="flex-1 sm:w-40 bg-gradient-to-r from-crimson-600 to-crimson-700 text-white px-6 py-3 rounded-lg hover:from-crimson-700 hover:to-crimson-800 transition-all text-base font-medium shadow-sm flex items-center justify-center gap-2 order-3 sm:order-none sm:ml-auto"
                   :disabled="loading"
                 >
                   <i class="fas fa-calendar-check"></i>
@@ -897,10 +1700,18 @@ export default {
     const error = ref(null);
     const apiData = ref(null);
     const testSessions = ref([]);
+    const testCenters = ref([]);
+    const testRooms = ref([]);
+    const loadingTestCenters = ref(false);
     const showCalendar = ref(false);
     const dateError = ref('');
     const userAppointments = ref([]);
     const currentStep = ref(1); // To manage the current step of the form
+    const totalSteps = 5; // Total number of steps in the form
+    const isSubmitting = ref(false); // Track form submission state
+    const showNotification = ref(false); // Track notification display state
+    const notificationMessage = ref(''); // Notification message content
+    const notificationType = ref('info'); // Notification type (info, warning, error, success)
 
     const validationErrors = ref({
       lastName: '',
@@ -917,7 +1728,10 @@ export default {
       citizenship: '',
       wmsucetExperience: '',
       applicantType: '',
-      age: '' // Added age here
+      testCenter: '',
+      testSession: '',
+      age: '', // Added age here
+      privacyPolicyAgreed: '' // Added privacy policy validation
     });
     
     // Add a touched state to track which fields have been interacted with
@@ -938,15 +1752,21 @@ export default {
       highSchoolCode: false,
       applicantType: false,
       timeSlot: false,
-      preferredDate: false
+      preferredDate: false,
+      testCenter: false,
+      testSession: false,
+      privacyPolicyAgreed: false // Added privacy policy touched field
     });
     
     const formData = ref({
       preferredDate: '',
       timeSlot: '',
+      testCenter: '',
+      testSession: '', // Add test session selection
       lastName: '',
       firstName: '',
       middleName: '',
+      suffix: '',
       contactNumber: '',
       email: '',
       schoolName: '',
@@ -983,7 +1803,45 @@ export default {
         schoolAddress: '',
         course: '',
         collegeType: ''
-      }
+      },
+      // Course choices and campus information
+      courseChoices: {
+        firstChoice: '',
+        firstChoiceCampus: '',
+        secondChoice: '',
+        secondChoiceCampus: '',
+        thirdChoice: '',
+        thirdChoiceCampus: ''
+      },
+      // Socio-economic data
+      socioEconomic: {
+        father: {
+          citizenship: '',
+          education: '',
+          occupation: '',
+          employer: '',
+          income: ''
+        },
+        mother: {
+          citizenship: '',
+          education: '',
+          occupation: '',
+          employer: '',
+          income: ''
+        }
+      },
+      // Additional information
+      additionalInfo: {
+        hasDisability: false,
+        disabilityDescription: '',
+        knowsComputer: false,
+        isIndigenous: false,
+        indigenousGroup: '',
+        religion: '',
+        religionOthers: ''
+      },
+      // Privacy Policy Agreement
+      privacyPolicyAgreed: false
     });
     
     // Convert imported arrays to reactive refs
@@ -991,6 +1849,194 @@ export default {
     const philippineCities = ref(citiesData);
     const citizenshipOptions = ref(citizenshipsData);
     const zamboanganSchools = ref(allZamboanganSchoolsFull);
+    
+    // WMSU Campus options for course choices
+    const campusOptions = ref([
+      'WMSU Main Campus',
+      'WMSU ESU - Alicia (Zamboanga Sibugay)',
+      'WMSU ESU - Aurora (Zamboanga del Sur)',
+      'WMSU ESU - Curuan (Zamboanga City) – autonomous campus',
+      'WMSU ESU - Malangas (Zamboanga Sibugay) – autonomous campus',
+      'WMSU ESU - Diplahan (Zamboanga Sibugay)',
+      'WMSU ESU - Imelda (Zamboanga Sibugay)',
+      'WMSU ESU - Ipil (Zamboanga Sibugay)',
+      'WMSU ESU - Mabuhay (Zamboanga Sibugay)',
+      'WMSU ESU - Molave (Zamboanga del Sur)',
+      'WMSU ESU - Naga (Zamboanga Sibugay)',
+      'WMSU ESU - Olutanga (Zamboanga Sibugay)',
+      'WMSU ESU - Pagadian City (Zamboanga del Sur)',
+      'WMSU ESU - Siay (Zamboanga Sibugay)',
+      'WMSU ESU - Tungawan (Zamboanga Sibugay)',
+      'San Ramon Campus (Zamboanga City) – satellite campus',
+      'Curuan Campus (Zamboanga City) – autonomous campus',
+      'Malangas Campus (Zamboanga Sibugay) – autonomous campus'
+    ]);
+
+    // WMSU Undergraduate Programs data
+    const wmsucourses = ref([
+      // College of Architecture
+      'BS Architecture (Specializations: Housing, Planning, Construction Technology, Architectural Design)',
+      
+      // College of Agriculture
+      'BS Agriculture (majors: Crop Science, Animal Science, Soil Science, Entomology, Horticulture)',
+      'BS Agricultural Engineering',
+      'Diploma in Agricultural Technology / BAT ladder-course',
+      
+      // College of Forestry & Environmental Studies
+      'BS Forestry',
+      
+      // College of Engineering
+      'BS Civil Engineering',
+      'BS Mechanical Engineering',
+      'BS Electrical Engineering',
+      'BS Computer Engineering',
+      'BS Environmental Engineering',
+      'BS Geodetic Engineering',
+      
+      // College of Computing Studies
+      'BS Computer Science',
+      'BS Information Technology',
+      'Associate In Computer Technology: Networking',
+      'Associate In Computer Technology: Application Development',
+      
+      // College of Science & Mathematics
+      'BS Chemistry',
+      'BS Biology',
+      'BS Mathematics',
+      'BS Physics',
+      'BS Statistics',
+      
+      // College of Nursing
+      'BS Nursing',
+      
+      // College of Home Economics
+      'BS Home Economics Education',
+      
+      // College of Social Work & Community Development
+      'BS Social Work',
+      
+      // College of Criminal Justice Education
+      'BS Criminology',
+      
+      // College of Teacher Education
+      'BEED (majors: Guidance & Counseling, Pre‑School, English, Work Education, Filipino, Math, MAPE, Science & Health, Social Studies, Special Education)',
+      'BSED (majors: English, PEHM, Filipino, Math, Physics, Biology, Social Studies, Values Education, Chemistry, General Science)',
+      
+      // College of Liberal Arts
+      'BA English',
+      'BA Political Science',
+      'BA Mass Communication (Journalism & Broadcasting)',
+      'BA Social Studies',
+      'BA Filipino',
+      'BS Economics',
+      'BS Psychology',
+      
+      // College of Asian & Islamic Studies
+      'BS Islamic Studies',
+      'BA Asian Studies (Southeast Asian focus; including Philippine/Korean history & culture)',
+      
+      // College of Physical Education
+      'BPE (Physical Education)',
+      
+      // College of Nutrition & Dietetics
+      'BS Nutrition & Dietetics',
+      
+      // College of Sports Science & Physical Education
+      'Undergrad in Physical Education',
+      
+      // College of Public Administration & Development Studies
+      'BS Community Development (BSCD)',
+      
+      // College of Law
+      'Bachelor of Laws (with specialization in Islamic Jurisprudence)'
+    ]);
+
+    // Socio-Economic Data Options
+    const educationalAttainmentOptions = ref([
+      'No Formal Education',
+      'Elementary Graduate',
+      'Elementary Undergraduate',
+      'High School Graduate', 
+      'High School Undergraduate',
+      'Senior High School Graduate',
+      'Senior High School Undergraduate',
+      'Vocational Graduate',
+      'Vocational Undergraduate',
+      'College Graduate',
+      'College Undergraduate',
+      'Masteral Graduate',
+      'Masteral Undergraduate',
+      'Doctoral Graduate',
+      'Doctoral Undergraduate'
+    ]);
+
+    const occupationOptions = ref([
+      // Professional/Technical
+      'Teacher',
+      'Engineer',
+      'Doctor',
+      'Nurse',
+      'Lawyer',
+      'Accountant',
+      'Architect',
+      'Social Worker',
+      'Police Officer',
+      'Military Personnel',
+      'Government Employee',
+      
+      // Business/Service
+      'Business Owner',
+      'Manager',
+      'Sales Representative',
+      'Cashier',
+      'Security Guard',
+      'Driver',
+      'Mechanic',
+      'Electrician',
+      'Plumber',
+      'Carpenter',
+      
+      // Agriculture/Fishing
+      'Farmer',
+      'Fisherman',
+      'Agricultural Worker',
+      
+      // Labor/Service
+      'Construction Worker',
+      'Factory Worker',
+      'Domestic Helper',
+      'Cook',
+      'Vendor',
+      'Jeepney Driver',
+      'Tricycle Driver',
+      
+      // Others
+      'Self-Employed',
+      'Housewife/Househusband',
+      'Retired',
+      'Unemployed',
+      'Student',
+      'Overseas Filipino Worker (OFW)',
+      'Others'
+    ]);
+    
+    const incomeOptions = ref([
+      'Below ₱5,000',
+      '₱5,000 - ₱10,000',
+      '₱10,001 - ₱15,000',
+      '₱15,001 - ₱20,000',
+      '₱20,001 - ₱25,000',
+      '₱25,001 - ₱30,000',
+      '₱30,001 - ₱40,000',
+      '₱40,001 - ₱50,000',
+      '₱50,001 - ₱75,000',
+      '₱75,001 - ₱100,000',
+      '₱100,001 - ₱150,000',
+      '₱150,001 - ₱200,000',
+      'Above ₱200,000',
+      'No Income',
+      'Prefer not to say'
+    ]);
     
     // Location data for the new LocationDropdowns component
     const locationData = ref({
@@ -1387,6 +2433,41 @@ export default {
       return dateInfo?.afternoon_available ?? false;
     });
     
+    // Get exam type based on program name for test session filtering
+    const getExamTypeFromProgram = computed(() => {
+      if (!props.program?.name) return null;
+      
+      const programName = props.program.name.toLowerCase();
+      
+      if (programName.includes('college entrance') || programName.includes('cet') || programName.includes('wmsu-cet') || programName.includes('wmsucet')) {
+        return 'CET';
+      } else if (programName.includes('nat') || programName.includes('nursing')) {
+        return 'NAT';
+      } else if (programName.includes('eat') || programName.includes('entrance')) {
+        return 'EAT';
+      }
+      
+      // Default to CET if no specific match is found
+      return 'CET';
+    });
+    
+    // Filter available test sessions based on program
+    const availableTestSessions = computed(() => {
+      if (!testSessions.value || testSessions.value.length === 0) return [];
+      
+      const examType = getExamTypeFromProgram.value;
+      if (!examType) return [];
+      
+      // Filter test sessions by exam type and status
+      const filteredSessions = testSessions.value.filter(session => {
+        return session.exam_type === examType && 
+               (session.status === 'ONGOING' || session.status === 'UPCOMING');
+      });
+      
+      // Sort by exam date
+      return filteredSessions.sort((a, b) => new Date(a.exam_date) - new Date(b.exam_date));
+    });
+    
     // Validate last name
     const validateLastName = () => {
       if (!formData.value.lastName.trim()) {
@@ -1420,7 +2501,7 @@ export default {
       // Middle name is optional, so no error if empty.
       // If provided, it can have a min length, e.g., 1 character if not just an initial.
       if (formData.value.middleName.trim() && formData.value.middleName.trim().length < 1) {
-        validationErrors.value.middleName = 'Middle name seems too short';
+        validationErrors.value.middleName = 'Middle name seems to short';
         return false; // Or true if partial validation is acceptable for optional fields
       }
       validationErrors.value.middleName = '';
@@ -1626,6 +2707,84 @@ export default {
       }
     };
     
+    // Validate course choices and socio-economic data
+    const validateCourseChoicesAndSocioEconomic = () => {
+      let isValid = true;
+      
+      // Safety check - ensure data structures exist
+      if (!formData.value.courseChoices || !formData.value.socioEconomic || !formData.value.additionalInfo) {
+        return true; // Skip validation if structures don't exist yet
+      }
+      
+      // Course choices validation
+      if (!formData.value.courseChoices?.firstChoice || !formData.value.courseChoices.firstChoice.trim()) {
+        validationErrors.value.firstChoice = 'First choice course is required';
+        isValid = false;
+      } else {
+        validationErrors.value.firstChoice = '';
+      }
+      
+      if (!formData.value.courseChoices?.firstChoiceCampus || !formData.value.courseChoices.firstChoiceCampus.trim()) {
+        validationErrors.value.firstChoiceCampus = 'Campus for first choice is required';
+        isValid = false;
+      } else {
+        validationErrors.value.firstChoiceCampus = '';
+      }
+      
+      if (!formData.value.courseChoices?.secondChoice || !formData.value.courseChoices.secondChoice.trim()) {
+        validationErrors.value.secondChoice = 'Second choice course is required';
+        isValid = false;
+      } else {
+        validationErrors.value.secondChoice = '';
+      }
+      
+      if (!formData.value.courseChoices?.secondChoiceCampus || !formData.value.courseChoices.secondChoiceCampus.trim()) {
+        validationErrors.value.secondChoiceCampus = 'Campus for second choice is required';
+        isValid = false;
+      } else {
+        validationErrors.value.secondChoiceCampus = '';
+      }
+      
+      // Socio-economic validation - Now optional, clear any existing errors
+      validationErrors.value.fatherCitizenship = '';
+      validationErrors.value.fatherEducation = '';
+      validationErrors.value.fatherOccupation = '';
+      validationErrors.value.motherCitizenship = '';
+      validationErrors.value.motherEducation = '';
+      validationErrors.value.motherOccupation = '';
+      
+      // Additional information validation
+      if (formData.value.additionalInfo?.hasDisability === null || formData.value.additionalInfo?.hasDisability === undefined) {
+        validationErrors.value.hasDisability = "Please select whether you have any disability";
+        isValid = false;
+      } else {
+        validationErrors.value.hasDisability = '';
+      }
+      
+      if (formData.value.additionalInfo?.knowsComputer === null || formData.value.additionalInfo?.knowsComputer === undefined) {
+        validationErrors.value.knowsComputer = "Please select whether you know how to use a computer";
+        isValid = false;
+      } else {
+        validationErrors.value.knowsComputer = '';
+      }
+      
+      if (formData.value.additionalInfo?.isIndigenous === null || formData.value.additionalInfo?.isIndigenous === undefined) {
+        validationErrors.value.isIndigenous = "Please select whether you belong to an indigenous group";
+        isValid = false;
+      } else {
+        validationErrors.value.isIndigenous = '';
+      }
+      
+      if (!formData.value.additionalInfo?.religion || !formData.value.additionalInfo.religion.trim()) {
+        validationErrors.value.religion = "Religious affiliation is required";
+        isValid = false;
+      } else {
+        validationErrors.value.religion = '';
+      }
+      
+      return isValid;
+    };
+    
     // Validate date and time slot
     const validateDateTime = () => {
       if (!formData.value.preferredDate) {
@@ -1636,8 +2795,30 @@ export default {
         dateError.value = 'Please select a time slot for your appointment';
         return false;
       }
+      if (!formData.value.testCenter) {
+        validationErrors.value.testCenter = 'Please select a test center for your appointment';
+        return false;
+      }
+      if (!formData.value.testSession) {
+        validationErrors.value.testSession = 'Please select a test session for your appointment';
+        return false;
+      }
+      
       dateError.value = '';
+      validationErrors.value.testCenter = '';
+      validationErrors.value.testSession = '';
       return true;
+    };
+    
+    // Validate privacy policy agreement
+    const validatePrivacyPolicy = () => {
+      if (!formData.value.privacyPolicyAgreed) {
+        validationErrors.value.privacyPolicyAgreed = 'You must agree to the Privacy Policy to continue';
+        return false;
+      } else {
+        validationErrors.value.privacyPolicyAgreed = '';
+        return true;
+      }
     };
     
     // Set up watchers for real-time validation
@@ -1730,6 +2911,16 @@ export default {
       validateDateTime();
     });
     
+    watch(() => formData.value.testSession, () => {
+      touchedFields.value.testSession = true;
+      validateDateTime();
+    });
+    
+    watch(() => formData.value.privacyPolicyAgreed, () => {
+      touchedFields.value.privacyPolicyAgreed = true;
+      validatePrivacyPolicy();
+    });
+    
     // fetchData is now moved above the watch statement
     
     // Fetch user appointments to check for duplicates
@@ -1743,12 +2934,65 @@ export default {
         // Don't set error.value here to avoid blocking the main flow
       }
     };
+
+    // Fetch user profile to get detailed user information
+    const fetchUserProfile = async () => {
+      try {
+        const response = await axios.get('/api/profile/');
+        const userProfile = response.data;
+        console.log('User profile loaded:', userProfile);
+        
+        // Parse and update form data with user profile information
+        if (userProfile.first_name) {
+          console.log('User first_name from profile:', userProfile.first_name);
+          const nameParts = userProfile.first_name.trim().split(' ');
+          formData.value.firstName = (nameParts[0] || '').toUpperCase();
+          markAsTouched('firstName'); // Mark firstName as touched after auto-fill
+          // If there are more than one parts, the rest is middle name
+          if (nameParts.length > 1) {
+            formData.value.middleName = nameParts.slice(1).join(' ').toUpperCase();
+            markAsTouched('middleName'); // Mark middleName as touched after auto-fill
+          }
+          console.log('Updated form - First:', formData.value.firstName, 'Middle:', formData.value.middleName);
+        }
+        
+        if (userProfile.last_name) {
+          formData.value.lastName = userProfile.last_name.toUpperCase();
+          markAsTouched('lastName'); // Mark lastName as touched after auto-fill
+          console.log('Updated form - Last name:', formData.value.lastName);
+        }
+        
+        if (userProfile.email) {
+          formData.value.email = userProfile.email;
+          markAsTouched('email'); // Mark email as touched after auto-fill
+        }
+        
+        // If there's additional info from previous appointments, use it
+        if (userProfile.contact_number) {
+          formData.value.contactNumber = userProfile.contact_number;
+          markAsTouched('contactNumber'); // Mark contactNumber as touched after auto-fill
+        }
+        
+        if (userProfile.school_name) {
+          formData.value.schoolName = userProfile.school_name;
+        }
+        
+        return userProfile;
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        // Fallback to localStorage data if API fails
+        const currentUser = AuthService.getCurrentUser();
+        return currentUser;
+      }
+    };
     
     // Watch for modal open/close
     watch(() => props.modelValue, (newVal) => {
       if (newVal && props.program?.id) {
         fetchData();
         fetchUserAppointments(); // Fetch user appointments to check for duplicates
+        fetchTestCenters(); // Fetch test centers when modal opens
+        fetchUserProfile(); // Fetch user profile to populate form data
       }
       
       // Reset the form data when modal is opened
@@ -1757,12 +3001,38 @@ export default {
         const currentUser = AuthService.getCurrentUser();
         const userEmail = currentUser?.email || '';
         
+        console.log('Current user data:', currentUser);
+        
+        // Parse name data from user info
+        let firstName = '';
+        let lastName = '';
+        let middleName = '';
+        
+        if (currentUser?.first_name) {
+          console.log('User first_name from backend:', currentUser.first_name);
+          // Since we combined first and middle name in backend, split them here
+          const nameParts = currentUser.first_name.trim().split(' ');
+          firstName = (nameParts[0] || '').toUpperCase();
+          // If there are more than one parts, the rest is middle name
+          if (nameParts.length > 1) {
+            middleName = nameParts.slice(1).join(' ').toUpperCase();
+          }
+          console.log('Parsed names - First:', firstName, 'Middle:', middleName);
+        }
+        
+        if (currentUser?.last_name) {
+          lastName = currentUser.last_name.toUpperCase();
+          console.log('Last name:', lastName);
+        }
+        
         formData.value = {
           preferredDate: '',
           timeSlot: '',
-          lastName: '',
-          firstName: '',
-          middleName: '',
+          testCenter: '',
+          testSession: '',
+          lastName: lastName,
+          firstName: firstName,
+          middleName: middleName,
           contactNumber: '',
           email: userEmail, // Pre-populate with user's email
           schoolName: '',
@@ -1797,7 +3067,45 @@ export default {
             schoolAddress: '',
             course: '',
             collegeType: ''
-          }
+          },
+          // Course choices and campus information
+          courseChoices: {
+            firstChoice: '',
+            firstChoiceCampus: '',
+            secondChoice: '',
+            secondChoiceCampus: '',
+            thirdChoice: '',
+            thirdChoiceCampus: ''
+          },
+          // Socio-economic data
+          socioEconomic: {
+            father: {
+              citizenship: '',
+              education: '',
+              occupation: '',
+              employer: '',
+              income: ''
+            },
+            mother: {
+              citizenship: '',
+              education: '',
+              occupation: '',
+              employer: '',
+              income: ''
+            }
+          },
+          // Additional information
+          additionalInfo: {
+            hasDisability: false,
+            disabilityDescription: '',
+            knowsComputer: false,
+            isIndigenous: false,
+            indigenousGroup: '',
+            religion: '',
+            religionOthers: ''
+          },
+          // Privacy Policy Agreement
+          privacyPolicyAgreed: false
         };
         dateError.value = '';
         validationErrors.value = {
@@ -1814,13 +3122,30 @@ export default {
           city: '',
           citizenship: '',
           wmsucetExperience: '',
-          applicantType: ''
+          applicantType: '',
+          testCenter: '',
+          testSession: '',
+          privacyPolicyAgreed: '' // Added privacy policy validation
         };
         
         // Reset touched fields
         Object.keys(touchedFields.value).forEach(key => {
           touchedFields.value[key] = false;
         });
+        
+        // Mark auto-populated fields as touched so validation works properly
+        if (firstName) {
+          markAsTouched('firstName');
+        }
+        if (lastName) {
+          markAsTouched('lastName');
+        }
+        if (middleName) {
+          markAsTouched('middleName');
+        }
+        if (userEmail) {
+          markAsTouched('email');
+        }
       }
       
       // Close calendar when modal is closed
@@ -1857,6 +3182,54 @@ export default {
     // Add debugging on mount
     onMounted(() => {
       console.log('ScheduleModal mounted');
+      console.log('formData:', formData.value);
+      console.log('courseChoices:', formData.value?.courseChoices);
+      console.log('socioEconomic:', formData.value?.socioEconomic);
+      console.log('additionalInfo:', formData.value?.additionalInfo);
+      
+      // Ensure formData nested objects are properly initialized
+      if (!formData.value.courseChoices) {
+        formData.value.courseChoices = {
+          firstChoice: '',
+          firstChoiceCampus: '',
+          secondChoice: '',
+          secondChoiceCampus: '',
+          thirdChoice: '',
+          thirdChoiceCampus: ''
+        };
+      }
+      
+      if (!formData.value.socioEconomic) {
+        formData.value.socioEconomic = {
+          father: {
+            citizenship: '',
+            education: '',
+            occupation: '',
+            employer: '',
+            income: ''
+          },
+          mother: {
+            citizenship: '',
+            education: '',
+            occupation: '',
+            employer: '',
+            income: ''
+          }
+        };
+      }
+      
+      if (!formData.value.additionalInfo) {
+        formData.value.additionalInfo = {
+          hasDisability: false,
+          disabilityDescription: '',
+          knowsComputer: false,
+          isIndigenous: false,
+          indigenousGroup: '',
+          religion: '',
+          religionOthers: ''
+        };
+      }
+      
       console.log('philippineBarangays length:', philippineBarangays.value.length);
       console.log('philippineCities length:', philippineCities.value.length);
       console.log('citizenshipOptions length:', citizenshipOptions.value.length);
@@ -1865,6 +3238,9 @@ export default {
       console.log('First 5 cities:', philippineCities.value.slice(0, 5));
       console.log('First 5 citizenships:', citizenshipOptions.value.slice(0, 5));
       console.log('First 5 Zamboangan schools:', zamboanganSchools.value.slice(0, 5));
+      
+      // Fetch test centers on component mount to ensure they're always available
+      fetchTestCenters();
     });
     
     // Add cleanup for when the modal is closed
@@ -1928,10 +3304,99 @@ export default {
       formData.value.timeSlot = slot;
       dateError.value = '';
       
+      // Reset test center selection when time slot changes
+      formData.value.testCenter = '';
+      validationErrors.value.testCenter = '';
+      
+      console.log('🕒 Time slot selected:', slot);
+      console.log('📅 Current date:', formData.value.preferredDate);
+      console.log('🔄 About to fetch test centers...');
+      
+      // Fetch test centers and rooms when time slot is selected
+      fetchTestCenters();
+      
       // Add a slight delay before closing the calendar for better UX
       setTimeout(() => {
         showCalendar.value = false;
       }, 500); // Increased delay for better reliability
+    };
+    
+    // Test Center selection
+    const selectTestCenter = (center) => {
+      formData.value.testCenter = center.id;
+      validationErrors.value.testCenter = '';
+    };
+    
+    // Fetch test centers
+    const fetchTestCenters = async () => {
+      loadingTestCenters.value = true;
+      try {
+        console.log('🔄 Fetching test centers...');
+        console.log('📍 Current step:', currentStep.value);
+        console.log('📅 Selected date:', formData.value.preferredDate);
+        console.log('⏰ Selected time slot:', formData.value.timeSlot);
+        
+        const response = await axios.get('/api/test-centers/');
+        console.log('✅ Test centers response status:', response.status);
+        console.log('📊 Test centers response data:', response.data);
+        console.log('📈 Number of test centers:', response.data.length);
+        
+        testCenters.value = response.data;
+        
+        if (response.data.length > 0) {
+          console.log('🎯 Test centers loaded successfully:', testCenters.value);
+        } else {
+          console.warn('⚠️ API returned empty array for test centers');
+        }
+        
+        // Also fetch test rooms for room availability
+        await fetchTestRooms();
+      } catch (error) {
+        console.error('❌ Error fetching test centers:', error);
+        console.error('🔍 Error status:', error.response?.status);
+        console.error('📝 Error details:', error.response?.data);
+        console.error('🌐 Error message:', error.message);
+        testCenters.value = [];
+        
+        // Show user-friendly error message
+        showToast('Error loading test centers. Please try again.', 'error');
+      } finally {
+        loadingTestCenters.value = false;
+        console.log('🏁 fetchTestCenters completed. testCenters.value.length:', testCenters.value.length);
+      }
+    };
+    
+    // Fetch test rooms
+    const fetchTestRooms = async () => {
+      try {
+        console.log('Fetching test rooms...');
+        const response = await axios.get('/api/admin/test-rooms/');
+        console.log('Test rooms response:', response.data);
+        testRooms.value = response.data;
+      } catch (error) {
+        console.error('Error fetching test rooms:', error);
+        console.error('Error details:', error.response?.data);
+        testRooms.value = [];
+      }
+    };
+    
+    // Get rooms for a specific test center and time slot
+    const getRoomsForCenter = (centerId, timeSlot) => {
+      return testRooms.value.filter(room => 
+        room.test_center === centerId && room.time_slot === timeSlot && room.is_active
+      );
+    };
+    
+    // Get total available slots for a specific test center and time slot
+    const getTotalSlotsForCenter = (centerId, timeSlot) => {
+      const rooms = getRoomsForCenter(centerId, timeSlot);
+      return rooms.reduce((total, room) => total + (room.available_capacity || 0), 0);
+    };
+    
+    // Get total capacity for a specific test center and time slot
+    const getTotalCapacityForCenter = (centerId, timeSlot) => {
+      const rooms = getRoomsForCenter(centerId, timeSlot);
+      return rooms.reduce((total, room) => total + (room.capacity || 0), 0);
     };
     
     // Add watcher to close calendar when time slot changes, as a backup
@@ -1966,14 +3431,15 @@ export default {
         validateCitizenship(),
         validateWmsucetExperience(),
         validateApplicantType(),
-        validateDateTime()
+        validateDateTime(),
+        validatePrivacyPolicy() // Added privacy policy validation
       ];
       
       const isValid = validationResults.every(result => result);
       
       if (!isValid) {
         // Find the first field with an error and scroll to it
-        const firstErrorElement = document.querySelector('.error-text');
+        const firstErrorElement = document.querySelector('.error-text:not(:empty)');
         if (firstErrorElement) {
           firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -2173,10 +3639,11 @@ export default {
       // Run all validation functions
       const isStep1Valid = validateLastName() && validateFirstName() && validateMiddleName() && validateContactNumber() && validateEmail() && validateBirthDate() && validateAge() && validateGender() && validateStreetPurok() && validateBarangay() && validateCity() && validateCitizenship();
       const isStep2Valid = validateWmsucetExperience() && validateApplicantType();
-      const isStep3Valid = validateDateTime();
+      const isStep3Valid = validateCourseChoicesAndSocioEconomic();
+      const isStep5Valid = validateDateTime();
 
 
-      if (!isStep1Valid || !isStep2Valid || !isStep3Valid) {
+      if (!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep5Valid) {
         // Find the first field with an error and scroll to it
         const firstErrorElement = document.querySelector('.error-text:not(:empty)');
         if (firstErrorElement) {
@@ -2185,7 +3652,7 @@ export default {
         
         // Show a notification about missing fields
         const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md z-[100] animate-fade-in';
+        notification.className = 'fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md z-50 animate-fade-in';
         notification.innerHTML = `
           <div class="flex items-center">
             <div class="flex-shrink-0">
@@ -2199,6 +3666,7 @@ export default {
         `;
         document.body.appendChild(notification);
         
+        // Remove the notification after 5 seconds
         setTimeout(() => {
           if (document.body.contains(notification)) {
             notification.remove();
@@ -2212,10 +3680,11 @@ export default {
         const homeAddressString = `${formData.value.streetPurok}, ${formData.value.barangay}, ${formData.value.city}`.trim();
         const applicationData = {
           // Personal info
-          full_name: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName}`.trim(),
+          full_name: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName} ${formData.value.suffix}`.trim().replace(/\s+/g, ' '),
           last_name: formData.value.lastName.trim(),
           first_name: formData.value.firstName.trim(),
           middle_name: formData.value.middleName.trim(),
+          suffix: formData.value.suffix.trim(),
           contact_number: formData.value.contactNumber,
           email: formData.value.email,
           birth_month: formData.value.birthMonth,
@@ -2237,6 +3706,43 @@ export default {
           // Applicant type
           applicant_type: formData.value.applicantType,
           
+          // Course choices and campus information
+          first_choice_course: formData.value.courseChoices.firstChoice,
+          first_choice_campus: formData.value.courseChoices.firstChoiceCampus,
+          second_choice_course: formData.value.courseChoices.secondChoice,
+          second_choice_campus: formData.value.courseChoices.secondChoiceCampus,
+          third_choice_course: formData.value.courseChoices.thirdChoice,
+          third_choice_campus: formData.value.courseChoices.thirdChoiceCampus,
+          
+          // Socio-economic data - Father information
+          father_citizenship: formData.value.socioEconomic.father.citizenship,
+          father_education: formData.value.socioEconomic.father.education,
+          father_work_occupation: formData.value.socioEconomic.father.occupation,
+          father_employer: formData.value.socioEconomic.father.employer,
+          father_monthly_income: formData.value.socioEconomic.father.income,
+          
+          // Socio-economic data - Mother information
+          mother_citizenship: formData.value.socioEconomic.mother.citizenship,
+          mother_education: formData.value.socioEconomic.mother.education,
+          mother_work_occupation: formData.value.socioEconomic.mother.occupation,
+          mother_employer: formData.value.socioEconomic.mother.employer,
+          mother_monthly_income: formData.value.socioEconomic.mother.income,
+          
+          // Physical disability information
+          has_physical_disability: formData.value.additionalInfo.hasDisability,
+          disability_description: formData.value.additionalInfo.disabilityDescription,
+          
+          // Computer usage knowledge
+          knows_computer_usage: formData.value.additionalInfo.knowsComputer,
+          
+          // Indigenous Peoples Group membership
+          is_indigenous_member: formData.value.additionalInfo.isIndigenous,
+          indigenous_group_specify: formData.value.additionalInfo.indigenousGroup,
+          
+          // Religious affiliation
+          religious_affiliation: formData.value.additionalInfo.religion,
+          religious_affiliation_others: formData.value.additionalInfo.religionOthers,
+          
           // School info - will be populated based on applicant type
           school_name: formData.value.schoolName || '',
           school_address: '', // This might need updating if school address is also separated
@@ -2249,6 +3755,8 @@ export default {
           program: props.program?.id,
           preferred_date: formData.value.preferredDate,
           time_slot: formData.value.timeSlot,
+          test_center: formData.value.testCenter,
+          test_session: formData.value.testSession,
         };
         
         // Set school-related fields based on applicant type (remains the same)
@@ -2268,7 +3776,7 @@ export default {
         }
         
         ApplicationFormStore.setFormData({
-          fullName: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName}`,
+          fullName: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName} ${formData.value.suffix}`.trim().replace(/\s+/g, ' '),
           contactNumber: formData.value.contactNumber,
           email: formData.value.email,
           schoolName: formData.value.applicantType === 'senior_high_graduating' ? formData.value.seniorGraduating.schoolName : 
@@ -2303,7 +3811,7 @@ export default {
         ApplicationFormStore.setHasSubmittedData(true);
         
         const emitData = {
-          fullName: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName}`,
+          fullName: `${formData.value.lastName}, ${formData.value.firstName} ${formData.value.middleName} ${formData.value.suffix}`.trim().replace(/\s+/g, ' '),
           contactNumber: formData.value.contactNumber,
           email: formData.value.email,
           preferredDate: formData.value.preferredDate,
@@ -2378,7 +3886,7 @@ export default {
 
     const nextStep = () => {
       if (validateCurrentStep()) {
-        if (currentStep.value < 3) {
+        if (currentStep.value < 5) {
           currentStep.value++;
         }
       }
@@ -2441,23 +3949,88 @@ export default {
         touchedFields.value.city = true;
         touchedFields.value.citizenship = true;
 
-        isValid = validateLastName() &&
-                  validateFirstName() &&
-                  validateMiddleName() && // Include in validation chain
-                  validateContactNumber() &&
-                  validateEmail() &&
-                  validateBirthDate() &&
-                  validateGender() &&
-                  validateStreetPurok() &&
-                  validateBarangay() &&
-                  validateCity() &&
-                  validateCitizenship() &&
-                  validateAge(); // Also validate age, as it depends on birthdate
+        // Calculate age first if birth date fields are filled
+        if (formData.value.birthMonth && formData.value.birthDay && formData.value.birthYear) {
+          calculateAndSetAge();
+        }
+
+        // Calculate age first if birth date fields are filled
+        if (formData.value.birthMonth && formData.value.birthDay && formData.value.birthYear) {
+          calculateAndSetAge();
+        }
+
+        // Validate all Step 1 fields
+        const lastNameValid = validateLastName();
+        const firstNameValid = validateFirstName();
+        const middleNameValid = validateMiddleName();
+        const contactValid = validateContactNumber();
+        const emailValid = validateEmail();
+        const birthDateValid = validateBirthDate();
+        const ageValid = validateAge();
+        const genderValid = validateGender();
+        const streetValid = validateStreetPurok();
+        const barangayValid = validateBarangay();
+        const cityValid = validateCity();
+        const citizenshipValid = validateCitizenship();
+
+        isValid = lastNameValid &&
+                  firstNameValid &&
+                  middleNameValid &&
+                  contactValid &&
+                  emailValid &&
+                  birthDateValid &&
+                  ageValid &&
+                  genderValid &&
+                  streetValid &&
+                  barangayValid &&
+                  cityValid &&
+                  citizenshipValid;
+
+        // Debug logging to help identify which field is failing
+        if (!isValid) {
+          console.log('Step 1 validation failed. Field validation results:', {
+            lastNameValid,
+            firstNameValid,
+            middleNameValid,
+            contactValid,
+            emailValid,
+            birthDateValid,
+            ageValid,
+            genderValid,
+            streetValid,
+            barangayValid,
+            cityValid,
+            citizenshipValid
+          });
+          console.log('Current form data:', {
+            lastName: formData.value.lastName,
+            firstName: formData.value.firstName,
+            middleName: formData.value.middleName,
+            contactNumber: formData.value.contactNumber,
+            email: formData.value.email,
+            birthMonth: formData.value.birthMonth,
+            birthDay: formData.value.birthDay,
+            birthYear: formData.value.birthYear,
+            age: formData.value.age,
+            gender: formData.value.gender,
+            streetPurok: formData.value.streetPurok,
+            barangay: formData.value.barangay,
+            city: formData.value.city,
+            citizenship: formData.value.citizenship
+          });
+          console.log('Validation errors:', validationErrors.value);
+        }
       } else if (currentStep.value === 2) {
         touchedFields.value.applicantType = true; // Assuming this covers all applicant type interactions
         // Mark WMSUCET experience fields as touched if necessary
         isValid = validateWmsucetExperience() && validateApplicantType();
       } else if (currentStep.value === 3) {
+        // Validate the new fields for course choices and socio-economic data
+        isValid = validateCourseChoicesAndSocioEconomic();
+      } else if (currentStep.value === 4) {
+        // Step 4 is the review step - no additional validation needed since all data has been validated in previous steps
+        isValid = true;
+      } else if (currentStep.value === 5) {
         touchedFields.value.preferredDate = true;
         touchedFields.value.timeSlot = true;
         isValid = validateDateTime();
@@ -2489,34 +4062,89 @@ export default {
       return isValid;
     };
     
+    // Safe access computed properties to prevent undefined errors
+    const safeFormData = computed(() => {
+      return {
+        ...formData.value,
+        courseChoices: formData.value?.courseChoices || {
+          firstChoice: '',
+          firstChoiceCampus: '',
+          secondChoice: '',
+          secondChoiceCampus: '',
+          thirdChoice: '',
+          thirdChoiceCampus: ''
+        },
+        socioEconomic: formData.value?.socioEconomic || {
+          father: {
+            citizenship: '',
+            education: '',
+            occupation: '',
+            employer: '',
+            income: ''
+          },
+          mother: {
+            citizenship: '',
+            education: '',
+            occupation: '',
+            employer: '',
+            income: ''
+          }
+        },
+        additionalInfo: formData.value?.additionalInfo || {
+          hasDisability: false,
+          disabilityDescription: '',
+          knowsComputer: false,
+          isIndigenous: false,
+          indigenousGroup: '',
+          religion: '',
+          religionOthers: ''
+        }
+      }
+    });
+
+    // Clear notification function
+    const clearNotification = () => {
+      showNotification.value = false;
+      notificationMessage.value = '';
+      notificationType.value = 'info';
+    };
+
+    // Return all reactive references and functions for the template
     return {
-      loading,
-      error,
-      apiData,
+      // Data refs
       formData,
-      dateError,
-      showCalendar,
-      isFormValid,
-      isMorningAvailable,
-      isAfternoonAvailable,
+      currentStep,
+      totalSteps,
       validationErrors,
-      birthYears,
+      isSubmitting,
+      showNotification,
+      notificationMessage,
+      notificationType,
+      locationData,
+      addressSuggestions,
       philippineBarangays,
       philippineCities,
       citizenshipOptions,
       zamboanganSchools,
+      campusOptions,
+      wmsucourses,
+      educationalAttainmentOptions,
+      occupationOptions,
+      incomeOptions,
+      loading,
+      error,
+      apiData,
       testSessions,
+      testCenters,
+      testRooms,
+      loadingTestCenters,
+      showCalendar,
+      dateError,
       userAppointments,
-      fetchData,
-      formatDate,
-      selectTimeSlot,
-      validateForm,
-      submitForm,
-      close,
-      closeCalendarWithDelay,
-      markAsTouched,
-      checkDuplicateRegistration,
       touchedFields,
+      
+      // Functions for form handling
+      markAsTouched,
       isFieldValid,
       isFieldInvalid,
       getInputClasses,
@@ -2526,13 +4154,9 @@ export default {
       selectAddressSuggestion,
       showAddressSuggestions,
       hideAddressSuggestions,
-      addressSuggestions,
-      calculateAndSetAge,
-      currentStep,
-      nextStep,
-      prevStep,
-      validateCurrentStep,
-      // Add all validation functions
+      onLocationChange,
+      
+      // Validation functions
       validateLastName,
       validateFirstName,
       validateMiddleName,
@@ -2547,9 +4171,49 @@ export default {
       validateCitizenship,
       validateWmsucetExperience,
       validateApplicantType,
+      validateCourseChoicesAndSocioEconomic,
       validateDateTime,
-      locationData,
-      onLocationChange
+      validateCurrentStep,
+      
+      // Computed properties
+      birthYears,
+      isFormValid,
+      isMorningAvailable,
+      isAfternoonAvailable,
+      safeFormData,
+      getExamTypeFromProgram,
+      availableTestSessions,
+      
+      // Navigation functions
+      nextStep,
+      prevStep,
+      
+      // Form submission
+      submitForm,
+      close,
+      
+      // Date and time functions
+      formatDate,
+      selectTimeSlot,
+      selectTestCenter,
+      closeCalendarWithDelay,
+      calculateAndSetAge,
+      
+      // Test center functions
+      fetchTestCenters,
+      fetchTestRooms,
+      getRoomsForCenter,
+      getTotalSlotsForCenter,
+      getTotalCapacityForCenter,
+      
+      // Utility functions
+      checkDuplicateRegistration,
+      clearNotification,
+      fetchData,
+      fetchTestSessions,
+      fetchUserAppointments,
+      fetchUserProfile,
+      formatDateForApi
     };
   }
 }

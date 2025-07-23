@@ -967,6 +967,7 @@ export default {
       testCenters: [],
       testRooms: [],
       programs: [],
+      sessionStatusCheckInterval: null, // For periodic status checks
       loading: {
         sessions: false,
         centers: false,
@@ -1114,6 +1115,18 @@ export default {
     await this.fetchTestCenters();
     await this.fetchTestRooms();
     await this.fetchPendingAssignments();
+    
+    // Set up periodic check for expired sessions (every 5 minutes)
+    this.sessionStatusCheckInterval = setInterval(() => {
+      this.checkAndUpdateExpiredSessions();
+    }, 5 * 60 * 1000); // 5 minutes
+  },
+
+  beforeUnmount() {
+    // Clean up interval when component is destroyed
+    if (this.sessionStatusCheckInterval) {
+      clearInterval(this.sessionStatusCheckInterval);
+    }
   },
   methods: {
     // Fetch data methods
@@ -1135,8 +1148,11 @@ export default {
         // Debug: log test sessions data to help diagnose issues
         console.log('Fetched test sessions:', this.testSessions);
         
-        // Update stats
-        this.stats.upcomingSessions = response.data.filter(s => s.status === 'SCHEDULED').length;
+        // Auto-complete any expired sessions immediately after fetching
+        await this.autoCompleteExpiredSessions();
+        
+        // Update stats after auto-completion
+        this.stats.upcomingSessions = this.testSessions.filter(s => s.status === 'SCHEDULED').length;
         // Update pagination total
         this.pagination.sessions.totalItems = this.testSessions.length;
       } catch (error) {
@@ -1150,6 +1166,10 @@ export default {
     async updateSessionStatus() {
       this.loading.updateStatus = true;
       try {
+        // First, automatically update sessions where exam date has passed
+        await this.autoCompleteExpiredSessions();
+        
+        // Then call the backend API for any additional status updates
         const response = await axiosInstance.post('/api/admin/test-sessions/update-status/');
         
         // Show success message
@@ -1163,6 +1183,43 @@ export default {
         this.showToast('Failed to update session status', 'error');
       } finally {
         this.loading.updateStatus = false;
+      }
+    },
+
+    async autoCompleteExpiredSessions() {
+      try {
+        const currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+        
+        const expiredSessions = this.testSessions.filter(session => {
+          if (session.status === 'COMPLETED' || session.status === 'CANCELLED') {
+            return false; // Skip already completed or cancelled sessions
+          }
+          
+          const examDate = new Date(session.exam_date);
+          examDate.setHours(23, 59, 59, 999); // Set to end of exam day
+          
+          return examDate < currentDate; // Exam date has passed
+        });
+        
+        if (expiredSessions.length > 0) {
+          console.log(`Found ${expiredSessions.length} expired sessions to complete:`, expiredSessions);
+          
+          // Update each expired session to COMPLETED status
+          const updatePromises = expiredSessions.map(session => 
+            axiosInstance.patch(`/api/admin/test-sessions/${session.id}/`, {
+              status: 'COMPLETED'
+            })
+          );
+          
+          await Promise.all(updatePromises);
+          
+          this.showToast(`Automatically completed ${expiredSessions.length} expired test session(s)`, 'success');
+        }
+        
+      } catch (error) {
+        console.error('Error auto-completing expired sessions:', error);
+        // Don't throw error here, let the main update continue
       }
     },
     
@@ -1452,6 +1509,29 @@ export default {
       
       // Store the room ID for the update operation
       this.editingRoomId = room.id;
+    },
+    
+    showDeleteCenterConfirmation(center) {
+      this.confirmationData = {
+        title: 'Delete Test Center',
+        message: `Are you sure you want to delete the center "${center.name}"? This will also delete all rooms associated with this center.`,
+        confirmButtonText: 'Delete',
+        action: this.deleteCenter,
+        item: center
+      };
+      this.showConfirmationModal = true;
+    },
+    
+    async deleteCenter(center) {
+      try {
+        await axiosInstance.delete(`/api/admin/test-centers/${center.id}/`);
+        this.showToast('Test center deleted successfully', 'success');
+        await this.fetchTestCenters();
+        await this.fetchTestRooms(); // Refresh rooms since they might be affected
+      } catch (error) {
+        console.error('Error deleting test center:', error);
+        this.showToast('Failed to delete test center', 'error');
+      }
     },
     
     showDeleteRoomConfirmation(room) {
@@ -1940,6 +2020,80 @@ export default {
       }
     },
     
+    // Handle confirmation modal actions
+    async confirmAction() {
+      if (this.confirmationData.action) {
+        this.loading.confirmation = true;
+        try {
+          await this.confirmationData.action(this.confirmationData.item);
+          this.showConfirmationModal = false;
+        } catch (error) {
+          console.error('Error executing confirmation action:', error);
+          this.showToast('An error occurred while processing your request', 'error');
+        } finally {
+          this.loading.confirmation = false;
+        }
+      }
+    },
+    
+    // Get display text for confirmation modal
+    getItemDisplayText(item) {
+      if (!item) return '';
+      
+      if (item.exam_type) {
+        // Test session
+        return `${item.exam_type} - ${this.formatDate(item.exam_date)}`;
+      } else if (item.name && item.code) {
+        // Test center
+        return `${item.name} (${item.code})`;
+      } else if (item.name && item.room_code) {
+        // Test room
+        return `${item.name} (${item.room_code})`;
+      }
+      
+      return item.name || item.code || 'Unknown item';
+    },
+    
+    // Delete session method
+    async deleteSession(session) {
+      try {
+        await axiosInstance.delete(`/api/admin/test-sessions/${session.id}/`);
+        this.showToast('Test session deleted successfully', 'success');
+        await this.fetchTestSessions();
+      } catch (error) {
+        console.error('Error deleting test session:', error);
+        this.showToast('Failed to delete test session', 'error');
+      }
+    },
+    
+    async checkAndUpdateExpiredSessions() {
+      try {
+        const currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0);
+        
+        const expiredSessions = this.testSessions.filter(session => {
+          if (session.status === 'COMPLETED' || session.status === 'CANCELLED') {
+            return false;
+          }
+          
+          const examDate = new Date(session.exam_date);
+          examDate.setHours(23, 59, 59, 999);
+          
+          return examDate < currentDate;
+        });
+        
+        if (expiredSessions.length > 0) {
+          console.log(`Periodic check: Found ${expiredSessions.length} expired sessions`);
+          await this.autoCompleteExpiredSessions();
+          // Refresh the sessions list to show updated status
+          await this.fetchTestSessions();
+        }
+        
+      } catch (error) {
+        console.error('Error in periodic session status check:', error);
+      }
+    },
+
     // Utility methods for formatting
     formatDate(dateString) {
       if (!dateString) return 'N/A';

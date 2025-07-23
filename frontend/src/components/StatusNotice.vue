@@ -49,12 +49,12 @@
           
           <span class="block mt-2 font-medium">Important:</span>
           <span class="block mt-1">Please arrive 30 minutes before your scheduled time and bring the following:</span>
-          <ul class="list-disc ml-5 mt-1 space-y-1">
-            <li>Printed application form</li>
-            <li>Valid ID</li>
-            <li>Examination permit</li>
-          </ul>
         </p>
+        <ul class="list-disc ml-5 mt-1 space-y-1">
+          <li>Printed application form</li>
+          <li>Valid ID</li>
+          <li>Examination permit</li>
+        </ul>
       </div>
     </div>
   </div>

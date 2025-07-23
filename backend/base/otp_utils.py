@@ -1,10 +1,10 @@
 import random
 import string
-import requests
-import json
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.conf import settings
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from .models import OTPVerification
 
 def generate_otp(length=6):
@@ -35,29 +35,12 @@ def save_otp(email):
     return otp
 
 def send_otp_email(email, otp):
-    """Send OTP via MailerSend API using requests"""
+    """Send OTP via Django's email system (Gmail SMTP)"""
     try:
-        url = "https://api.mailersend.com/v1/email"
+        subject = "Your OTP Verification Code"
         
-        headers = {
-            "Content-Type": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
-            "Authorization": f"Bearer {settings.MAILERSEND_API_KEY}"
-        }
-        
-        data = {
-            "from": {
-                "email": settings.MAILERSEND_DEFAULT_FROM,
-                "name": settings.MAILERSEND_DEFAULT_FROM_NAME
-            },
-            "to": [
-                {
-                    "email": email,
-                    "name": email.split('@')[0]
-                }
-            ],
-            "subject": "Your OTP Verification Code",
-            "text": f"""
+        # Plain text message
+        message = f"""
 Hello,
 
 Your OTP verification code is: {otp}
@@ -67,37 +50,42 @@ This code will expire in 10 minutes.
 If you did not request this code, please ignore this email.
 
 Thank you,
-{settings.MAILERSEND_DEFAULT_FROM_NAME}
-            """,
-            "html": f"""
+TEC Registration System
+        """
+        
+        # HTML message
+        html_message = f"""
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
     <h2 style="color: #333;">Your Verification Code</h2>
     <p>Hello,</p>
     <p>Your OTP verification code is:</p>
-    <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; text-align: center; font-size: 24px; letter-spacing: 5px; font-weight: bold;">
+    <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; text-align: center; font-size: 24px; letter-spacing: 5px; font-weight: bold; color: #333;">
         {otp}
     </div>
     <p>This code will expire in 10 minutes.</p>
     <p>If you did not request this code, please ignore this email.</p>
-    <p>Thank you,<br/>{settings.MAILERSEND_DEFAULT_FROM_NAME}</p>
+    <p>Thank you,<br/>TEC Registration System</p>
 </div>
-            """
-        }
+        """
         
         print(f"Sending email to {email} with OTP {otp}")
-        print(f"Using sender: {settings.MAILERSEND_DEFAULT_FROM}")
+        print(f"Using sender: {settings.DEFAULT_FROM_EMAIL}")
         
-        # Make the API request
-        response = requests.post(url, headers=headers, json=data)
+        # Send email using Django's send_mail
+        result = send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            html_message=html_message,
+            fail_silently=False
+        )
         
-        print(f"MailerSend API response: {response.status_code}")
-        print(f"Response body: {response.text}")
-        
-        if response.status_code >= 200 and response.status_code < 300:
+        if result:
             print("Email sent successfully!")
             return True
         else:
-            print(f"Error sending email: {response.status_code} - {response.text}")
+            print("Failed to send email")
             return False
     
     except Exception as e:

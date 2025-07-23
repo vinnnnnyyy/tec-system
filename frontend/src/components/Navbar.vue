@@ -414,6 +414,13 @@ export default {
     }
 
     const fetchNotifications = async () => {
+      // Only fetch notifications if user is authenticated
+      if (!isAuthenticated.value) {
+        notifications.value = []
+        unreadNotificationsCount.value = 0
+        return
+      }
+      
       try {
         console.log('Fetching notifications...')
         const response = await NotificationService.getNotifications()
@@ -438,9 +445,16 @@ export default {
         clearInterval(notificationPollingInterval.value)
       }
       
-      // Poll for new notifications every 30 seconds (for all users)
+      // Only poll for notifications if user is authenticated
+      if (!isAuthenticated.value) {
+        return
+      }
+      
+      // Poll for new notifications every 30 seconds (for authenticated users)
       notificationPollingInterval.value = setInterval(() => {
-        fetchNotifications()
+        if (isAuthenticated.value) {
+          fetchNotifications()
+        }
       }, 30000) // 30 seconds
     }
 
@@ -583,9 +597,11 @@ export default {
     onMounted(() => {
       checkAuth() // Initial auth check
       
-      // Always start polling for notifications (for global notifications)
-      fetchNotifications()
-      startNotificationPolling()
+      // Only fetch notifications and start polling if authenticated
+      if (isAuthenticated.value) {
+        fetchNotifications()
+        startNotificationPolling()
+      }
       
       document.addEventListener('click', handleClickOutside)
       window.addEventListener('resize', handleResize)

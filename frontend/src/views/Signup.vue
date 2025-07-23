@@ -80,6 +80,23 @@
               </div>
             </div>
 
+            <!-- Middle Name Field -->
+            <div class="group">
+              <label for="middleName" class="block text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">Middle Name (Optional)</label>
+              <div class="relative mt-1">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <font-awesome-icon icon="user" class="h-5 w-5 text-gray-400 group-hover:text-crimson-500 transition-colors duration-200" />
+                </div>
+                <input
+                  id="middleName"
+                  v-model="middleName"
+                  type="text"
+                  class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-crimson-500 focus:border-transparent sm:text-sm bg-white/90 hover:bg-white transition-colors duration-200"
+                  placeholder="Middle Name"
+                />
+              </div>
+            </div>
+
             <!-- Email Address -->
             <div class="group">
               <label for="email" class="block text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">Email</label>
@@ -288,6 +305,7 @@ export default {
     const { showToast } = useToast()
     const firstName = ref('')
     const lastName = ref('')
+    const middleName = ref('')
     const email = ref('')
     const password = ref('')
     const confirmPassword = ref('')
@@ -430,6 +448,7 @@ export default {
         const response = await AuthService.registerWithOTP(
           firstName.value,
           lastName.value,
+          middleName.value,
           email.value,
           password.value,
           otpCode.value
@@ -458,6 +477,7 @@ export default {
     return {
       firstName,
       lastName,
+      middleName,
       email,
       password,
       confirmPassword,
@@ -511,8 +531,36 @@ export default {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes fadeInUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes subtleZoom {
+  0%, 100% { 
+    transform: scale(1); 
+  }
+  50% { 
+    transform: scale(1.05); 
+  }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-subtle-zoom {
+  animation: subtleZoom 20s infinite;
 }
 
 /* Add responsive font size utility if needed */

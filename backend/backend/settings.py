@@ -26,17 +26,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY')
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY environment variable is required")
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,wmsutec.pythonanywhere.com,wmsutec.netlify.app').split(',')
 
 # Frontend URL for email links
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3001')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://wmsutec.netlify.app')
 
 
 # Application definition
@@ -57,6 +55,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'base.middleware.CSPMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -137,11 +136,24 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Additional static files locations (if any)
+STATICFILES_DIRS = [
+    # Add any additional static directories here if needed
+]
 
 # Media files (User uploaded content)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# For production deployment - ensure media files use HTTPS
+if not DEBUG:
+    MEDIA_URL = 'https://wmsutec.pythonanywhere.com/media/'
+else:
+    # For development, use the full URL to avoid mixed content
+    MEDIA_URL = os.getenv('MEDIA_URL', '/media/')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -149,10 +161,24 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True').lower() == 'true'  # For development only
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True').lower() == 'true'  # Set to False for production
 CORS_ALLOWED_ORIGINS = [
-    url.strip() for url in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3001').split(',')
+    'https://wmsutec.netlify.app',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:4173',
+    'http://127.0.0.1:4173',
 ]
+
+# Add any additional origins from environment variable
+if os.getenv('CORS_ALLOWED_ORIGINS'):
+    CORS_ALLOWED_ORIGINS.extend([
+        url.strip() for url in os.getenv('CORS_ALLOWED_ORIGINS').split(',')
+    ])
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
@@ -204,3 +230,13 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@example.com')
 MAILERSEND_API_KEY = os.getenv('MAILERSEND_API_KEY')
 MAILERSEND_DEFAULT_FROM = os.getenv('MAILERSEND_DEFAULT_FROM')
 MAILERSEND_DEFAULT_FROM_NAME = os.getenv('MAILERSEND_DEFAULT_FROM_NAME', 'TEC Registration')
+
+# Content Security Policy Settings
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com")
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com")
+CSP_IMG_SRC = ("'self'", "data:", "https:", "https://wmsutec.pythonanywhere.com")
+CSP_FONT_SRC = ("'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com")
+CSP_CONNECT_SRC = ("'self'", "https://wmsutec.pythonanywhere.com", "https://wmsutec.netlify.app")
+CSP_FRAME_SRC = ("'self'",)
+CSP_MEDIA_SRC = ("'self'", "https://wmsutec.pythonanywhere.com")
